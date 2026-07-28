@@ -1,0 +1,6 @@
+/// Formats a duration given in whole seconds as `mm:ss`.
+String formatMinutesSeconds(int totalSeconds) {
+  final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
+  final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+  return '$minutes:$seconds';
+}
