@@ -1,5 +1,6 @@
 // Unit tests for WalletCubit: starts at the service's balance, persists
-// and emits on addCoins, and ignores non-positive amounts.
+// and emits on addCoins/spendCoins, ignores non-positive addCoins
+// amounts, and refuses to spend more than the balance covers.
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,5 +31,25 @@ void main() {
     await cubit.addCoins(-10);
 
     expect(cubit.state, 50);
+  });
+
+  test('spendCoins deducts and emits the new balance on success', () async {
+    final service = FakeWalletService(50);
+    final cubit = WalletCubit(service);
+
+    final success = await cubit.spendCoins(20);
+
+    expect(success, isTrue);
+    expect(cubit.state, 30);
+    expect(service.balance, 30);
+  });
+
+  test('spendCoins fails and leaves the balance untouched when insufficient', () async {
+    final cubit = WalletCubit(FakeWalletService(10));
+
+    final success = await cubit.spendCoins(20);
+
+    expect(success, isFalse);
+    expect(cubit.state, 10);
   });
 }

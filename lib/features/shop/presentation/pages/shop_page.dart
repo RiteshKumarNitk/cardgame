@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
+import '../../../../core/router/route_paths.dart';
 import '../../../../game/ads_cubit.dart';
 import '../../../../game/wallet_cubit.dart';
 import '../../../../shared/utils/number_format.dart';
@@ -117,7 +118,16 @@ class _ShopTopBar extends StatelessWidget {
       children: [
         CircleIconButton(
           icon: Icons.arrow_back_rounded,
-          onTap: () => context.pop(),
+          onTap: () {
+            // Shop is always reached via `goNamed`, which replaces the
+            // stack rather than pushing — so there's usually nothing to
+            // pop back to; fall back to Home in that case.
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.goNamed(RouteNames.home);
+            }
+          },
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(

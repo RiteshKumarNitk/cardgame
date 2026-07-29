@@ -14,4 +14,14 @@ class WalletCubit extends Cubit<int> {
     await _service.addCoins(amount);
     emit(_service.balance);
   }
+
+  /// Attempts to spend [amount] coins. Returns whether it succeeded —
+  /// callers use this to gate coin-locked content without needing to
+  /// inspect state themselves.
+  Future<bool> spendCoins(int amount) async {
+    if (amount <= 0) return true;
+    final success = await _service.spendCoins(amount);
+    if (success) emit(_service.balance);
+    return success;
+  }
 }

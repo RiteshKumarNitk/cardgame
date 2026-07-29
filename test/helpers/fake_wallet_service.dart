@@ -14,4 +14,11 @@ class FakeWalletService implements WalletService {
   Future<void> addCoins(int amount) async {
     _balance += amount;
   }
+
+  @override
+  Future<bool> spendCoins(int amount) async {
+    if (_balance < amount) return false;
+    _balance -= amount;
+    return true;
+  }
 }

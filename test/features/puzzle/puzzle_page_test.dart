@@ -58,7 +58,8 @@ void main() {
 
     expect(find.text('Level 1'), findsOneWidget);
     expect(find.text('Easy'), findsOneWidget);
-    expect(find.text('Reassemble this photo'), findsOneWidget);
+    // The reference preview is locked by default (unlockable with coins).
+    expect(find.text('Preview locked'), findsOneWidget);
     // A 3x3 board for easy: every one of the 9 cells always renders a
     // piece (locked or not), but exactly how many start locked depends
     // on the shuffle, so only the total tile count is asserted exactly.

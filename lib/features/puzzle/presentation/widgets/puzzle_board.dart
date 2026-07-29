@@ -4,15 +4,15 @@ import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_shadows.dart';
-import '../../../../core/design_system/app_spacing.dart';
 import '../../../levels/domain/entities/level.dart';
 import '../../domain/puzzle_board_size.dart';
 import 'puzzle_image_tile.dart';
 
 /// The puzzle board: an N×N grid where every cell already holds a piece
-/// (shuffled). Drag one piece onto another to swap them — a cell locks
-/// with a satisfying pop + glow once its piece is correct, and can no
-/// longer be moved.
+/// (shuffled). Pieces sit flush against each other with square corners,
+/// so a solved board reads as one seamless photo rather than a grid of
+/// separated chips. Drag one piece onto another to swap them — a cell
+/// locks with a satisfying pop + glow once its piece is correct.
 class PuzzleBoard extends StatelessWidget {
   const PuzzleBoard({
     super.key,
@@ -34,21 +34,21 @@ class PuzzleBoard extends StatelessWidget {
     final size = boardSizeFor(difficulty);
 
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: AppRadius.lgRadius,
         border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.card,
       ),
+      clipBehavior: Clip.antiAlias,
       child: AspectRatio(
         aspectRatio: 1,
         child: GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: size,
-            crossAxisSpacing: AppSpacing.xs,
-            mainAxisSpacing: AppSpacing.xs,
+            crossAxisSpacing: 0,
+            mainAxisSpacing: 0,
           ),
           itemCount: size * size,
           itemBuilder: (context, cellIndex) {
@@ -126,38 +126,34 @@ class _BoardCellState extends State<_BoardCell>
     final row = (widget.pieceIndex - 1) ~/ widget.gridSize;
     final col = (widget.pieceIndex - 1) % widget.gridSize;
 
-    final content = ClipRRect(
-      borderRadius: AppRadius.smRadius,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          PuzzleImageTile(
-            imageUrl: widget.imageUrl,
-            gridSize: widget.gridSize,
-            row: row,
-            col: col,
-          ),
-          if (widget.correct)
-            const Positioned(
-              top: 2,
-              right: 2,
-              child: Icon(
-                Icons.check_circle_rounded,
-                color: Colors.white,
-                size: 16,
-                shadows: [Shadow(blurRadius: 3, color: Colors.black45)],
-              ),
+    final content = Stack(
+      fit: StackFit.expand,
+      children: [
+        PuzzleImageTile(
+          imageUrl: widget.imageUrl,
+          gridSize: widget.gridSize,
+          row: row,
+          col: col,
+        ),
+        if (widget.correct)
+          const Positioned(
+            top: 2,
+            right: 2,
+            child: Icon(
+              Icons.check_circle_rounded,
+              color: Colors.white,
+              size: 16,
+              shadows: [Shadow(blurRadius: 3, color: Colors.black45)],
             ),
-        ],
-      ),
+          ),
+      ],
     );
 
     final decorated = Container(
       decoration: BoxDecoration(
-        borderRadius: AppRadius.smRadius,
         border: Border.all(
           color: widget.correct ? AppColors.success : AppColors.border,
-          width: widget.correct ? 2 : 1,
+          width: widget.correct ? 2 : 0.5,
         ),
         boxShadow: widget.correct
             ? AppShadows.glow(AppColors.success, opacity: 0.3)
@@ -179,7 +175,6 @@ class _BoardCellState extends State<_BoardCell>
         final hoverRing = hovering
             ? Container(
                 decoration: BoxDecoration(
-                  borderRadius: AppRadius.smRadius,
                   border: Border.all(color: AppColors.primary, width: 2),
                 ),
                 child: popped,

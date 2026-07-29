@@ -8,6 +8,10 @@ import '../core/constants/app_constants.dart';
 abstract interface class WalletService {
   int get balance;
   Future<void> addCoins(int amount);
+
+  /// Deducts [amount] if the balance covers it. Returns whether the
+  /// spend succeeded.
+  Future<bool> spendCoins(int amount);
 }
 
 class HiveWalletService implements WalletService {
@@ -19,5 +23,12 @@ class HiveWalletService implements WalletService {
   @override
   Future<void> addCoins(int amount) async {
     await _box.put(AppConstants.walletCoinsKey, balance + amount);
+  }
+
+  @override
+  Future<bool> spendCoins(int amount) async {
+    if (balance < amount) return false;
+    await _box.put(AppConstants.walletCoinsKey, balance - amount);
+    return true;
   }
 }
