@@ -1,5 +1,6 @@
 // Verifies the Puzzle screen shell renders for a valid level: title,
-// difficulty badge, and the right number of board slots / tray pieces.
+// difficulty badge, and a fully-populated 3x3 board (every cell holds a
+// piece from the start — there's no separate tray).
 //
 // Uses an in-memory fake LevelsRepository (via LevelService) rather than
 // real Hive — same reasoning as the Levels feature tests.
@@ -13,6 +14,7 @@ import 'package:puzzle_cards/features/levels/domain/entities/level.dart';
 import 'package:puzzle_cards/features/levels/domain/repositories/levels_repository.dart';
 import 'package:puzzle_cards/features/levels/domain/services/level_service.dart';
 import 'package:puzzle_cards/features/puzzle/presentation/pages/puzzle_page.dart';
+import 'package:puzzle_cards/features/puzzle/presentation/widgets/puzzle_image_tile.dart';
 
 class _FakeLevelsRepository implements LevelsRepository {
   List<Level> stored = [
@@ -40,7 +42,7 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('shows level title, difficulty, and a 3x3 board/tray for easy', (
+  testWidgets('shows level title, difficulty, and a fully-populated 3x3 board', (
     tester,
   ) async {
     final levelService = LevelService(_FakeLevelsRepository());
@@ -56,13 +58,13 @@ void main() {
 
     expect(find.text('Level 1'), findsOneWidget);
     expect(find.text('Easy'), findsOneWidget);
-    expect(find.text('Pieces'), findsOneWidget);
-    expect(find.text('Preview'), findsOneWidget);
-    // A 3x3 board for easy: 9 drop targets, 9 draggable tray pieces (none
-    // placed yet). Pieces now render an image crop rather than a number
-    // label, so we assert by widget type/count instead of text.
-    expect(find.byType(DragTarget<int>), findsNWidgets(9));
-    expect(find.byType(Draggable<int>), findsNWidgets(9));
+    expect(find.text('Reassemble this photo'), findsOneWidget);
+    // A 3x3 board for easy: every one of the 9 cells always renders a
+    // piece (locked or not), but exactly how many start locked depends
+    // on the shuffle, so only the total tile count is asserted exactly.
+    expect(find.byType(PuzzleImageTile), findsNWidgets(9));
+    // At least the not-yet-correct cells should be interactive.
+    expect(find.byType(DragTarget<int>), findsWidgets);
 
     // A loaded puzzle starts a repeating Timer (the elapsed-time clock).
     // Unmount to dispose the cubit (cancelling it) before the test ends —

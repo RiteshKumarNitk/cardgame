@@ -29,9 +29,22 @@ class _FakeDailyChallengeRepository implements DailyChallengeRepository {
   }
 }
 
+/// Solves the board by walking its permutation cycles (see the matching
+/// helper in puzzle_cubit_test.dart for why this always converges).
 Future<void> _solve(DailyChallengeCubit cubit) async {
-  for (var piece = 1; piece <= 16; piece++) {
-    await cubit.attemptPlacePiece(piece, piece - 1);
+  while (true) {
+    final state = cubit.state as DailyChallengeReady;
+    if (state.isComplete) return;
+
+    var wrongCell = -1;
+    for (var i = 0; i < state.arrangement.length; i++) {
+      if (state.arrangement[i] != i + 1) {
+        wrongCell = i;
+        break;
+      }
+    }
+    final targetCell = state.arrangement[wrongCell] - 1;
+    await cubit.swapPieces(wrongCell, targetCell);
   }
 }
 
@@ -41,6 +54,18 @@ void main() {
     expect(DailyChallengeCubit.coinsFor(1), 110);
     expect(DailyChallengeCubit.coinsFor(10), 200);
     expect(DailyChallengeCubit.coinsFor(50), 200, reason: 'bonus caps at 10 days');
+  });
+
+  test('load shuffles a 4x4 (16-piece) board, unsolved', () async {
+    final cubit = DailyChallengeCubit(
+      DailyChallengeService(_FakeDailyChallengeRepository()),
+    );
+
+    await cubit.load();
+
+    final state = cubit.state as DailyChallengeReady;
+    expect(state.arrangement.toSet(), List.generate(16, (i) => i + 1).toSet());
+    expect(state.isComplete, isFalse);
   });
 
   test('solving marks justSolved, awards coins, and persists the streak', () async {
@@ -58,17 +83,23 @@ void main() {
     expect(repository.streak, 1, reason: 'should be persisted, not just in memory');
   });
 
-  test('a wrong drop does not place the piece', () async {
+  test('swapping a locked cell does not count a move', () async {
     final cubit = DailyChallengeCubit(
       DailyChallengeService(_FakeDailyChallengeRepository()),
     );
     await cubit.load();
 
-    final correct = await cubit.attemptPlacePiece(1, 5);
+    var state = cubit.state as DailyChallengeReady;
+    final pieceOneCell = state.arrangement.indexOf(1);
+    if (pieceOneCell != 0) {
+      await cubit.swapPieces(0, pieceOneCell);
+    }
+    state = cubit.state as DailyChallengeReady;
+    final movesSoFar = state.moves;
 
-    expect(correct, isFalse);
-    final state = cubit.state as DailyChallengeReady;
-    expect(state.placedPieceIds, isEmpty);
-    expect(state.wrongAttempts, 1);
+    await cubit.swapPieces(0, 1);
+
+    state = cubit.state as DailyChallengeReady;
+    expect(state.moves, movesSoFar);
   });
 }

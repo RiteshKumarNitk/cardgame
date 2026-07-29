@@ -17,14 +17,13 @@ import '../../domain/puzzle_image.dart';
 import '../bloc/puzzle_cubit.dart';
 import '../bloc/puzzle_state.dart';
 import '../widgets/puzzle_board.dart';
-import '../widgets/puzzle_piece_tray.dart';
 import '../widgets/puzzle_preview_thumbnail.dart';
 import '../widgets/puzzle_top_bar.dart';
 
-/// Puzzle (gameplay) screen: top bar, board, and piece tray for the
-/// requested level. Drag a piece from the tray onto its matching board
-/// slot; solving the puzzle persists progress via [PuzzleCubit] and
-/// advances to Victory.
+/// Puzzle (gameplay) screen: top bar, reference preview, and board for
+/// the requested level. Every piece starts already on the board,
+/// shuffled — drag one onto another to swap them into place; solving the
+/// puzzle persists progress via [PuzzleCubit] and advances to Victory.
 class PuzzlePage extends StatelessWidget {
   /// [levelService] defaults to the real Hive-backed stack; tests can
   /// supply a service built on an in-memory fake instead.
@@ -133,25 +132,18 @@ class _LoadedPuzzle extends StatelessWidget {
           onBack: () => context.goNamed(RouteNames.levels),
           onPause: () => _showPauseDialog(context),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         PuzzlePreviewThumbnail(imageUrl: imageUrl),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         Expanded(
           child: PuzzleBoard(
             difficulty: state.level.difficulty,
             imageUrl: imageUrl,
-            placedPieceIds: state.placedPieceIds,
-            onDrop: (pieceIndex, slotIndex) => context
+            arrangement: state.arrangement,
+            onSwap: (fromCell, toCell) => context
                 .read<PuzzleCubit>()
-                .attemptPlacePiece(pieceIndex, slotIndex),
+                .swapPieces(fromCell, toCell),
           ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        PuzzlePieceTray(
-          difficulty: state.level.difficulty,
-          shuffleSeed: state.level.id,
-          imageUrl: imageUrl,
-          placedPieceIds: state.placedPieceIds,
         ),
       ],
     );

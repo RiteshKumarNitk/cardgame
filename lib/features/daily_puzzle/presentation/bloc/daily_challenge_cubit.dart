@@ -2,12 +2,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../puzzle/domain/puzzle_board_size.dart';
 import '../../../puzzle/domain/puzzle_image.dart';
-import '../../../puzzle/domain/tile_matching.dart';
+import '../../../puzzle/domain/tile_swap_engine.dart';
 import '../../domain/services/daily_challenge_service.dart';
 import 'daily_challenge_state.dart';
 
 /// Drives the Daily Challenge: loads today's status, runs the same
-/// piece-matching mechanic as a regular puzzle (fixed at
+/// tile-swap mechanic as a regular puzzle (fixed at
 /// [DailyChallengeService.difficulty]), and on solving awards a
 /// streak-scaled coin bonus through [DailyChallengeService.completeToday].
 class DailyChallengeCubit extends Cubit<DailyChallengeState> {
@@ -20,10 +20,15 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     try {
       final now = DateTime.now();
       final challenge = await _service.loadToday(now);
+      final arrangement = TileSwapEngine.shuffledArrangement(
+        size: boardSizeFor(challenge.difficulty),
+        seed: challenge.dateKey.hashCode,
+      );
       emit(
         DailyChallengeReady(
           challenge: challenge,
           imageUrl: puzzleImageUrlForDaily(challenge.dateKey),
+          arrangement: arrangement,
         ),
       );
     } catch (e) {
@@ -31,40 +36,33 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     }
   }
 
-  Future<bool> attemptPlacePiece(int pieceIndex, int slotIndex) async {
+  Future<void> swapPieces(int fromCell, int toCell) async {
     final current = state;
-    if (current is! DailyChallengeReady || current.isComplete) return false;
+    if (current is! DailyChallengeReady || current.isComplete) return;
 
-    if (!isCorrectPlacement(pieceIndex, slotIndex)) {
-      emit(
-        current.copyWith(
-          moves: current.moves + 1,
-          wrongAttempts: current.wrongAttempts + 1,
-        ),
-      );
-      return false;
-    }
+    final arrangement = TileSwapEngine.swap(
+      current.arrangement,
+      fromCell,
+      toCell,
+    );
+    if (identical(arrangement, current.arrangement)) return;
 
-    final placed = {...current.placedPieceIds, pieceIndex};
-    final size = boardSizeFor(current.challenge.difficulty);
-    final solved = placed.length == size * size;
-
+    final solved = TileSwapEngine.isSolved(arrangement);
     if (!solved) {
-      emit(current.copyWith(placedPieceIds: placed, moves: current.moves + 1));
-      return true;
+      emit(current.copyWith(arrangement: arrangement, moves: current.moves + 1));
+      return;
     }
 
     final completed = await _service.completeToday(DateTime.now());
     emit(
       current.copyWith(
-        placedPieceIds: placed,
+        arrangement: arrangement,
         moves: current.moves + 1,
         justSolved: true,
         coinsEarned: coinsFor(completed.streak),
         challenge: completed,
       ),
     );
-    return true;
   }
 
   /// Base reward plus a streak bonus, capped at a 10-day streak.

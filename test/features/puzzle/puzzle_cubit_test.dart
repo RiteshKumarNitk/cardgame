@@ -1,7 +1,8 @@
-// Unit tests for PuzzleCubit's matching game logic: correct/wrong drops,
-// star rating, and — on solving — persisting through LevelService
-// (marking the level complete and unlocking the next one). Pure Dart,
-// backed by an in-memory fake LevelsRepository; no widgets, no gestures.
+// Unit tests for PuzzleCubit's tile-swap game: loading shuffles the
+// board, swapping obeys the locked-cell rules, and solving persists
+// through LevelService (marking the level complete and unlocking the
+// next one). Pure Dart, backed by an in-memory fake LevelsRepository; no
+// widgets, no gestures.
 //
 // Note: loading a level starts a repeating Timer (the elapsed-time
 // clock), so every test closes the cubit in tearDown to cancel it —
@@ -44,9 +45,24 @@ class _FakeLevelsRepository implements LevelsRepository {
   }
 }
 
-Future<void> _solve(PuzzleCubit cubit) async {
-  for (var piece = 1; piece <= 9; piece++) {
-    await cubit.attemptPlacePiece(piece, piece - 1);
+/// Solves the board by walking its permutation cycles — repeatedly finds
+/// the first wrong cell and swaps it with wherever its own correct piece
+/// currently sits. That always locks the target cell immediately, so
+/// this converges in exactly the minimal number of swaps.
+Future<void> _solveOptimally(PuzzleCubit cubit) async {
+  while (true) {
+    final state = cubit.state as PuzzleLoaded;
+    if (state.isSolved) return;
+
+    var wrongCell = -1;
+    for (var i = 0; i < state.arrangement.length; i++) {
+      if (state.arrangement[i] != i + 1) {
+        wrongCell = i;
+        break;
+      }
+    }
+    final targetCell = state.arrangement[wrongCell] - 1;
+    await cubit.swapPieces(wrongCell, targetCell);
   }
 }
 
@@ -63,13 +79,14 @@ void main() {
     await cubit.close();
   });
 
-  test('loadLevel emits the requested level with nothing placed', () async {
+  test('loadLevel shuffles the board (unsolved) for the requested level', () async {
     await cubit.loadLevel(1);
 
     final state = cubit.state as PuzzleLoaded;
     expect(state.level.id, 1);
-    expect(state.placedPieceIds, isEmpty);
+    expect(state.arrangement.toSet(), {1, 2, 3, 4, 5, 6, 7, 8, 9});
     expect(state.isSolved, isFalse);
+    expect(state.moves, 0);
   });
 
   test('emits an error for an unknown level id', () async {
@@ -78,40 +95,53 @@ void main() {
     expect(cubit.state, isA<PuzzleError>());
   });
 
-  test('a wrong drop increments moves/wrongAttempts without placing the piece', () async {
+  test('swapping two unlocked cells exchanges their pieces and counts a move', () async {
     await cubit.loadLevel(1);
+    final before = (cubit.state as PuzzleLoaded).arrangement;
 
-    final correct = await cubit.attemptPlacePiece(1, 5);
+    await cubit.swapPieces(0, 1);
 
-    expect(correct, isFalse);
     final state = cubit.state as PuzzleLoaded;
+    expect(state.arrangement[0], before[1]);
+    expect(state.arrangement[1], before[0]);
     expect(state.moves, 1);
-    expect(state.wrongAttempts, 1);
-    expect(state.placedPieceIds, isEmpty);
   });
 
-  test('a correct drop places the piece', () async {
+  test('swapping a locked (already-correct) cell is a no-op', () async {
     await cubit.loadLevel(1);
 
-    final correct = await cubit.attemptPlacePiece(1, 0);
+    // Force cell 0 to become locked by swapping piece 1 into it.
+    var state = cubit.state as PuzzleLoaded;
+    final pieceOneCell = state.arrangement.indexOf(1);
+    if (pieceOneCell != 0) {
+      await cubit.swapPieces(0, pieceOneCell);
+    }
+    state = cubit.state as PuzzleLoaded;
+    expect(state.arrangement[0], 1, reason: 'cell 0 should now be locked');
+    final movesSoFar = state.moves;
 
-    expect(correct, isTrue);
-    final state = cubit.state as PuzzleLoaded;
-    expect(state.placedPieceIds, {1});
-    expect(state.isSolved, isFalse);
+    await cubit.swapPieces(0, 1);
+
+    state = cubit.state as PuzzleLoaded;
+    expect(
+      state.moves,
+      movesSoFar,
+      reason: 'locked cells cannot be moved, so no new move is counted',
+    );
   });
 
   test(
-    'placing every piece solves it, awards 3 stars with no mistakes, '
-    'unlocks the next level, and persists',
+    'solving optimally awards 3 stars, unlocks the next level, and persists',
     () async {
       await cubit.loadLevel(1);
 
-      await _solve(cubit);
+      await _solveOptimally(cubit);
 
       final state = cubit.state as PuzzleLoaded;
       expect(state.isSolved, isTrue);
-      expect(state.coinsAwarded, 60, reason: '3 stars * 20 coins');
+      expect(state.moves, state.minimalSwaps);
+      expect(state.stars, 3);
+      expect(state.coinsAwarded, 60);
 
       final saved = repository.stored.firstWhere((l) => l.id == 1);
       expect(saved.isCompleted, isTrue);
@@ -121,19 +151,6 @@ void main() {
       expect(next.isUnlocked, isTrue);
     },
   );
-
-  test('mistakes lower the star rating, matching state.stars', () async {
-    await cubit.loadLevel(1);
-
-    await cubit.attemptPlacePiece(1, 5); // wrong
-    await cubit.attemptPlacePiece(1, 6); // wrong again
-    await _solve(cubit);
-
-    final state = cubit.state as PuzzleLoaded;
-    expect(state.stars, 2);
-    final saved = repository.stored.firstWhere((l) => l.id == 1);
-    expect(saved.stars, 2);
-  });
 
   test('nextLevelId points at the following level, then null past the last one', () async {
     await cubit.loadLevel(1);

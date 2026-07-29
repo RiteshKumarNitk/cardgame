@@ -20,27 +20,32 @@ final class PuzzleLoading extends PuzzleState {
 final class PuzzleLoaded extends PuzzleState {
   const PuzzleLoaded({
     required this.level,
-    this.placedPieceIds = const {},
+    required this.arrangement,
+    required this.minimalSwaps,
     this.moves = 0,
-    this.wrongAttempts = 0,
     this.elapsedSeconds = 0,
     this.isSolved = false,
   });
 
   final Level level;
 
-  /// 1-based piece indices that have been dropped on their correct slot.
-  final Set<int> placedPieceIds;
+  /// `arrangement[cell]` is the 1-based piece index currently sitting in
+  /// that (0-based) cell — see [TileSwapEngine].
+  final List<int> arrangement;
+
+  /// The fewest swaps this shuffle could be solved in — the baseline for
+  /// [stars].
+  final int minimalSwaps;
   final int moves;
-  final int wrongAttempts;
   final int elapsedSeconds;
   final bool isSolved;
 
-  /// 1-3, derived from [wrongAttempts] — the single source of truth for
-  /// star rating, read by both the persistence call and the UI.
+  /// 1-3, derived from how close [moves] is to [minimalSwaps] — the
+  /// single source of truth for star rating, read by both the
+  /// persistence call and the UI.
   int get stars {
-    if (wrongAttempts == 0) return 3;
-    if (wrongAttempts <= 2) return 2;
+    if (moves <= minimalSwaps + 1) return 3;
+    if (moves <= minimalSwaps * 2 + 2) return 2;
     return 1;
   }
 
@@ -49,17 +54,16 @@ final class PuzzleLoaded extends PuzzleState {
   int get coinsAwarded => stars * 20;
 
   PuzzleLoaded copyWith({
-    Set<int>? placedPieceIds,
+    List<int>? arrangement,
     int? moves,
-    int? wrongAttempts,
     int? elapsedSeconds,
     bool? isSolved,
   }) {
     return PuzzleLoaded(
       level: level,
-      placedPieceIds: placedPieceIds ?? this.placedPieceIds,
+      arrangement: arrangement ?? this.arrangement,
+      minimalSwaps: minimalSwaps,
       moves: moves ?? this.moves,
-      wrongAttempts: wrongAttempts ?? this.wrongAttempts,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       isSolved: isSolved ?? this.isSolved,
     );
@@ -68,9 +72,9 @@ final class PuzzleLoaded extends PuzzleState {
   @override
   List<Object?> get props => [
     level,
-    placedPieceIds,
+    arrangement,
+    minimalSwaps,
     moves,
-    wrongAttempts,
     elapsedSeconds,
     isSolved,
   ];

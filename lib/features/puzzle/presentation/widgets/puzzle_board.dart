@@ -1,33 +1,33 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
+import '../../../../core/design_system/app_shadows.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../levels/domain/entities/level.dart';
 import '../../domain/puzzle_board_size.dart';
 import 'puzzle_image_tile.dart';
 
-/// The puzzle board: an N×N grid of drop targets sized by the level's
-/// difficulty. Slot `i` (0-based) accepts piece `i + 1` from
-/// [PuzzlePieceTray]; a correct drop reveals that cell of [imageUrl] in
-/// place, a wrong one shakes the slot and sends the piece back to the
-/// tray. Unfilled slots show a faint "ghost" of their target cell as a
-/// hint.
+/// The puzzle board: an N×N grid where every cell already holds a piece
+/// (shuffled). Drag one piece onto another to swap them — a cell locks
+/// with a satisfying pop + glow once its piece is correct, and can no
+/// longer be moved.
 class PuzzleBoard extends StatelessWidget {
   const PuzzleBoard({
     super.key,
     required this.difficulty,
     required this.imageUrl,
-    required this.placedPieceIds,
-    required this.onDrop,
+    required this.arrangement,
+    required this.onSwap,
   });
 
   final LevelDifficulty difficulty;
   final String imageUrl;
-  final Set<int> placedPieceIds;
 
-  /// Returns whether the drop was correct.
-  final Future<bool> Function(int pieceIndex, int slotIndex) onDrop;
+  /// `arrangement[cell]` is the 1-based piece index in that cell.
+  final List<int> arrangement;
+  final void Function(int fromCell, int toCell) onSwap;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +39,7 @@ class PuzzleBoard extends StatelessWidget {
         color: AppColors.card,
         borderRadius: AppRadius.lgRadius,
         border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.card,
       ),
       child: AspectRatio(
         aspectRatio: 1,
@@ -50,16 +51,15 @@ class PuzzleBoard extends StatelessWidget {
             mainAxisSpacing: AppSpacing.xs,
           ),
           itemCount: size * size,
-          itemBuilder: (context, index) {
-            final pieceIndex = index + 1;
-            return _BoardSlot(
-              slotIndex: index,
-              row: index ~/ size,
-              col: index % size,
+          itemBuilder: (context, cellIndex) {
+            final pieceIndex = arrangement[cellIndex];
+            return _BoardCell(
+              cellIndex: cellIndex,
+              pieceIndex: pieceIndex,
               gridSize: size,
               imageUrl: imageUrl,
-              filled: placedPieceIds.contains(pieceIndex),
-              onDrop: onDrop,
+              correct: pieceIndex == cellIndex + 1,
+              onSwap: onSwap,
             );
           },
         ),
@@ -68,118 +68,135 @@ class PuzzleBoard extends StatelessWidget {
   }
 }
 
-class _BoardSlot extends StatefulWidget {
-  const _BoardSlot({
-    required this.slotIndex,
-    required this.row,
-    required this.col,
+class _BoardCell extends StatefulWidget {
+  const _BoardCell({
+    required this.cellIndex,
+    required this.pieceIndex,
     required this.gridSize,
     required this.imageUrl,
-    required this.filled,
-    required this.onDrop,
+    required this.correct,
+    required this.onSwap,
   });
 
-  final int slotIndex;
-  final int row;
-  final int col;
+  final int cellIndex;
+  final int pieceIndex;
   final int gridSize;
   final String imageUrl;
-  final bool filled;
-  final Future<bool> Function(int pieceIndex, int slotIndex) onDrop;
+  final bool correct;
+  final void Function(int fromCell, int toCell) onSwap;
 
   @override
-  State<_BoardSlot> createState() => _BoardSlotState();
+  State<_BoardCell> createState() => _BoardCellState();
 }
 
-class _BoardSlotState extends State<_BoardSlot>
+class _BoardCellState extends State<_BoardCell>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _shakeController;
-  late final Animation<double> _shake;
+  late final AnimationController _popController;
+  late final Animation<double> _pop;
 
   @override
   void initState() {
     super.initState();
-    _shakeController = AnimationController(
+    _popController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: AppAnimations.medium,
     );
-    _shake =
-        TweenSequence<double>([
-          TweenSequenceItem(tween: Tween(begin: 0.0, end: -6.0), weight: 1),
-          TweenSequenceItem(tween: Tween(begin: -6.0, end: 6.0), weight: 2),
-          TweenSequenceItem(tween: Tween(begin: 6.0, end: 0.0), weight: 1),
-        ]).animate(
-          CurvedAnimation(parent: _shakeController, curve: Curves.easeInOut),
-        );
+    _pop = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.16), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 1.16, end: 1.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _popController, curve: Curves.easeOut));
+  }
+
+  @override
+  void didUpdateWidget(covariant _BoardCell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.correct && widget.correct) {
+      _popController.forward(from: 0);
+    }
   }
 
   @override
   void dispose() {
-    _shakeController.dispose();
+    _popController.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleAccept(int pieceIndex) async {
-    final correct = await widget.onDrop(pieceIndex, widget.slotIndex);
-    if (!correct && mounted) _shakeController.forward(from: 0);
   }
 
   @override
   Widget build(BuildContext context) {
-    final tile = PuzzleImageTile(
-      imageUrl: widget.imageUrl,
-      gridSize: widget.gridSize,
-      row: widget.row,
-      col: widget.col,
-      opacity: widget.filled ? 1 : 0.18,
+    final row = (widget.pieceIndex - 1) ~/ widget.gridSize;
+    final col = (widget.pieceIndex - 1) % widget.gridSize;
+
+    final content = ClipRRect(
+      borderRadius: AppRadius.smRadius,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          PuzzleImageTile(
+            imageUrl: widget.imageUrl,
+            gridSize: widget.gridSize,
+            row: row,
+            col: col,
+          ),
+          if (widget.correct)
+            const Positioned(
+              top: 2,
+              right: 2,
+              child: Icon(
+                Icons.check_circle_rounded,
+                color: Colors.white,
+                size: 16,
+                shadows: [Shadow(blurRadius: 3, color: Colors.black45)],
+              ),
+            ),
+        ],
+      ),
     );
 
-    return AnimatedBuilder(
-      animation: _shake,
-      builder: (context, child) =>
-          Transform.translate(offset: Offset(_shake.value, 0), child: child),
-      child: DragTarget<int>(
-        onWillAcceptWithDetails: (_) => !widget.filled,
-        onAcceptWithDetails: (details) => _handleAccept(details.data),
-        builder: (context, candidateData, rejectedData) {
-          final hovering = candidateData.isNotEmpty;
-          return Container(
-            decoration: BoxDecoration(
-              borderRadius: AppRadius.smRadius,
-              border: Border.all(
-                color: widget.filled
-                    ? AppColors.success
-                    : hovering
-                    ? AppColors.primary
-                    : AppColors.border,
-                width: hovering || widget.filled ? 2 : 1,
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: AppRadius.smRadius,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  tile,
-                  if (hovering && !widget.filled)
-                    ColoredBox(color: AppColors.primary.withValues(alpha: 0.18)),
-                  if (widget.filled)
-                    const Positioned(
-                      top: 2,
-                      right: 2,
-                      child: Icon(
-                        Icons.check_circle_rounded,
-                        color: Colors.white,
-                        size: 16,
-                        shadows: [Shadow(blurRadius: 3, color: Colors.black45)],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          );
-        },
+    final decorated = Container(
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.smRadius,
+        border: Border.all(
+          color: widget.correct ? AppColors.success : AppColors.border,
+          width: widget.correct ? 2 : 1,
+        ),
+        boxShadow: widget.correct
+            ? AppShadows.glow(AppColors.success, opacity: 0.3)
+            : null,
       ),
+      child: content,
+    );
+
+    final popped = ScaleTransition(scale: _pop, child: decorated);
+
+    if (widget.correct) return popped;
+
+    return DragTarget<int>(
+      onWillAcceptWithDetails: (details) => details.data != widget.cellIndex,
+      onAcceptWithDetails: (details) =>
+          widget.onSwap(details.data, widget.cellIndex),
+      builder: (context, candidateData, rejectedData) {
+        final hovering = candidateData.isNotEmpty;
+        final hoverRing = hovering
+            ? Container(
+                decoration: BoxDecoration(
+                  borderRadius: AppRadius.smRadius,
+                  border: Border.all(color: AppColors.primary, width: 2),
+                ),
+                child: popped,
+              )
+            : popped;
+
+        return Draggable<int>(
+          data: widget.cellIndex,
+          feedback: SizedBox(
+            width: 72,
+            height: 72,
+            child: Material(color: Colors.transparent, child: decorated),
+          ),
+          childWhenDragging: Opacity(opacity: 0.35, child: decorated),
+          child: hoverRing,
+        );
+      },
     );
   }
 }

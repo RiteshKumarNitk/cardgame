@@ -14,6 +14,7 @@ import 'package:puzzle_cards/core/theme/app_theme.dart';
 import 'package:puzzle_cards/features/daily_puzzle/domain/repositories/daily_challenge_repository.dart';
 import 'package:puzzle_cards/features/daily_puzzle/domain/services/daily_challenge_service.dart';
 import 'package:puzzle_cards/features/daily_puzzle/presentation/pages/daily_puzzle_page.dart';
+import 'package:puzzle_cards/features/puzzle/presentation/widgets/puzzle_image_tile.dart';
 import 'package:puzzle_cards/game/wallet_cubit.dart';
 
 import '../../helpers/fake_wallet_service.dart';
@@ -58,12 +59,12 @@ void main() {
     await tester.pump();
 
     expect(find.text('Daily Challenge'), findsOneWidget);
-    // Medium difficulty = 4x4 = 16 pieces. The board is a fixed,
-    // non-scrolling grid, so all 16 slots build. The tray is a scrollable
-    // ListView, which — unlike the board — only lazily builds pieces
-    // that fit in the test viewport, so assert "some" rather than all 16.
-    expect(find.byType(DragTarget<int>), findsNWidgets(16));
-    expect(find.byType(Draggable<int>), findsWidgets);
+    // Medium difficulty = 4x4 = 16 pieces; every cell always renders a
+    // tile (locked or not — how many start locked depends on the
+    // shuffle), and the board is a fixed non-scrolling grid so all 16
+    // build.
+    expect(find.byType(PuzzleImageTile), findsNWidgets(16));
+    expect(find.byType(DragTarget<int>), findsWidgets);
   });
 
   testWidgets(

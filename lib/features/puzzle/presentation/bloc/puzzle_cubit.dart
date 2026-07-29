@@ -5,13 +5,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../levels/domain/entities/level.dart';
 import '../../../levels/domain/services/level_service.dart';
 import '../../domain/puzzle_board_size.dart';
-import '../../domain/tile_matching.dart';
+import '../../domain/tile_swap_engine.dart';
 import 'puzzle_state.dart';
 
 /// Loads the [Level] a Puzzle screen was opened for and drives the
-/// drag-and-drop matching game on top of it: a piece is "correct" when
-/// its 1-based index matches the 0-based slot index it's dropped on
-/// (piece 1 -> slot 0, piece 2 -> slot 1, ...).
+/// tile-swap mechanic on top of it: every piece starts already placed on
+/// the board, shuffled — drag one piece onto another to swap them. A cell
+/// locks once its piece is correct; the puzzle is solved once every cell
+/// is locked.
 ///
 /// On completion, persists the result through [LevelService.completeLevel]
 /// — the same unlock-next-level/best-score logic built in Phase 5, now
@@ -32,38 +33,40 @@ class PuzzleCubit extends Cubit<PuzzleState> {
         emit(PuzzleError('Level $levelId not found'));
         return;
       }
-      emit(PuzzleLoaded(level: _levels[index]));
+      final level = _levels[index];
+      final arrangement = TileSwapEngine.shuffledArrangement(
+        size: boardSizeFor(level.difficulty),
+        seed: level.id,
+      );
+      emit(
+        PuzzleLoaded(
+          level: level,
+          arrangement: arrangement,
+          minimalSwaps: TileSwapEngine.minimalSwaps(arrangement),
+        ),
+      );
       _startTimer();
     } catch (e) {
       emit(PuzzleError(e.toString()));
     }
   }
 
-  /// Attempts to drop [pieceIndex] onto [slotIndex]. Returns whether the
-  /// placement was correct — callers use this to trigger "wrong drop"
-  /// feedback (e.g. a shake animation) without needing to inspect state.
-  Future<bool> attemptPlacePiece(int pieceIndex, int slotIndex) async {
+  /// Swaps the pieces in [fromCell] and [toCell]. A no-op if either cell
+  /// is already locked (solved) or the puzzle is already complete.
+  Future<void> swapPieces(int fromCell, int toCell) async {
     final current = state;
-    if (current is! PuzzleLoaded || current.isSolved) return false;
+    if (current is! PuzzleLoaded || current.isSolved) return;
 
-    if (!isCorrectPlacement(pieceIndex, slotIndex)) {
-      emit(
-        current.copyWith(
-          moves: current.moves + 1,
-          wrongAttempts: current.wrongAttempts + 1,
-        ),
-      );
-      return false;
-    }
+    final arrangement = TileSwapEngine.swap(
+      current.arrangement,
+      fromCell,
+      toCell,
+    );
+    if (identical(arrangement, current.arrangement)) return;
 
-    final placed = {...current.placedPieceIds, pieceIndex};
-    final totalPieces =
-        boardSizeFor(current.level.difficulty) *
-        boardSizeFor(current.level.difficulty);
-    final solved = placed.length == totalPieces;
-
+    final solved = TileSwapEngine.isSolved(arrangement);
     final updated = current.copyWith(
-      placedPieceIds: placed,
+      arrangement: arrangement,
       moves: current.moves + 1,
       isSolved: solved,
     );
@@ -79,8 +82,6 @@ class PuzzleCubit extends Cubit<PuzzleState> {
         moves: updated.moves,
       );
     }
-
-    return true;
   }
 
   /// The level right after the currently loaded one, or `null` if it was
