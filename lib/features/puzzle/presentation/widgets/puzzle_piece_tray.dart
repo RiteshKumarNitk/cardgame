@@ -13,23 +13,31 @@ import 'puzzle_image_tile.dart';
 /// piece shows the actual crop of [imageUrl] it belongs at — drag it onto
 /// the matching [PuzzleBoard] slot to reveal that part of the picture.
 /// Placed pieces disappear from here.
+///
+/// Takes [difficulty]/[shuffleSeed] directly rather than a [Level] so it's
+/// reusable outside the regular level progression (e.g. Daily Challenge).
 class PuzzlePieceTray extends StatelessWidget {
   const PuzzlePieceTray({
     super.key,
-    required this.level,
+    required this.difficulty,
+    required this.shuffleSeed,
     required this.imageUrl,
     required this.placedPieceIds,
   });
 
-  final Level level;
+  final LevelDifficulty difficulty;
+
+  /// Seeds the shuffle order so it's stable across rebuilds but differs
+  /// per puzzle (typically the level id, or a hash of the daily date key).
+  final int shuffleSeed;
   final String imageUrl;
   final Set<int> placedPieceIds;
 
   @override
   Widget build(BuildContext context) {
-    final size = boardSizeFor(level.difficulty);
+    final size = boardSizeFor(difficulty);
     final order = List.generate(size * size, (i) => i + 1)
-      ..shuffle(Random(level.id));
+      ..shuffle(Random(shuffleSeed));
     final remaining = order.where((i) => !placedPieceIds.contains(i)).toList();
 
     return Column(

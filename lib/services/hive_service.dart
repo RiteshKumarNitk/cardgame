@@ -11,5 +11,7 @@ abstract final class HiveService {
     Hive.registerAdapter(LevelModelAdapter());
     await Hive.openBox<LevelModel>(AppConstants.levelsBoxName);
     await Hive.openBox<int>(AppConstants.walletBoxName);
+    await Hive.openBox(AppConstants.dailyChallengeBoxName);
+    await Hive.openBox(AppConstants.monetizationBoxName);
   }
 }

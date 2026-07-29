@@ -148,7 +148,8 @@ class _LoadedPuzzle extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         PuzzlePieceTray(
-          level: state.level,
+          difficulty: state.level.difficulty,
+          shuffleSeed: state.level.id,
           imageUrl: imageUrl,
           placedPieceIds: state.placedPieceIds,
         ),

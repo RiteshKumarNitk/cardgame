@@ -19,8 +19,10 @@ import 'package:puzzle_cards/features/levels/data/models/level_model.dart';
 import 'package:puzzle_cards/features/levels/data/repositories/levels_repository_impl.dart';
 import 'package:puzzle_cards/features/levels/domain/services/level_service.dart';
 import 'package:puzzle_cards/features/levels/presentation/pages/levels_page.dart';
+import 'package:puzzle_cards/game/ads_cubit.dart';
 import 'package:puzzle_cards/game/wallet_cubit.dart';
 
+import '../../helpers/fake_ads_service.dart';
 import '../../helpers/fake_wallet_service.dart';
 
 class _FakeLevelsLocalDataSource implements LevelsLocalDataSource {
@@ -49,8 +51,11 @@ void main() {
       LevelsRepositoryImpl(_FakeLevelsLocalDataSource()),
     );
     await tester.pumpWidget(
-      BlocProvider<WalletCubit>(
-        create: (_) => WalletCubit(FakeWalletService()),
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<WalletCubit>(create: (_) => WalletCubit(FakeWalletService())),
+          BlocProvider<AdsCubit>(create: (_) => AdsCubit(FakeAdsService())),
+        ],
         child: MaterialApp(
           theme: AppTheme.game,
           home: LevelsPage(levelService: levelService),

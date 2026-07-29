@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
+import '../../../../shared/widgets/ad_banner_placeholder.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../data/datasources/levels_local_datasource.dart';
 import '../../data/repositories/levels_repository_impl.dart';
@@ -97,6 +98,10 @@ class _LevelsView extends StatelessWidget {
                           levels: levels,
                           currentLevelId: progress.currentLevelId,
                         ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.md),
+                        child: AdBannerPlaceholder(),
                       ),
                     ],
                   ),

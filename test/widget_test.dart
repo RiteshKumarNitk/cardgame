@@ -16,8 +16,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:puzzle_cards/core/app/puzzle_cards_app.dart';
+import 'package:puzzle_cards/game/ads_cubit.dart';
 import 'package:puzzle_cards/game/wallet_cubit.dart';
 
+import 'helpers/fake_ads_service.dart';
 import 'helpers/fake_wallet_service.dart';
 
 void main() {
@@ -31,7 +33,10 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      PuzzleCardsApp(walletCubit: WalletCubit(FakeWalletService())),
+      PuzzleCardsApp(
+        walletCubit: WalletCubit(FakeWalletService()),
+        adsCubit: AdsCubit(FakeAdsService()),
+      ),
     );
     await tester.pump(const Duration(milliseconds: 100));
 

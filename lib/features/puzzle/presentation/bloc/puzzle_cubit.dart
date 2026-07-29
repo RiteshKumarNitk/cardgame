@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../levels/domain/entities/level.dart';
 import '../../../levels/domain/services/level_service.dart';
 import '../../domain/puzzle_board_size.dart';
+import '../../domain/tile_matching.dart';
 import 'puzzle_state.dart';
 
 /// Loads the [Level] a Puzzle screen was opened for and drives the
@@ -45,8 +46,7 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     final current = state;
     if (current is! PuzzleLoaded || current.isSolved) return false;
 
-    final isCorrect = pieceIndex - 1 == slotIndex;
-    if (!isCorrect) {
+    if (!isCorrectPlacement(pieceIndex, slotIndex)) {
       emit(
         current.copyWith(
           moves: current.moves + 1,

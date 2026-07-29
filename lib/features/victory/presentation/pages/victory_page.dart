@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../shared/utils/duration_format.dart';
 import '../../../../shared/widgets/bounce_in.dart';
+import '../../../../shared/widgets/coin_reward_chip.dart';
 import '../../../../shared/widgets/confetti_burst.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
@@ -107,7 +107,7 @@ class _VictoryContent extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         BounceIn(
           delay: const Duration(milliseconds: 500),
-          child: _RewardChip(coins: result.coinsEarned),
+          child: CoinRewardChip(coins: result.coinsEarned),
         ),
         const SizedBox(height: AppSpacing.xl),
         if (result.nextLevelId case final nextLevelId?) ...[
@@ -228,55 +228,6 @@ class _StarsRow extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _RewardChip extends StatelessWidget {
-  const _RewardChip({required this.coins});
-
-  final int coins;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            AppColors.premiumGradientStart,
-            AppColors.premiumGradientEnd,
-          ],
-        ),
-        borderRadius: AppRadius.pillRadius,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accent.withValues(alpha: 0.35),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.monetization_on_rounded,
-            color: Colors.white,
-            size: 20,
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            '+$coins',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: Colors.white),
-          ),
-        ],
-      ),
     );
   }
 }
