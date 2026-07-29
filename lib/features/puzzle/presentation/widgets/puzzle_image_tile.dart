@@ -2,26 +2,28 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 
-/// Renders the (row, col) cell of a [gridSize] x [gridSize] crop of the
+/// Renders the (row, col) cell of a [gridCols] x [gridRows] crop of the
 /// image at [imageUrl] — without needing any image-decoding/cropping
 /// package. The trick: render the *whole* image at
-/// `tileExtent * gridSize` square (via [LayoutBuilder] for the tile's own
-/// on-screen size) inside a fixed [tileExtent] window, shifted so only
-/// the target cell is visible. Every tile for the same [imageUrl] shares
-/// Flutter's image cache, so this costs one network fetch/decode total,
-/// not one per tile.
+/// `tileExtent * gridCols` by `tileExtent * gridRows` (via [LayoutBuilder]
+/// for the tile's own on-screen size, which is square) inside a fixed
+/// [tileExtent] window, shifted so only the target cell is visible. Every
+/// tile for the same [imageUrl] shares Flutter's image cache, so this
+/// costs one network fetch/decode total, not one per tile.
 class PuzzleImageTile extends StatelessWidget {
   const PuzzleImageTile({
     super.key,
     required this.imageUrl,
-    required this.gridSize,
+    required this.gridCols,
+    required this.gridRows,
     required this.row,
     required this.col,
     this.opacity = 1,
   });
 
   final String imageUrl;
-  final int gridSize;
+  final int gridCols;
+  final int gridRows;
   final int row;
   final int col;
   final double opacity;
@@ -31,12 +33,13 @@ class PuzzleImageTile extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final tileExtent = constraints.maxWidth;
-        final fullExtent = tileExtent * gridSize;
+        final fullWidth = tileExtent * gridCols;
+        final fullHeight = tileExtent * gridRows;
 
         return ClipRect(
           child: OverflowBox(
-            maxWidth: fullExtent,
-            maxHeight: fullExtent,
+            maxWidth: fullWidth,
+            maxHeight: fullHeight,
             alignment: Alignment.topLeft,
             child: Transform.translate(
               offset: Offset(-col * tileExtent, -row * tileExtent),
@@ -44,8 +47,8 @@ class PuzzleImageTile extends StatelessWidget {
                 opacity: opacity,
                 child: Image.network(
                   imageUrl,
-                  width: fullExtent,
-                  height: fullExtent,
+                  width: fullWidth,
+                  height: fullHeight,
                   fit: BoxFit.cover,
                   loadingBuilder: (context, child, progress) {
                     if (progress == null) return child;

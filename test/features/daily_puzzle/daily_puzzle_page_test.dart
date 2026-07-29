@@ -59,11 +59,11 @@ void main() {
     await tester.pump();
 
     expect(find.text('Daily Challenge'), findsOneWidget);
-    // Medium difficulty = 4x4 = 16 pieces; every cell always renders a
-    // tile (locked or not — how many start locked depends on the
-    // shuffle), and the board is a fixed non-scrolling grid so all 16
+    // Medium difficulty = 4 cols x 5 rows = 20 pieces; every cell always
+    // renders a tile (locked or not — how many start locked depends on
+    // the shuffle), and the board is a fixed non-scrolling grid so all 20
     // build.
-    expect(find.byType(PuzzleImageTile), findsNWidgets(16));
+    expect(find.byType(PuzzleImageTile), findsNWidgets(20));
     expect(find.byType(DragTarget<int>), findsWidgets);
   });
 

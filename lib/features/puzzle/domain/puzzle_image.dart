@@ -2,8 +2,11 @@
 /// picsum.photos' seeded endpoint — the same seed always gets the same
 /// photo (so replaying isn't jarring), different seeds get different
 /// photos. No image assets are bundled with the app.
+///
+/// Fetched portrait (3:4) to match the board's portrait grid — see
+/// [BoardDimensions].
 String _puzzleImageUrlForSeed(String seed) =>
-    'https://picsum.photos/seed/puzzle-cards-$seed/600/600';
+    'https://picsum.photos/seed/puzzle-cards-$seed/600/800';
 
 /// The puzzle image for a regular level.
 String puzzleImageUrlFor(int levelId) => _puzzleImageUrlForSeed('$levelId');

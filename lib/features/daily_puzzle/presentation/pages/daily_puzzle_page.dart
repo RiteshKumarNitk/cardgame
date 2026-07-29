@@ -50,7 +50,7 @@ class _DailyPuzzleView extends StatelessWidget {
         showFloatingPieces: false,
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: BlocConsumer<DailyChallengeCubit, DailyChallengeState>(
               listenWhen: (previous, current) =>
                   previous is DailyChallengeReady &&
@@ -81,7 +81,7 @@ class _DailyPuzzleView extends StatelessWidget {
                         streak: state.challenge.streak,
                         onBack: () => context.goNamed(RouteNames.home),
                       ),
-                      const SizedBox(height: AppSpacing.lg),
+                      const SizedBox(height: AppSpacing.sm),
                       Expanded(
                         child: state.isComplete
                             ? DailyCompletedCard(

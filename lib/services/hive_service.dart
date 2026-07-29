@@ -13,5 +13,6 @@ abstract final class HiveService {
     await Hive.openBox<int>(AppConstants.walletBoxName);
     await Hive.openBox(AppConstants.dailyChallengeBoxName);
     await Hive.openBox(AppConstants.monetizationBoxName);
+    await Hive.openBox(AppConstants.settingsBoxName);
   }
 }

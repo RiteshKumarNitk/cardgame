@@ -8,14 +8,16 @@ import 'dart:math';
 /// 1-based piece index currently sitting in that (0-based) `cell`. A cell
 /// is "solved"/locked when `arrangement[cell] == cell + 1`.
 abstract final class TileSwapEngine {
-  /// A shuffled arrangement of `size * size` pieces — deterministic for a
+  /// A shuffled arrangement of [pieceCount] pieces — deterministic for a
   /// given [seed], and guaranteed not to already be solved.
-  static List<int> shuffledArrangement({required int size, required int seed}) {
-    final total = size * size;
+  static List<int> shuffledArrangement({
+    required int pieceCount,
+    required int seed,
+  }) {
     var attempt = seed;
-    var arrangement = List.generate(total, (i) => i + 1);
+    var arrangement = List.generate(pieceCount, (i) => i + 1);
     do {
-      arrangement = List.generate(total, (i) => i + 1)
+      arrangement = List.generate(pieceCount, (i) => i + 1)
         ..shuffle(Random(attempt));
       attempt++;
     } while (isSolved(arrangement));

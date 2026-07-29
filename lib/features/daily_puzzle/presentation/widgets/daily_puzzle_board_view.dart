@@ -19,7 +19,7 @@ class DailyPuzzleBoardView extends StatelessWidget {
     return Column(
       children: [
         PuzzlePreviewThumbnail(imageUrl: state.imageUrl),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: PuzzleBoard(
             difficulty: state.challenge.difficulty,

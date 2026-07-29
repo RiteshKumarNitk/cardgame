@@ -14,4 +14,7 @@ abstract final class AppConstants {
   static const String dailyChallengeStreakKey = 'streak';
   static const String monetizationBoxName = 'monetization_box';
   static const String adsRemovedKey = 'adsRemoved';
+  static const String soundEnabledKey = 'soundEnabled';
+  static const String musicEnabledKey = 'musicEnabled';
+  static const String hapticsEnabledKey = 'hapticsEnabled';
 }

@@ -8,7 +8,8 @@ import '../../../levels/domain/entities/level.dart';
 import '../../domain/puzzle_board_size.dart';
 import 'puzzle_image_tile.dart';
 
-/// The puzzle board: an N×N grid where every cell already holds a piece
+/// The puzzle board: a portrait grid (more rows than columns, matching a
+/// portrait reference photo) where every cell already holds a piece
 /// (shuffled). Pieces sit flush against each other with square corners,
 /// so a solved board reads as one seamless photo rather than a grid of
 /// separated chips. Drag one piece onto another to swap them — a cell
@@ -31,7 +32,7 @@ class PuzzleBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = boardSizeFor(difficulty);
+    final dimensions = boardDimensionsFor(difficulty);
 
     return Container(
       decoration: BoxDecoration(
@@ -42,21 +43,22 @@ class PuzzleBoard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: AspectRatio(
-        aspectRatio: 1,
+        aspectRatio: dimensions.aspectRatio,
         child: GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: size,
+            crossAxisCount: dimensions.cols,
             crossAxisSpacing: 0,
             mainAxisSpacing: 0,
           ),
-          itemCount: size * size,
+          itemCount: dimensions.pieceCount,
           itemBuilder: (context, cellIndex) {
             final pieceIndex = arrangement[cellIndex];
             return _BoardCell(
               cellIndex: cellIndex,
               pieceIndex: pieceIndex,
-              gridSize: size,
+              gridCols: dimensions.cols,
+              gridRows: dimensions.rows,
               imageUrl: imageUrl,
               correct: pieceIndex == cellIndex + 1,
               onSwap: onSwap,
@@ -72,7 +74,8 @@ class _BoardCell extends StatefulWidget {
   const _BoardCell({
     required this.cellIndex,
     required this.pieceIndex,
-    required this.gridSize,
+    required this.gridCols,
+    required this.gridRows,
     required this.imageUrl,
     required this.correct,
     required this.onSwap,
@@ -80,7 +83,8 @@ class _BoardCell extends StatefulWidget {
 
   final int cellIndex;
   final int pieceIndex;
-  final int gridSize;
+  final int gridCols;
+  final int gridRows;
   final String imageUrl;
   final bool correct;
   final void Function(int fromCell, int toCell) onSwap;
@@ -123,35 +127,22 @@ class _BoardCellState extends State<_BoardCell>
 
   @override
   Widget build(BuildContext context) {
-    final row = (widget.pieceIndex - 1) ~/ widget.gridSize;
-    final col = (widget.pieceIndex - 1) % widget.gridSize;
+    final row = (widget.pieceIndex - 1) ~/ widget.gridCols;
+    final col = (widget.pieceIndex - 1) % widget.gridCols;
 
-    final content = Stack(
-      fit: StackFit.expand,
-      children: [
-        PuzzleImageTile(
-          imageUrl: widget.imageUrl,
-          gridSize: widget.gridSize,
-          row: row,
-          col: col,
-        ),
-        if (widget.correct)
-          const Positioned(
-            top: 2,
-            right: 2,
-            child: Icon(
-              Icons.check_circle_rounded,
-              color: Colors.white,
-              size: 16,
-              shadows: [Shadow(blurRadius: 3, color: Colors.black45)],
-            ),
-          ),
-      ],
+    final content = PuzzleImageTile(
+      imageUrl: widget.imageUrl,
+      gridCols: widget.gridCols,
+      gridRows: widget.gridRows,
+      row: row,
+      col: col,
     );
 
     final decorated = Container(
       decoration: BoxDecoration(
         border: Border.all(
+          // The only "correct" indicator is this border — no checkmark
+          // badge on top of the piece.
           color: widget.correct ? AppColors.success : AppColors.border,
           width: widget.correct ? 2 : 0.5,
         ),

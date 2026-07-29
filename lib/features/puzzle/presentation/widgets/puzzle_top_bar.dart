@@ -8,8 +8,9 @@ import '../../../../shared/widgets/difficulty_badge.dart';
 import '../../../../shared/widgets/stat_chip.dart';
 import '../../../levels/domain/entities/level.dart';
 
-/// Puzzle screen's top bar: back button, level title + difficulty badge,
-/// pause button, and a row of timer/moves/hint stats.
+/// Puzzle screen's top bar: a single compact row — back, difficulty,
+/// timer, moves, pause — so the board below gets as much of the screen
+/// as possible.
 class PuzzleTopBar extends StatelessWidget {
   const PuzzleTopBar({
     super.key,
@@ -28,70 +29,28 @@ class PuzzleTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            CircleIconButton(icon: Icons.arrow_back_rounded, onTap: onBack),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    level.title,
-                    style: textTheme.titleMedium?.copyWith(
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  DifficultyBadge(difficulty: level.difficulty),
-                ],
-              ),
-            ),
-            CircleIconButton(
-              icon: Icons.pause_rounded,
-              iconColor: AppColors.textSecondary,
-              onTap: onPause,
-            ),
-          ],
+        CircleIconButton(icon: Icons.arrow_back_rounded, onTap: onBack),
+        const SizedBox(width: AppSpacing.sm),
+        DifficultyBadge(difficulty: level.difficulty),
+        const Spacer(),
+        StatChip(
+          icon: Icons.timer_rounded,
+          value: formatMinutesSeconds(elapsedSeconds),
+          iconColor: AppColors.secondary,
         ),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Expanded(
-              child: Center(
-                child: StatChip(
-                  icon: Icons.timer_rounded,
-                  value: formatMinutesSeconds(elapsedSeconds),
-                  iconColor: AppColors.secondary,
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Center(
-                child: StatChip(
-                  icon: Icons.touch_app_rounded,
-                  value: '$moves',
-                  iconColor: AppColors.primary,
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            const Expanded(
-              child: Center(
-                child: StatChip(
-                  icon: Icons.lightbulb_rounded,
-                  value: '5',
-                  iconColor: AppColors.success,
-                ),
-              ),
-            ),
-          ],
+        const SizedBox(width: AppSpacing.xs),
+        StatChip(
+          icon: Icons.touch_app_rounded,
+          value: '$moves',
+          iconColor: AppColors.primary,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        CircleIconButton(
+          icon: Icons.pause_rounded,
+          iconColor: AppColors.textSecondary,
+          onTap: onPause,
         ),
       ],
     );

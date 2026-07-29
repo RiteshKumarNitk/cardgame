@@ -1,6 +1,6 @@
-// Unit tests for DailyChallengeCubit: solving the (medium, 4x4 = 16
-// piece) board marks it justSolved, computes the streak-scaled coin
-// reward, and persists through DailyChallengeService.
+// Unit tests for DailyChallengeCubit: solving the (medium, 4 cols x 5
+// rows = 20 piece) board marks it justSolved, computes the streak-scaled
+// coin reward, and persists through DailyChallengeService.
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -56,7 +56,7 @@ void main() {
     expect(DailyChallengeCubit.coinsFor(50), 200, reason: 'bonus caps at 10 days');
   });
 
-  test('load shuffles a 4x4 (16-piece) board, unsolved', () async {
+  test('load shuffles a 4x5 (20-piece) board, unsolved', () async {
     final cubit = DailyChallengeCubit(
       DailyChallengeService(_FakeDailyChallengeRepository()),
     );
@@ -64,7 +64,7 @@ void main() {
     await cubit.load();
 
     final state = cubit.state as DailyChallengeReady;
-    expect(state.arrangement.toSet(), List.generate(16, (i) => i + 1).toSet());
+    expect(state.arrangement.toSet(), List.generate(20, (i) => i + 1).toSet());
     expect(state.isComplete, isFalse);
   });
 

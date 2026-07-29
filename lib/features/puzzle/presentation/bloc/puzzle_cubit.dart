@@ -35,7 +35,7 @@ class PuzzleCubit extends Cubit<PuzzleState> {
       }
       final level = _levels[index];
       final arrangement = TileSwapEngine.shuffledArrangement(
-        size: boardSizeFor(level.difficulty),
+        pieceCount: boardDimensionsFor(level.difficulty).pieceCount,
         seed: level.id,
       );
       emit(

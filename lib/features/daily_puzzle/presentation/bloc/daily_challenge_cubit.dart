@@ -21,7 +21,7 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
       final now = DateTime.now();
       final challenge = await _service.loadToday(now);
       final arrangement = TileSwapEngine.shuffledArrangement(
-        size: boardSizeFor(challenge.difficulty),
+        pieceCount: boardDimensionsFor(challenge.difficulty).pieceCount,
         seed: challenge.dateKey.hashCode,
       );
       emit(

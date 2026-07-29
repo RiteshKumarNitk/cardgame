@@ -21,7 +21,7 @@ class _FakeLevelsRepository implements LevelsRepository {
     const Level(
       id: 1,
       title: 'Level 1',
-      difficulty: LevelDifficulty.easy, // 3x3 = 9 pieces
+      difficulty: LevelDifficulty.easy, // 3 cols x 4 rows = 12 pieces
       stars: 0,
       isCompleted: false,
       isUnlocked: true,
@@ -84,7 +84,7 @@ void main() {
 
     final state = cubit.state as PuzzleLoaded;
     expect(state.level.id, 1);
-    expect(state.arrangement.toSet(), {1, 2, 3, 4, 5, 6, 7, 8, 9});
+    expect(state.arrangement.toSet(), Set.of(List.generate(12, (i) => i + 1)));
     expect(state.isSolved, isFalse);
     expect(state.moves, 0);
   });

@@ -1,6 +1,8 @@
-// Verifies the Puzzle screen shell renders for a valid level: title,
-// difficulty badge, and a fully-populated 3x3 board (every cell holds a
-// piece from the start — there's no separate tray).
+// Verifies the Puzzle screen shell renders for a valid level: difficulty
+// badge and a fully-populated portrait board (every cell holds a piece
+// from the start — there's no separate tray). The top bar is a single
+// compact row (see PuzzleTopBar) that doesn't show the level title, to
+// leave more screen space for the board.
 //
 // Uses an in-memory fake LevelsRepository (via LevelService) rather than
 // real Hive — same reasoning as the Levels feature tests.
@@ -42,7 +44,7 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('shows level title, difficulty, and a fully-populated 3x3 board', (
+  testWidgets('shows difficulty and a fully-populated portrait board', (
     tester,
   ) async {
     final levelService = LevelService(_FakeLevelsRepository());
@@ -56,14 +58,14 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Level 1'), findsOneWidget);
     expect(find.text('Easy'), findsOneWidget);
     // The reference preview is locked by default (unlockable with coins).
     expect(find.text('Preview locked'), findsOneWidget);
-    // A 3x3 board for easy: every one of the 9 cells always renders a
-    // piece (locked or not), but exactly how many start locked depends
-    // on the shuffle, so only the total tile count is asserted exactly.
-    expect(find.byType(PuzzleImageTile), findsNWidgets(9));
+    // A 3x4 (portrait) board for easy = 12 pieces; every cell always
+    // renders a piece (locked or not), but exactly how many start locked
+    // depends on the shuffle, so only the total tile count is asserted
+    // exactly.
+    expect(find.byType(PuzzleImageTile), findsNWidgets(12));
     // At least the not-yet-correct cells should be interactive.
     expect(find.byType(DragTarget<int>), findsWidgets);
 

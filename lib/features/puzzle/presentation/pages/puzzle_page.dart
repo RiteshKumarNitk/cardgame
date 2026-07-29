@@ -6,6 +6,7 @@ import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/wallet_cubit.dart';
+import '../../../../shared/widgets/confetti_burst.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
@@ -22,8 +23,9 @@ import '../widgets/puzzle_top_bar.dart';
 
 /// Puzzle (gameplay) screen: top bar, reference preview, and board for
 /// the requested level. Every piece starts already on the board,
-/// shuffled — drag one onto another to swap them into place; solving the
-/// puzzle persists progress via [PuzzleCubit] and advances to Victory.
+/// shuffled — drag one onto another to swap them into place. Solving
+/// persists progress via [PuzzleCubit], then the completed photo gets a
+/// moment to shine (confetti) before advancing to Victory.
 class PuzzlePage extends StatelessWidget {
   /// [levelService] defaults to the real Hive-backed stack; tests can
   /// supply a service built on an in-memory fake instead.
@@ -54,6 +56,10 @@ class PuzzlePage extends StatelessWidget {
   }
 }
 
+/// How long the completed board lingers (with a confetti burst over it)
+/// before advancing to Victory.
+const _celebrationDelay = Duration(milliseconds: 1600);
+
 class _PuzzleView extends StatelessWidget {
   const _PuzzleView({required this.levelIdIsValid});
 
@@ -66,7 +72,7 @@ class _PuzzleView extends StatelessWidget {
         showFloatingPieces: false,
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: BlocConsumer<PuzzleCubit, PuzzleState>(
               listenWhen: (previous, current) =>
                   previous is PuzzleLoaded &&
@@ -76,17 +82,7 @@ class _PuzzleView extends StatelessWidget {
               listener: (context, state) {
                 final solved = state as PuzzleLoaded;
                 context.read<WalletCubit>().addCoins(solved.coinsAwarded);
-                context.goNamed(
-                  RouteNames.victory,
-                  extra: VictoryResult(
-                    level: solved.level,
-                    stars: solved.stars,
-                    moves: solved.moves,
-                    timeSeconds: solved.elapsedSeconds,
-                    coinsEarned: solved.coinsAwarded,
-                    nextLevelId: context.read<PuzzleCubit>().nextLevelId,
-                  ),
-                );
+                _celebrateThenNavigate(context, solved);
               },
               builder: (context, state) {
                 if (!levelIdIsValid) {
@@ -112,6 +108,25 @@ class _PuzzleView extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _celebrateThenNavigate(
+    BuildContext context,
+    PuzzleLoaded solved,
+  ) async {
+    await Future.delayed(_celebrationDelay);
+    if (!context.mounted) return;
+    context.goNamed(
+      RouteNames.victory,
+      extra: VictoryResult(
+        level: solved.level,
+        stars: solved.stars,
+        moves: solved.moves,
+        timeSeconds: solved.elapsedSeconds,
+        coinsEarned: solved.coinsAwarded,
+        nextLevelId: context.read<PuzzleCubit>().nextLevelId,
+      ),
+    );
+  }
 }
 
 class _LoadedPuzzle extends StatelessWidget {
@@ -132,17 +147,26 @@ class _LoadedPuzzle extends StatelessWidget {
           onBack: () => context.goNamed(RouteNames.levels),
           onPause: () => _showPauseDialog(context),
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.sm),
         PuzzlePreviewThumbnail(imageUrl: imageUrl),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
-          child: PuzzleBoard(
-            difficulty: state.level.difficulty,
-            imageUrl: imageUrl,
-            arrangement: state.arrangement,
-            onSwap: (fromCell, toCell) => context
-                .read<PuzzleCubit>()
-                .swapPieces(fromCell, toCell),
+          child: Stack(
+            children: [
+              PuzzleBoard(
+                difficulty: state.level.difficulty,
+                imageUrl: imageUrl,
+                arrangement: state.arrangement,
+                onSwap: (fromCell, toCell) => context
+                    .read<PuzzleCubit>()
+                    .swapPieces(fromCell, toCell),
+              ),
+              // Let the finished photo take a bow before Victory.
+              if (state.isSolved)
+                const Positioned.fill(
+                  child: IgnorePointer(child: ConfettiBurst()),
+                ),
+            ],
           ),
         ),
       ],

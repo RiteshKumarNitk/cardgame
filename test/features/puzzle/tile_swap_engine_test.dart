@@ -11,7 +11,7 @@ void main() {
     test('contains every piece exactly once and is never pre-solved', () {
       for (var seed = 0; seed < 50; seed++) {
         final arrangement = TileSwapEngine.shuffledArrangement(
-          size: 3,
+          pieceCount: 9,
           seed: seed,
         );
         expect(arrangement.toSet(), {1, 2, 3, 4, 5, 6, 7, 8, 9});
