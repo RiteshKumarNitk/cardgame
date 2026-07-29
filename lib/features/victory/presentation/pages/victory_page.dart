@@ -105,9 +105,9 @@ class _VictoryContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        const BounceIn(
-          delay: Duration(milliseconds: 500),
-          child: _RewardChip(coins: 50),
+        BounceIn(
+          delay: const Duration(milliseconds: 500),
+          child: _RewardChip(coins: result.coinsEarned),
         ),
         const SizedBox(height: AppSpacing.xl),
         if (result.nextLevelId case final nextLevelId?) ...[

@@ -16,6 +16,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:puzzle_cards/core/app/puzzle_cards_app.dart';
+import 'package:puzzle_cards/game/wallet_cubit.dart';
+
+import 'helpers/fake_wallet_service.dart';
 
 void main() {
   setUpAll(() {
@@ -27,7 +30,9 @@ void main() {
   testWidgets('App boots, shows splash, then navigates to Home', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const PuzzleCardsApp());
+    await tester.pumpWidget(
+      PuzzleCardsApp(walletCubit: WalletCubit(FakeWalletService())),
+    );
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byIcon(Icons.extension_rounded), findsOneWidget);

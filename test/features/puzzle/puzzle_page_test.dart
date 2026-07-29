@@ -57,10 +57,12 @@ void main() {
     expect(find.text('Level 1'), findsOneWidget);
     expect(find.text('Easy'), findsOneWidget);
     expect(find.text('Pieces'), findsOneWidget);
-    // A 3x3 board for easy: 9 empty slots, plus 9 tray piece cards showing
-    // indices 1-9 (each index rendered once, in board+tray combined we
-    // only assert the tray pieces since board slots carry no text).
-    expect(find.text('9'), findsOneWidget);
+    expect(find.text('Preview'), findsOneWidget);
+    // A 3x3 board for easy: 9 drop targets, 9 draggable tray pieces (none
+    // placed yet). Pieces now render an image crop rather than a number
+    // label, so we assert by widget type/count instead of text.
+    expect(find.byType(DragTarget<int>), findsNWidgets(9));
+    expect(find.byType(Draggable<int>), findsNWidgets(9));
 
     // A loaded puzzle starts a repeating Timer (the elapsed-time clock).
     // Unmount to dispose the cubit (cancelling it) before the test ends —

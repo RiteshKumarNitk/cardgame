@@ -44,6 +44,10 @@ final class PuzzleLoaded extends PuzzleState {
     return 1;
   }
 
+  /// Coin reward for solving, scaled with [stars] so playing cleanly pays
+  /// off more.
+  int get coinsAwarded => stars * 20;
+
   PuzzleLoaded copyWith({
     Set<int>? placedPieceIds,
     int? moves,

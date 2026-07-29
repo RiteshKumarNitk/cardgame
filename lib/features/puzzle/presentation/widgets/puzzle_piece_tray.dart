@@ -6,20 +6,23 @@ import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../levels/domain/entities/level.dart';
-import '../../../levels/presentation/widgets/level_difficulty_style.dart';
 import '../../domain/puzzle_board_size.dart';
+import 'puzzle_image_tile.dart';
 
-/// The scrambled tray of draggable puzzle pieces below the board. Drag a
-/// piece onto its matching [PuzzleBoard] slot; placed pieces disappear
-/// from here.
+/// The scrambled tray of draggable puzzle pieces below the board. Each
+/// piece shows the actual crop of [imageUrl] it belongs at — drag it onto
+/// the matching [PuzzleBoard] slot to reveal that part of the picture.
+/// Placed pieces disappear from here.
 class PuzzlePieceTray extends StatelessWidget {
   const PuzzlePieceTray({
     super.key,
     required this.level,
+    required this.imageUrl,
     required this.placedPieceIds,
   });
 
   final Level level;
+  final String imageUrl;
   final Set<int> placedPieceIds;
 
   @override
@@ -58,8 +61,10 @@ class PuzzlePieceTray extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final pieceIndex = remaining[index];
                     final card = _PieceCard(
-                      index: pieceIndex,
-                      color: level.difficulty.color,
+                      imageUrl: imageUrl,
+                      gridSize: size,
+                      row: (pieceIndex - 1) ~/ size,
+                      col: (pieceIndex - 1) % size,
                     );
                     return Draggable<int>(
                       data: pieceIndex,
@@ -76,43 +81,42 @@ class PuzzlePieceTray extends StatelessWidget {
 }
 
 class _PieceCard extends StatelessWidget {
-  const _PieceCard({required this.index, required this.color});
+  const _PieceCard({
+    required this.imageUrl,
+    required this.gridSize,
+    required this.row,
+    required this.col,
+  });
 
-  final int index;
-  final Color color;
+  final String imageUrl;
+  final int gridSize;
+  final int row;
+  final int col;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 64,
       height: 64,
-      alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [color, color.withValues(alpha: 0.7)],
-        ),
         borderRadius: AppRadius.mdRadius,
-        boxShadow: [
+        border: Border.all(color: Colors.white, width: 2),
+        boxShadow: const [
           BoxShadow(
-            color: color.withValues(alpha: 0.35),
+            color: AppColors.shadow,
             blurRadius: 8,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.extension_rounded, color: Colors.white, size: 22),
-          Text(
-            '$index',
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: Colors.white),
-          ),
-        ],
+      child: ClipRRect(
+        borderRadius: AppRadius.mdRadius,
+        child: PuzzleImageTile(
+          imageUrl: imageUrl,
+          gridSize: gridSize,
+          row: row,
+          col: col,
+        ),
       ),
     );
   }

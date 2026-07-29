@@ -9,6 +9,7 @@
 // like production code does; only the bottom (Hive) layer is faked.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -18,6 +19,9 @@ import 'package:puzzle_cards/features/levels/data/models/level_model.dart';
 import 'package:puzzle_cards/features/levels/data/repositories/levels_repository_impl.dart';
 import 'package:puzzle_cards/features/levels/domain/services/level_service.dart';
 import 'package:puzzle_cards/features/levels/presentation/pages/levels_page.dart';
+import 'package:puzzle_cards/game/wallet_cubit.dart';
+
+import '../../helpers/fake_wallet_service.dart';
 
 class _FakeLevelsLocalDataSource implements LevelsLocalDataSource {
   final List<LevelModel> _stored = [];
@@ -45,9 +49,12 @@ void main() {
       LevelsRepositoryImpl(_FakeLevelsLocalDataSource()),
     );
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.game,
-        home: LevelsPage(levelService: levelService),
+      BlocProvider<WalletCubit>(
+        create: (_) => WalletCubit(FakeWalletService()),
+        child: MaterialApp(
+          theme: AppTheme.game,
+          home: LevelsPage(levelService: levelService),
+        ),
       ),
     );
     // Avoid pumpAndSettle: the brief Loading state shows an indeterminate

@@ -10,5 +10,6 @@ abstract final class HiveService {
     await Hive.initFlutter();
     Hive.registerAdapter(LevelModelAdapter());
     await Hive.openBox<LevelModel>(AppConstants.levelsBoxName);
+    await Hive.openBox<int>(AppConstants.walletBoxName);
   }
 }

@@ -7,4 +7,6 @@ abstract final class AppConstants {
   static const String levelsBoxName = 'levels_box';
   static const String progressBoxName = 'progress_box';
   static const String settingsBoxName = 'settings_box';
+  static const String walletBoxName = 'wallet_box';
+  static const String walletCoinsKey = 'coins';
 }

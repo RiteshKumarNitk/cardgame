@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Needed at runtime (not just the debug-only default) to load the
+         puzzle images via Image.network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="puzzle_cards"
         android:name="${applicationName}"

@@ -111,6 +111,7 @@ void main() {
 
       final state = cubit.state as PuzzleLoaded;
       expect(state.isSolved, isTrue);
+      expect(state.coinsAwarded, 60, reason: '3 stars * 20 coins');
 
       final saved = repository.stored.firstWhere((l) => l.id == 1);
       expect(saved.isCompleted, isTrue);

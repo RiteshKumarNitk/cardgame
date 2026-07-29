@@ -41,6 +41,7 @@ void main() {
             stars: 3,
             moves: 12,
             timeSeconds: 75,
+            coinsEarned: 60,
             nextLevelId: 2,
           ),
         ),
@@ -56,6 +57,7 @@ void main() {
     expect(find.textContaining('Level 1'), findsOneWidget);
     expect(find.text('01:15'), findsOneWidget);
     expect(find.text('12'), findsOneWidget);
+    expect(find.text('+60'), findsOneWidget);
     expect(find.text('Next Level'), findsOneWidget);
   });
 
@@ -71,6 +73,7 @@ void main() {
             stars: 1,
             moves: 30,
             timeSeconds: 10,
+            coinsEarned: 20,
             nextLevelId: null,
           ),
         ),

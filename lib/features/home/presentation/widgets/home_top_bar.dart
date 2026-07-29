@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
+import '../../../../game/wallet_cubit.dart';
+import '../../../../shared/utils/number_format.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/stat_chip.dart';
 
@@ -21,10 +24,12 @@ class HomeTopBar extends StatelessWidget {
           onTap: () => context.goNamed(RouteNames.settings),
         ),
         const Spacer(),
-        const StatChip(
-          icon: Icons.monetization_on_rounded,
-          value: '1,250',
-          iconColor: AppColors.accent,
+        BlocBuilder<WalletCubit, int>(
+          builder: (context, coins) => StatChip(
+            icon: Icons.monetization_on_rounded,
+            value: formatThousands(coins),
+            iconColor: AppColors.accent,
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
         const StatChip(

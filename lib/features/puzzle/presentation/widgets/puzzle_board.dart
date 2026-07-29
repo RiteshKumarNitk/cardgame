@@ -4,22 +4,26 @@ import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../levels/domain/entities/level.dart';
-import '../../../levels/presentation/widgets/level_difficulty_style.dart';
 import '../../domain/puzzle_board_size.dart';
+import 'puzzle_image_tile.dart';
 
 /// The puzzle board: an N×N grid of drop targets sized by the level's
 /// difficulty. Slot `i` (0-based) accepts piece `i + 1` from
-/// [PuzzlePieceTray]; a correct drop locks the piece in place, a wrong
-/// one shakes the slot and sends the piece back to the tray.
+/// [PuzzlePieceTray]; a correct drop reveals that cell of [imageUrl] in
+/// place, a wrong one shakes the slot and sends the piece back to the
+/// tray. Unfilled slots show a faint "ghost" of their target cell as a
+/// hint.
 class PuzzleBoard extends StatelessWidget {
   const PuzzleBoard({
     super.key,
     required this.difficulty,
+    required this.imageUrl,
     required this.placedPieceIds,
     required this.onDrop,
   });
 
   final LevelDifficulty difficulty;
+  final String imageUrl;
   final Set<int> placedPieceIds;
 
   /// Returns whether the drop was correct.
@@ -50,10 +54,11 @@ class PuzzleBoard extends StatelessWidget {
             final pieceIndex = index + 1;
             return _BoardSlot(
               slotIndex: index,
-              filledPieceIndex: placedPieceIds.contains(pieceIndex)
-                  ? pieceIndex
-                  : null,
-              color: difficulty.color,
+              row: index ~/ size,
+              col: index % size,
+              gridSize: size,
+              imageUrl: imageUrl,
+              filled: placedPieceIds.contains(pieceIndex),
               onDrop: onDrop,
             );
           },
@@ -66,14 +71,20 @@ class PuzzleBoard extends StatelessWidget {
 class _BoardSlot extends StatefulWidget {
   const _BoardSlot({
     required this.slotIndex,
-    required this.filledPieceIndex,
-    required this.color,
+    required this.row,
+    required this.col,
+    required this.gridSize,
+    required this.imageUrl,
+    required this.filled,
     required this.onDrop,
   });
 
   final int slotIndex;
-  final int? filledPieceIndex;
-  final Color color;
+  final int row;
+  final int col;
+  final int gridSize;
+  final String imageUrl;
+  final bool filled;
   final Future<bool> Function(int pieceIndex, int slotIndex) onDrop;
 
   @override
@@ -115,43 +126,57 @@ class _BoardSlotState extends State<_BoardSlot>
 
   @override
   Widget build(BuildContext context) {
-    final filled = widget.filledPieceIndex != null;
+    final tile = PuzzleImageTile(
+      imageUrl: widget.imageUrl,
+      gridSize: widget.gridSize,
+      row: widget.row,
+      col: widget.col,
+      opacity: widget.filled ? 1 : 0.18,
+    );
 
     return AnimatedBuilder(
       animation: _shake,
       builder: (context, child) =>
           Transform.translate(offset: Offset(_shake.value, 0), child: child),
       child: DragTarget<int>(
-        onWillAcceptWithDetails: (_) => !filled,
+        onWillAcceptWithDetails: (_) => !widget.filled,
         onAcceptWithDetails: (details) => _handleAccept(details.data),
         builder: (context, candidateData, rejectedData) {
           final hovering = candidateData.isNotEmpty;
-          return DecoratedBox(
+          return Container(
             decoration: BoxDecoration(
-              color: filled
-                  ? widget.color.withValues(alpha: 0.85)
-                  : hovering
-                  ? AppColors.primary.withValues(alpha: 0.15)
-                  : AppColors.background,
               borderRadius: AppRadius.smRadius,
               border: Border.all(
-                color: filled
-                    ? widget.color
+                color: widget.filled
+                    ? AppColors.success
                     : hovering
                     ? AppColors.primary
                     : AppColors.border,
-                width: hovering || filled ? 2 : 1,
+                width: hovering || widget.filled ? 2 : 1,
               ),
             ),
-            child: filled
-                ? const Center(
-                    child: Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: 18,
+            child: ClipRRect(
+              borderRadius: AppRadius.smRadius,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  tile,
+                  if (hovering && !widget.filled)
+                    ColoredBox(color: AppColors.primary.withValues(alpha: 0.18)),
+                  if (widget.filled)
+                    const Positioned(
+                      top: 2,
+                      right: 2,
+                      child: Icon(
+                        Icons.check_circle_rounded,
+                        color: Colors.white,
+                        size: 16,
+                        shadows: [Shadow(blurRadius: 3, color: Colors.black45)],
+                      ),
                     ),
-                  )
-                : null,
+                ],
+              ),
+            ),
           );
         },
       ),

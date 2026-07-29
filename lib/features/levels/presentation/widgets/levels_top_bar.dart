@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
+import '../../../../core/router/route_paths.dart';
+import '../../../../game/wallet_cubit.dart';
+import '../../../../shared/utils/number_format.dart';
 import '../../../../shared/widgets/press_scale.dart';
 import '../../../../shared/widgets/stat_chip.dart';
 
@@ -24,7 +28,13 @@ class LevelsTopBar extends StatelessWidget {
         Row(
           children: [
             PressScale(
-              onTap: () => context.pop(),
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.goNamed(RouteNames.home);
+                }
+              },
               child: Container(
                 width: 40,
                 height: 40,
@@ -47,10 +57,12 @@ class LevelsTopBar extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            const StatChip(
-              icon: Icons.monetization_on_rounded,
-              value: '1,250',
-              iconColor: AppColors.accent,
+            BlocBuilder<WalletCubit, int>(
+              builder: (context, coins) => StatChip(
+                icon: Icons.monetization_on_rounded,
+                value: formatThousands(coins),
+                iconColor: AppColors.accent,
+              ),
             ),
             const SizedBox(width: AppSpacing.sm + 2),
             const StatChip(
