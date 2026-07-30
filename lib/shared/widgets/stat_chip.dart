@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/design_system/app_colors.dart';
 import '../../core/design_system/app_radius.dart';
+import '../../core/design_system/app_shadows.dart';
 import '../../core/design_system/app_spacing.dart';
 import '../../core/design_system/app_theme_extension.dart';
 
@@ -31,8 +32,8 @@ class StatChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: AppRadius.pillRadius,
-        border: Border.all(color: AppColors.border),
-        boxShadow: ext.cardShadow,
+        border: Border.all(color: AppColors.outline, width: 2),
+        boxShadow: [...ext.cardShadow, ...AppShadows.bevel(AppColors.card, depth: 3)],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

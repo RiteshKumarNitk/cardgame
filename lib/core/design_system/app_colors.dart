@@ -18,6 +18,11 @@ abstract final class AppColors {
   static const Color border = Color(0xFFD9E6F2);
   static const Color shadow = Color(0x1A0F172A); // rgba(15,23,42,0.10)
 
+  /// Thick dark-navy outline used by every chunky "3D toy" surface
+  /// (buttons, cards, chips) — the one constant line color that ties the
+  /// whole bevel treatment together, regardless of a surface's own fill.
+  static const Color outline = Color(0xFF1E2A4A);
+
   // Gradient stops — see AppGradients for the assembled LinearGradients.
   static const Color primaryGradientStart = Color(0xFF5B5BF7);
   static const Color primaryGradientEnd = Color(0xFF3A7BFF);

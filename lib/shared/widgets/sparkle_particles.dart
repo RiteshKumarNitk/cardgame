@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../core/design_system/app_animations.dart';
 import '../../core/design_system/app_colors.dart';
 
 /// A gentle, continuously looping sparkle particle effect that radiates

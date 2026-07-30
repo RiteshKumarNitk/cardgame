@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../../core/design_system/app_colors.dart';
 import '../../core/design_system/app_radius.dart';
+import '../../core/design_system/app_shadows.dart';
 import '../../core/design_system/app_spacing.dart';
 import '../../core/design_system/app_theme_extension.dart';
+import 'outlined_text.dart';
 import 'press_scale.dart';
 
 enum GameButtonVariant { primary, secondary, premium }
 
 /// The one and only button surface in the app: gradient fill, pill
-/// corners, soft shadow, and press-scale feedback (via [PressScale]).
+/// corners, a thick dark outline, and a chunky "3D bevel" band beneath —
+/// a bold toy-block look with press-scale feedback (via [PressScale]).
 /// Every CTA — Play, menu tiles, dialogs — should use this instead of a
 /// bespoke `Container`/`ElevatedButton`.
 class GameButton extends StatelessWidget {
@@ -35,6 +39,15 @@ class GameButton extends StatelessWidget {
     GameButtonVariant.premium => ext.premiumButtonGradient,
   };
 
+  /// The gradient's own bottom-most color — darkened to derive the bevel
+  /// band beneath the button, so the band always matches this button's
+  /// own fill instead of a hand-picked shade per variant.
+  Color _baseColor() => switch (variant) {
+    GameButtonVariant.primary => AppColors.primaryGradientEnd,
+    GameButtonVariant.secondary => AppColors.secondaryGradientEnd,
+    GameButtonVariant.premium => AppColors.premiumGradientEnd,
+  };
+
   @override
   Widget build(BuildContext context) {
     final ext = Theme.of(context).extension<AppThemeExtension>()!;
@@ -51,20 +64,35 @@ class GameButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: _gradient(ext),
           borderRadius: AppRadius.pillRadius,
-          boxShadow: ext.buttonShadow,
+          border: Border.all(color: AppColors.outline, width: 3),
+          boxShadow: [
+            ...ext.buttonShadow,
+            ...AppShadows.bevel(_baseColor(), depth: 5),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, color: Colors.white, size: 22),
+              Icon(
+                icon,
+                color: Colors.white,
+                size: 22,
+                shadows: [
+                  Shadow(
+                    color: AppColors.outline.withValues(alpha: 0.5),
+                    offset: const Offset(0, 1.5),
+                  ),
+                ],
+              ),
               const SizedBox(width: AppSpacing.sm),
             ],
             Flexible(
-              child: Text(
+              child: OutlinedText(
                 label,
                 style: textStyle,
+                outlineWidth: 3,
                 overflow: TextOverflow.ellipsis,
               ),
             ),

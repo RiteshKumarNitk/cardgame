@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/design_system/app_colors.dart';
 import '../../core/design_system/app_radius.dart';
+import '../../core/design_system/app_shadows.dart';
 import '../../core/design_system/app_spacing.dart';
 
 /// A gold pill showing a coin reward (`+N`) — used wherever the player
@@ -26,12 +27,14 @@ class CoinRewardChip extends StatelessWidget {
           ],
         ),
         borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: AppColors.outline, width: 2.5),
         boxShadow: [
           BoxShadow(
             color: AppColors.accent.withValues(alpha: 0.35),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
+          ...AppShadows.bevel(AppColors.premiumGradientEnd, depth: 4),
         ],
       ),
       child: Row(

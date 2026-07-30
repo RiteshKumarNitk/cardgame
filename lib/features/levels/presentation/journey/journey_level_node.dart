@@ -40,6 +40,7 @@ class LevelNodeCircle extends StatelessWidget {
     final unlocked = level.isUnlocked;
     final completed = level.isCompleted;
     final diameter = isCurrent ? 76.0 : 64.0;
+    final bevelBase = unlocked ? level.difficulty.color : AppColors.card;
 
     final circle = Container(
       width: diameter,
@@ -58,16 +59,15 @@ class LevelNodeCircle extends StatelessWidget {
             : null,
         color: unlocked ? null : AppColors.card,
         border: Border.all(
-          color: completed
-              ? AppColors.success
-              : isCurrent
-              ? AppColors.primary
-              : AppColors.border,
-          width: isCurrent ? 3 : 2,
+          color: completed ? AppColors.success : AppColors.outline,
+          width: isCurrent ? 4 : 3,
         ),
-        boxShadow: unlocked
-            ? AppShadows.glow(level.difficulty.color, opacity: 0.35)
-            : AppShadows.card,
+        boxShadow: [
+          ...unlocked
+              ? AppShadows.glow(level.difficulty.color, opacity: 0.35)
+              : AppShadows.card,
+          ...AppShadows.bevel(bevelBase, depth: isCurrent ? 5 : 4),
+        ],
       ),
       child: Center(
         child: completed

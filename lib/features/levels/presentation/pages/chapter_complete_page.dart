@@ -1,11 +1,8 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_gradients.dart';
+import '../../../../services/audio_service.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
@@ -17,7 +14,6 @@ import '../../../../shared/widgets/floating_bob.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
-import '../../../../shared/widgets/press_scale.dart';
 import '../../../../shared/widgets/pulsing_glow.dart';
 import '../../../../shared/widgets/sparkle_particles.dart';
 import '../../domain/entities/chapter_complete_result.dart';
@@ -70,7 +66,10 @@ class _ChapterCompletePageState extends State<ChapterCompletePage>
     );
 
     Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) _controller.forward();
+      if (mounted) {
+        _controller.forward();
+        AudioService().playChapterComplete();
+      }
     });
   }
 

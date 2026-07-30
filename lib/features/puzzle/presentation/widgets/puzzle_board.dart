@@ -15,6 +15,8 @@ import 'puzzle_image_tile.dart';
 /// locks with a satisfying pop + glow once its piece is correct.
 import 'dart:math' as math;
 
+import '../../../../services/audio_service.dart';
+
 class PuzzleBoard extends StatelessWidget {
   const PuzzleBoard({
     super.key,
@@ -142,6 +144,7 @@ class _BoardCellState extends State<_BoardCell>
     super.didUpdateWidget(oldWidget);
     if (!oldWidget.correct && widget.correct) {
       _popController.forward(from: 0);
+      AudioService().playPieceSnap();
     }
   }
 

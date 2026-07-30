@@ -2,29 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
+import '../../../../services/audio_service.dart';
 import '../../../../core/design_system/app_gradients.dart';
 import '../../../../core/design_system/app_radius.dart';
+import '../../../../core/design_system/app_shadows.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/game_progress_manager.dart';
 import '../../../../game/wallet_cubit.dart';
 import '../../../../shared/utils/number_format.dart';
+import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/bounce_in.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
-import '../../../../shared/widgets/floating_bob.dart';
 import '../../../../shared/widgets/game_background.dart';
+import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
+import '../../../../shared/widgets/outlined_text.dart';
 import '../../../../shared/widgets/press_scale.dart';
 import '../../../../shared/widgets/pulsing_glow.dart';
 import '../../../../shared/widgets/stat_chip.dart';
 import '../../../levels/data/datasources/levels_local_datasource.dart';
 import '../../../levels/data/repositories/levels_repository_impl.dart';
 import '../../../levels/domain/entities/level.dart';
+import '../../../levels/domain/entities/section.dart';
 import '../../../levels/domain/services/chapter_catalog.dart';
 import '../../../levels/domain/services/level_service.dart';
 import '../../../levels/presentation/widgets/level_difficulty_style.dart';
+import '../../../puzzle/domain/puzzle_board_size.dart';
+import '../../../puzzle/domain/puzzle_image.dart';
 
 /// Premium Home Hub: the player's landing page showing current progress,
 /// daily challenge, a large Continue button, and quick-access bottom
@@ -44,6 +50,13 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadProgress();
+    AudioService().startBgm();
+  }
+
+  @override
+  void dispose() {
+    AudioService().stopBgm();
+    super.dispose();
   }
 
   Future<void> _loadProgress() async {
@@ -60,7 +73,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final progress = _progress;
 
     return Scaffold(
@@ -87,7 +99,6 @@ class _HomePageState extends State<HomePage> {
                   _CurrentLevelHero(
                     levelId: progress.currentLevelId!,
                     levels: _levels,
-                    progress: progress,
                   ),
                 ] else if (progress != null && progress.completedCount == progress.totalCount) ...[
                   _AllCompleteBanner(),
@@ -141,71 +152,97 @@ class _HomePageState extends State<HomePage> {
 class _HomeTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        // Avatar circle
-        PressScale(
-          onTap: () {},
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: AppGradients.premiumButton,
-              border: Border.all(color: Colors.white, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accent.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+        // ── Row 1: Avatar — Settings ──
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            PressScale(
+              onTap: () {},
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppGradients.premiumButton,
+                  border: Border.all(color: AppColors.outline, width: 2.5),
+                  boxShadow: [
+                    const BoxShadow(
+                      color: AppColors.shadow,
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                    ...AppShadows.bevel(AppColors.premiumGradientEnd, depth: 3),
+                  ],
                 ),
-              ],
-            ),
-            child: const Icon(
-              Icons.person_rounded,
-              color: Colors.white,
-              size: 26,
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Player',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.textSecondary,
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: Colors.white,
+                  size: 26,
                 ),
               ),
-              Text(
-                'Level 1',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColors.textDark,
+            ),
+            CircleIconButton(
+              icon: Icons.settings_rounded,
+              onTap: () => context.goNamed(RouteNames.settings),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+
+        // ── Row 2: Coins — Logo — Daily ──
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            BlocBuilder<WalletCubit, int>(
+              builder: (context, coins) => StatChip(
+                icon: Icons.monetization_on_rounded,
+                value: formatThousands(coins),
+                iconColor: AppColors.accent,
+              ),
+            ),
+            const Expanded(
+              child: Center(child: AppLogo(size: 44, wordmark: true)),
+            ),
+            PressScale(
+              onTap: () => context.goNamed(RouteNames.dailyPuzzle),
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.card,
+                  borderRadius: AppRadius.mdRadius,
+                  border: Border.all(color: AppColors.outline, width: 2.5),
+                  boxShadow: [
+                    const BoxShadow(
+                      color: AppColors.shadow,
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                    ...AppShadows.bevel(AppColors.card, depth: 3),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.event_rounded,
+                      color: AppColors.danger,
+                      size: 16,
+                    ),
+                    Text(
+                      '${DateTime.now().day}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.textDark,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-        BlocBuilder<WalletCubit, int>(
-          builder: (context, coins) => StatChip(
-            icon: Icons.monetization_on_rounded,
-            value: formatThousands(coins),
-            iconColor: AppColors.accent,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        StatChip(
-          icon: Icons.lightbulb_rounded,
-          value: '5',
-          iconColor: AppColors.success,
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        CircleIconButton(
-          icon: Icons.settings_rounded,
-          onTap: () => context.goNamed(RouteNames.settings),
+            ),
+          ],
         ),
       ],
     );
@@ -216,144 +253,139 @@ class _HomeTopBar extends StatelessWidget {
 /// Hero: Current Level Card with Continue Button
 /// ────────────────────────────────────────────────────────────────────
 class _CurrentLevelHero extends StatelessWidget {
-  const _CurrentLevelHero({
-    required this.levelId,
-    required this.levels,
-    required this.progress,
-  });
+  const _CurrentLevelHero({required this.levelId, required this.levels});
 
   final int levelId;
   final List<Level> levels;
-  final GameProgress progress;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final chapter = ChapterCatalog.chapterForLevel(levelId);
     final section = ChapterCatalog.sectionForLevel(levelId);
-    final level = levels.firstWhere((l) => l.id == levelId);
+    final completedInSection = levels
+        .where((l) => section.containsLevel(l.id) && l.isCompleted)
+        .length;
+    final imageUrl = puzzleImageUrlFor(levelId);
 
     return BounceIn(
-      child: GameCard(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        borderRadius: AppRadius.xlRadius,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            chapter.difficulty.color,
-            chapter.difficulty.color.withValues(alpha: 0.85),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Chapter & Section
-            Text(
-              'CHAPTER ${chapter.id} — ${chapter.name.toUpperCase()}',
-              style: textTheme.labelMedium?.copyWith(
-                color: Colors.white70,
-                letterSpacing: 1.2,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          // ── Main card: puzzle preview + section progress ──
+          Padding(
+            padding: const EdgeInsets.only(top: 22, bottom: 30),
+            child: GameCard(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.xl,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              borderRadius: AppRadius.xlRadius,
+              child: Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: AppRadius.lgRadius,
+                    child: AspectRatio(
+                      aspectRatio: boardDimensionsForLevel(levelId).aspectRatio,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: chapter.difficulty.color,
+                            width: 3,
+                          ),
+                        ),
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, progress) =>
+                              progress == null
+                              ? child
+                              : const ColoredBox(color: AppColors.border),
+                          errorBuilder: (context, error, stackTrace) =>
+                              const ColoredBox(
+                                color: AppColors.border,
+                                child: Icon(
+                                  Icons.image_not_supported_rounded,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    '$completedInSection / ${section.levelCount}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: chapter.difficulty.color,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: AppRadius.pillRadius,
-              ),
-              child: Text(
-                'Section ${section.index} · Level $levelId',
-                style: textTheme.bodySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
+          ),
 
-            // Progress bar
-            ClipRRect(
-              borderRadius: AppRadius.pillRadius,
-              child: LinearProgressIndicator(
-                value: progress.percentComplete,
-                backgroundColor: Colors.white.withValues(alpha: 0.25),
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                minHeight: 6,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              '${progress.completedCount} / ${progress.totalCount} levels',
-              style: textTheme.bodySmall?.copyWith(
-                color: Colors.white70,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
+          // ── Section banner, overlapping the card's top edge ──
+          Positioned(
+            top: 0,
+            child: _SectionBanner(section: section, color: chapter.difficulty.color),
+          ),
 
-            // Continue Button
-            PulsingGlow(
-              color: Colors.white,
-              borderRadius: AppRadius.pillRadius,
-              minOpacity: 0.3,
-              maxOpacity: 0.6,
-              blurRadius: 24,
-              child: GestureDetector(
+          // ── "Level N" button, overlapping the card's bottom edge ──
+          Positioned(
+            bottom: 0,
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            child: PulsingGlow(
+              color: chapter.difficulty.color,
+              child: GameButton(
+                label: 'Level $levelId',
+                icon: Icons.play_arrow_rounded,
+                width: double.infinity,
+                height: 60,
                 onTap: () => context.goNamed(
                   RouteNames.puzzle,
                   pathParameters: {'levelId': '$levelId'},
                 ),
-                child: Container(
-                  width: double.infinity,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: AppRadius.pillRadius,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.play_arrow_rounded,
-                        color: chapter.difficulty.color,
-                        size: 32,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        'Continue',
-                        style: textTheme.titleLarge?.copyWith(
-                          color: chapter.difficulty.color,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-            const SizedBox(height: AppSpacing.sm),
+/// Chunky pill banner naming the current section — sits overlapping the
+/// hero card's top edge, matching a "ribbon tab" look.
+class _SectionBanner extends StatelessWidget {
+  const _SectionBanner({required this.section, required this.color});
 
-            // Secondary: View Map
-            TextButton.icon(
-              onPressed: () => context.goNamed(RouteNames.levels),
-              icon: const Icon(Icons.map_rounded, size: 18, color: Colors.white70),
-              label: Text(
-                'View Journey Map',
-                style: textTheme.bodySmall?.copyWith(color: Colors.white70),
-              ),
-            ),
-          ],
+  final Section section;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: AppColors.outline, width: 3),
+        boxShadow: AppShadows.bevel(color, depth: 4),
+      ),
+      child: OutlinedText(
+        'Section ${section.index}',
+        outlineWidth: 2,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -607,8 +639,6 @@ class _SeasonPassCard extends StatelessWidget {
 class _BottomActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return Row(
       children: [
         Expanded(child: _NavCard(
@@ -655,20 +685,9 @@ class _NavCard extends StatelessWidget {
 
     return PressScale(
       onTap: onTap,
-      child: Container(
+      child: GameCard(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: AppRadius.lgRadius,
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow,
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        borderRadius: AppRadius.lgRadius,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -678,6 +697,7 @@ class _NavCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
+                border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
               ),
               child: Icon(icon, color: color, size: 24),
             ),

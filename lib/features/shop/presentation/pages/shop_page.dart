@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
+import '../../../../services/audio_service.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/ads_cubit.dart';
 import '../../../../game/wallet_cubit.dart';
@@ -52,6 +53,7 @@ class ShopPage extends StatelessWidget {
                           rewardCoins: 25,
                           onRewardEarned: () {
                             context.read<WalletCubit>().addCoins(25);
+                            AudioService().playCoinReward();
                             _showEarnedSnackBar(context, 25);
                           },
                         ),
@@ -63,13 +65,13 @@ class ShopPage extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        for (final pack in coinPacks) ...[
-                          CoinPackCard(
+                        for (final pack in coinPacks) ...[                            CoinPackCard(
                             pack: pack,
                             onPurchase: () {
                               context.read<WalletCubit>().addCoins(
                                 pack.coins,
                               );
+                              AudioService().playCoinReward();
                               _showEarnedSnackBar(context, pack.coins);
                             },
                           ),

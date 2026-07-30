@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/design_system/app_colors.dart';
 import '../../core/design_system/app_radius.dart';
 import '../../core/design_system/app_spacing.dart';
 import '../../features/levels/domain/entities/level.dart';
@@ -23,6 +24,7 @@ class DifficultyBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: difficulty.color,
         borderRadius: AppRadius.pillRadius,
+        border: Border.all(color: AppColors.outline, width: 2),
       ),
       child: Text(
         difficulty.label,

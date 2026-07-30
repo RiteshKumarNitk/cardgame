@@ -1,11 +1,8 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_gradients.dart';
+import '../../../../services/audio_service.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
@@ -16,14 +13,15 @@ import '../../../../shared/widgets/confetti_burst.dart';
 import '../../../../shared/widgets/fireworks_burst.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
-import '../../../../shared/widgets/game_card.dart';
-import '../../../../shared/widgets/press_scale.dart';
 import '../../../../shared/widgets/pulsing_glow.dart';
 import '../../../../shared/widgets/sparkle_particles.dart';
 import '../../../../shared/widgets/stat_chip.dart';
+import '../../../levels/data/datasources/levels_local_datasource.dart';
+import '../../../levels/data/repositories/levels_repository_impl.dart';
 import '../../../levels/domain/entities/chapter.dart';
 import '../../../levels/domain/entities/chapter_complete_result.dart';
 import '../../../levels/domain/services/chapter_catalog.dart';
+import '../../../levels/domain/services/level_service.dart';
 import '../../../levels/presentation/widgets/level_difficulty_style.dart';
 import '../../../puzzle/domain/puzzle_image.dart';
 import '../../domain/entities/victory_result.dart';
@@ -91,6 +89,7 @@ class _VictoryPageState extends State<VictoryPage>
       if (mounted) {
         _controller.forward();
         setState(() => _showCelebration = true);
+        AudioService().playVictory();
       }
     });
   }
@@ -578,17 +577,27 @@ class _ActionButtons extends StatelessWidget {
                 icon: Icons.double_arrow_rounded,
                 width: double.infinity,
                 height: 68,
-                onTap: () {
+                onTap: () async {
                   if (isChapterComplete) {
                     final chapter = ChapterCatalog.chapterForLevel(result.level.id);
                     final nextChapter = chapter.id < ChapterCatalog.chapters.length
                         ? ChapterCatalog.chapters[chapter.id]
                         : null;
+                    // Sum stars across every level in the chapter (not
+                    // just this one) for an accurate chapter total.
+                    final levelService = LevelService(
+                      LevelsRepositoryImpl(HiveLevelsLocalDataSource()),
+                    );
+                    final levels = await levelService.loadLevels();
+                    final totalStars = levels
+                        .where((level) => chapter.containsLevel(level.id))
+                        .fold(0, (sum, level) => sum + level.stars);
+                    if (!context.mounted) return;
                     context.goNamed(
                       RouteNames.chapterComplete,
                       extra: ChapterCompleteResult(
                         chapter: chapter,
-                        totalStars: result.stars,
+                        totalStars: totalStars,
                         nextChapter: nextChapter,
                       ),
                     );

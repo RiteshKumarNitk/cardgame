@@ -8,10 +8,13 @@
 // real Hive — same reasoning as the Levels feature tests.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:puzzle_cards/core/theme/app_theme.dart';
+import 'package:puzzle_cards/game/wallet_cubit.dart';
+import '../../helpers/fake_wallet_service.dart';
 import 'package:puzzle_cards/features/levels/domain/entities/level.dart';
 import 'package:puzzle_cards/features/levels/domain/repositories/levels_repository.dart';
 import 'package:puzzle_cards/features/levels/domain/services/chapter_catalog.dart';
@@ -47,9 +50,12 @@ void main() {
     final levelService = LevelService(_FakeLevelsRepository());
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.game,
-        home: PuzzlePage(levelId: '1', levelService: levelService),
+      BlocProvider<WalletCubit>(
+        create: (_) => WalletCubit(FakeWalletService()),
+        child: MaterialApp(
+          theme: AppTheme.game,
+          home: PuzzlePage(levelId: '1', levelService: levelService),
+        ),
       ),
     );
     await tester.pump();
@@ -79,9 +85,12 @@ void main() {
     final unknownLevelId = ChapterCatalog.totalLevelCount + 1;
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.game,
-        home: PuzzlePage(levelId: '$unknownLevelId', levelService: levelService),
+      BlocProvider<WalletCubit>(
+        create: (_) => WalletCubit(FakeWalletService()),
+        child: MaterialApp(
+          theme: AppTheme.game,
+          home: PuzzlePage(levelId: '$unknownLevelId', levelService: levelService),
+        ),
       ),
     );
     await tester.pump();

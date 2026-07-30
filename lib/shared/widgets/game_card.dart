@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 
 import '../../core/design_system/app_colors.dart';
 import '../../core/design_system/app_radius.dart';
+import '../../core/design_system/app_shadows.dart';
 import '../../core/design_system/app_spacing.dart';
 import '../../core/design_system/app_theme_extension.dart';
 
-/// The app's single card surface: rounded corners, soft shadow, light
-/// border, with an optional frosted-glass look for content sitting on
-/// top of a colorful background (used on Home/Levels).
+/// The app's single card surface: rounded corners, a thick dark outline,
+/// and a chunky "3D bevel" band beneath — the same toy-block look as
+/// [GameButton] — with an optional frosted-glass look for content sitting
+/// on top of a colorful background (used on Home/Levels; the glass
+/// variant skips the outline/bevel since a visible dark line would fight
+/// the translucency).
 class GameCard extends StatelessWidget {
   const GameCard({
     super.key,
@@ -28,6 +32,17 @@ class GameCard extends StatelessWidget {
   final Color? color;
   final bool glass;
 
+  /// The card's own fill (or gradient's bottom-most color) — darkened to
+  /// derive the bevel band, so it always matches whatever color this card
+  /// was given rather than a hand-picked shade per call site.
+  Color _bevelBase() {
+    final gradient = this.gradient;
+    if (gradient is LinearGradient && gradient.colors.isNotEmpty) {
+      return gradient.colors.last;
+    }
+    return color ?? AppColors.card;
+  }
+
   @override
   Widget build(BuildContext context) {
     final ext = Theme.of(context).extension<AppThemeExtension>()!;
@@ -44,11 +59,12 @@ class GameCard extends StatelessWidget {
         gradient: gradient,
         borderRadius: radius,
         border: Border.all(
-          color: glass
-              ? Colors.white.withValues(alpha: 0.32)
-              : AppColors.border,
+          color: glass ? Colors.white.withValues(alpha: 0.32) : AppColors.outline,
+          width: glass ? 1 : 3,
         ),
-        boxShadow: glass ? null : ext.cardShadow,
+        boxShadow: glass
+            ? null
+            : [...ext.cardShadow, ...AppShadows.bevel(_bevelBase(), depth: 5)],
       ),
       child: child,
     );

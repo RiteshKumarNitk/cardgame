@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_gradients.dart';
+import '../../../../services/audio_service.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
@@ -21,7 +20,6 @@ import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/difficulty_badge.dart';
 import '../../../levels/data/datasources/levels_local_datasource.dart';
 import '../../../levels/data/repositories/levels_repository_impl.dart';
-import '../../../levels/domain/entities/chapter_complete_result.dart';
 import '../../../levels/domain/services/level_service.dart';
 import '../../../victory/domain/entities/victory_result.dart';
 import '../../domain/puzzle_board_size.dart';
@@ -131,6 +129,11 @@ class _PuzzleView extends StatelessWidget {
   ) async {
     await Future.delayed(_celebrationDelay);
     if (!context.mounted) return;
+
+    // Always land on Victory first, even when this was a chapter's last
+    // level — Victory shows its own "Chapter Complete" banner in that
+    // case, and its Continue button routes onward to the full Chapter
+    // Complete celebration. See VictoryPage's _ActionButtons.
     context.goNamed(
       RouteNames.victory,
       extra: VictoryResult(
@@ -166,6 +169,7 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
       vsync: this,
       duration: _celebrationDelay,
     );
+    AudioService().playLevelStart();
   }
 
   @override

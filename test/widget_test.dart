@@ -24,6 +24,7 @@ import 'package:hive/hive.dart';
 import 'package:puzzle_cards/core/app/puzzle_cards_app.dart';
 import 'package:puzzle_cards/core/constants/app_constants.dart';
 import 'package:puzzle_cards/features/levels/data/models/level_model.dart';
+import 'package:puzzle_cards/features/splash/presentation/pages/splash_page.dart';
 import 'package:puzzle_cards/game/ads_cubit.dart';
 import 'package:puzzle_cards/game/wallet_cubit.dart';
 
@@ -70,7 +71,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     // Splash screen: logo + app name
-    expect(find.byIcon(Icons.extension_rounded), findsOneWidget);
+    expect(find.byType(SplashPage), findsOneWidget);
     expect(find.text('Puzzle Cards'), findsOneWidget);
 
     // Advance past splash's 2s delay so the Timer fires cleanly
@@ -86,8 +87,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Splash logo must be gone — confirms navigation fired
-    expect(find.byIcon(Icons.extension_rounded), findsNothing);
+    // Splash screen must be gone — confirms navigation fired. (Home also
+    // shows the same logo mark in its top bar, so checking for the splash
+    // page itself rather than the shared icon is what actually proves we
+    // navigated away.)
+    expect(find.byType(SplashPage), findsNothing);
 
     // Home screen: static elements that render regardless of async state
     expect(find.byIcon(Icons.settings_rounded), findsOneWidget);

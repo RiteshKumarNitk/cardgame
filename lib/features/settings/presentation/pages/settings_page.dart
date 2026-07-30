@@ -20,8 +20,12 @@ import '../bloc/settings_cubit.dart';
 
 /// Settings screen: sound/music/haptics toggles and a (confirmed) reset
 /// of level progress.
+///
+/// Uses the [SettingsCubit] provided by [PuzzleCardsApp] at the app root,
+/// so the audio service stays in sync across all screens. Falls back to
+/// creating its own if none is found (backward-compat for tests).
 class SettingsPage extends StatelessWidget {
-  /// [settingsRepository]/[levelService] default to the real Hive-backed
+  /// [settingsRepository]/[levelService] — defaults to real Hive-backed
   /// stacks; tests can supply ones built on in-memory fakes instead.
   const SettingsPage({
     super.key,
@@ -35,16 +39,22 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) =>
-          SettingsCubit(_settingsRepository ?? HiveSettingsRepository())
-            ..load(),
-      child: _SettingsView(
-        levelService:
-            _levelService ??
-            LevelService(LevelsRepositoryImpl(HiveLevelsLocalDataSource())),
-      ),
+    // Wrap in a provider only if none exists up the tree (tests).
+    Widget view = _SettingsView(
+      levelService:
+          _levelService ??
+          LevelService(LevelsRepositoryImpl(HiveLevelsLocalDataSource())),
     );
+    try {
+      context.read<SettingsCubit>();
+    } on ProviderNotFoundException {
+      view = BlocProvider(
+        create: (_) =>
+            SettingsCubit(_settingsRepository ?? HiveSettingsRepository())..load(),
+        child: view,
+      );
+    }
+    return view;
   }
 }
 
