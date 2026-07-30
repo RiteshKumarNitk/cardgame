@@ -4,7 +4,6 @@ import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_shadows.dart';
-import '../../../levels/domain/entities/level.dart';
 import '../../domain/puzzle_board_size.dart';
 import 'puzzle_image_tile.dart';
 
@@ -14,31 +13,49 @@ import 'puzzle_image_tile.dart';
 /// so a solved board reads as one seamless photo rather than a grid of
 /// separated chips. Drag one piece onto another to swap them — a cell
 /// locks with a satisfying pop + glow once its piece is correct.
+import 'dart:math' as math;
+
 class PuzzleBoard extends StatelessWidget {
   const PuzzleBoard({
     super.key,
-    required this.difficulty,
+    required this.dimensions,
     required this.imageUrl,
     required this.arrangement,
     required this.onSwap,
+    this.solvedProgress = 0.0,
+    this.snapFraction = 0.18,
+    this.borderFadeFraction = 0.5,
   });
 
-  final LevelDifficulty difficulty;
+  /// Resolved by the caller — from a chapter's board size
+  /// ([boardDimensionsForLevel]) for regular levels, or a fixed
+  /// per-difficulty table ([boardDimensionsFor]) for Daily Challenge.
+  final BoardDimensions dimensions;
   final String imageUrl;
 
   /// `arrangement[cell]` is the 1-based piece index in that cell.
   final List<int> arrangement;
   final void Function(int fromCell, int toCell) onSwap;
 
+  /// 0.0–1.0 progress of the puzzle-solved celebration animation.
+  /// 0 = just solved, 1 = about to navigate to Victory.
+  final double solvedProgress;
+
+  /// Fraction of [solvedProgress] used for the piece-snap pop animation.
+  final double snapFraction;
+
+  /// Fraction of [solvedProgress] used for fading cell borders away.
+  final double borderFadeFraction;
+
   @override
   Widget build(BuildContext context) {
-    final dimensions = boardDimensionsFor(difficulty);
-
     return Container(
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: AppRadius.lgRadius,
-        border: Border.all(color: AppColors.border),
+        border: solvedProgress < borderFadeFraction
+            ? Border.all(color: AppColors.border)
+            : null,
         boxShadow: AppShadows.card,
       ),
       clipBehavior: Clip.antiAlias,
@@ -62,6 +79,9 @@ class PuzzleBoard extends StatelessWidget {
               imageUrl: imageUrl,
               correct: pieceIndex == cellIndex + 1,
               onSwap: onSwap,
+              solvedProgress: solvedProgress,
+              snapFraction: snapFraction,
+              borderFadeFraction: borderFadeFraction,
             );
           },
         ),
@@ -79,6 +99,9 @@ class _BoardCell extends StatefulWidget {
     required this.imageUrl,
     required this.correct,
     required this.onSwap,
+    this.solvedProgress = 0.0,
+    this.snapFraction = 0.18,
+    this.borderFadeFraction = 0.5,
   });
 
   final int cellIndex;
@@ -88,6 +111,9 @@ class _BoardCell extends StatefulWidget {
   final String imageUrl;
   final bool correct;
   final void Function(int fromCell, int toCell) onSwap;
+  final double solvedProgress;
+  final double snapFraction;
+  final double borderFadeFraction;
 
   @override
   State<_BoardCell> createState() => _BoardCellState();
@@ -129,6 +155,33 @@ class _BoardCellState extends State<_BoardCell>
   Widget build(BuildContext context) {
     final row = (widget.pieceIndex - 1) ~/ widget.gridCols;
     final col = (widget.pieceIndex - 1) % widget.gridCols;
+    final solved = widget.solvedProgress;
+    final isAnimatingSolved = solved > 0.0;
+
+    // ── Phase 1: Snap pop (all pieces together) ──
+    final snapLocal = (solved / widget.snapFraction).clamp(0.0, 1.0);
+    final snapScale = isAnimatingSolved
+        ? 1.0 + 0.14 * math.sin(snapLocal * math.pi) * (1.0 - snapLocal * 0.3)
+        : 1.0;
+
+    // ── Phase 2: Border fade ──
+    final borderFadeLocal =
+        ((solved - widget.snapFraction) / widget.borderFadeFraction).clamp(0.0, 1.0);
+    final borderColor = isAnimatingSolved
+        ? Color.lerp(
+            widget.correct ? AppColors.success : AppColors.border,
+            Colors.transparent,
+            borderFadeLocal,
+          )!
+        : (widget.correct ? AppColors.success : AppColors.border);
+    final borderWidth = isAnimatingSolved
+        ? (widget.correct ? 2.0 : 0.5) * (1.0 - borderFadeLocal)
+        : (widget.correct ? 2.0 : 0.5);
+
+    // ── Phase 3: Tile glow (subtle lighten as borders disappear) ──
+    final tileOpacity = isAnimatingSolved
+        ? 1.0 + 0.06 * (solved - widget.snapFraction - widget.borderFadeFraction).clamp(0.0, 0.3) / 0.3
+        : 1.0;
 
     final content = PuzzleImageTile(
       imageUrl: widget.imageUrl,
@@ -136,26 +189,31 @@ class _BoardCellState extends State<_BoardCell>
       gridRows: widget.gridRows,
       row: row,
       col: col,
+      opacity: tileOpacity.clamp(0.0, 1.0),
     );
 
     final decorated = Container(
       decoration: BoxDecoration(
         border: Border.all(
-          // The only "correct" indicator is this border — no checkmark
-          // badge on top of the piece.
-          color: widget.correct ? AppColors.success : AppColors.border,
-          width: widget.correct ? 2 : 0.5,
+          color: borderColor,
+          width: borderWidth,
         ),
-        boxShadow: widget.correct
+        boxShadow: widget.correct && !isAnimatingSolved
             ? AppShadows.glow(AppColors.success, opacity: 0.3)
             : null,
       ),
       child: content,
     );
 
-    final popped = ScaleTransition(scale: _pop, child: decorated);
+    // Apply snap scale
+    final animated = snapScale != 1.0
+        ? Transform.scale(scale: snapScale, child: decorated)
+        : decorated;
 
-    if (widget.correct) return popped;
+    final popped = ScaleTransition(scale: _pop, child: animated);
+
+    // When solved animation is playing, disable all interactions
+    if (isAnimatingSolved || widget.correct) return popped;
 
     return DragTarget<int>(
       onWillAcceptWithDetails: (details) => details.data != widget.cellIndex,

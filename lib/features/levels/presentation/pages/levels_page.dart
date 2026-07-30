@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
-import '../../../../core/router/route_paths.dart';
 import '../../../../shared/widgets/ad_banner_placeholder.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../data/datasources/levels_local_datasource.dart';
 import '../../data/repositories/levels_repository_impl.dart';
 import '../../domain/entities/level.dart';
+import '../../domain/services/chapter_catalog.dart';
 import '../../domain/services/level_service.dart';
 import '../bloc/levels_cubit.dart';
 import '../bloc/levels_state.dart';
-import '../widgets/level_tile.dart';
+import '../journey/chapter_banner.dart';
+import '../journey/journey_item.dart';
+import '../journey/journey_level_node.dart';
+import '../journey/journey_path_segment.dart';
+import '../journey/level_card_sheet.dart';
+import '../journey/section_complete_banner.dart';
+import '../widgets/level_difficulty_style.dart';
 import '../widgets/levels_top_bar.dart';
 
-/// Level Selection screen: a scrollable grid of the 100 demo levels behind
-/// a top bar showing coins, hints, and overall completion progress.
+/// Level Selection screen: a winding Journey Map (chapters -> sections ->
+/// levels) instead of a flat grid, behind a top bar showing coins, hints,
+/// and overall completion progress.
 ///
 /// Loading/unlocking/completing levels goes through [LevelsCubit] ->
 /// [LevelService] -> [LevelsRepositoryImpl] -> Hive.
@@ -94,7 +100,7 @@ class _LevelsView extends StatelessWidget {
                       LevelsTopBar(progress: progress.percentComplete),
                       const SizedBox(height: AppSpacing.md),
                       Expanded(
-                        child: _LevelsGrid(
+                        child: _JourneyMap(
                           levels: levels,
                           currentLevelId: progress.currentLevelId,
                         ),
@@ -115,43 +121,97 @@ class _LevelsView extends StatelessWidget {
   }
 }
 
-class _LevelsGrid extends StatelessWidget {
-  const _LevelsGrid({required this.levels, required this.currentLevelId});
+class _JourneyMap extends StatefulWidget {
+  const _JourneyMap({required this.levels, required this.currentLevelId});
 
   final List<Level> levels;
   final int? currentLevelId;
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = (constraints.maxWidth / 88)
-            .floor()
-            .clamp(4, 8);
+  State<_JourneyMap> createState() => _JourneyMapState();
+}
 
-        return GridView.builder(
-          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: AppSpacing.md,
-            mainAxisSpacing: AppSpacing.md,
-            childAspectRatio: 1,
+class _JourneyMapState extends State<_JourneyMap> {
+  late final ScrollController _scrollController;
+  late List<JourneyItem> _items;
+
+  @override
+  void initState() {
+    super.initState();
+    _items = buildJourneyItems(widget.levels);
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
+  }
+
+  @override
+  void didUpdateWidget(covariant _JourneyMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _items = buildJourneyItems(widget.levels);
+  }
+
+  void _scrollToCurrent() {
+    if (!_scrollController.hasClients) return;
+    final currentId = widget.currentLevelId;
+    if (currentId == null) return;
+
+    final index = _items.indexWhere(
+      (item) => item is JourneyLevelNode && item.level.id == currentId,
+    );
+    if (index == -1) return;
+
+    // Roughly center the current level: each item averages ~110px tall.
+    final offset = (index * 110 - 240).toDouble().clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
+    _scrollController.jumpTo(offset);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg, top: AppSpacing.sm),
+      itemCount: _items.length,
+      itemBuilder: (context, index) {
+        final item = _items[index];
+        return switch (item) {
+          JourneyChapterBanner(:final chapter) => ChapterBanner(
+            chapter: chapter,
           ),
-          itemCount: levels.length,
-          itemBuilder: (context, index) {
-            final level = levels[index];
-            return LevelTile(
-              level: level,
-              isCurrent: level.id == currentLevelId,
-              onTap: level.isUnlocked
-                  ? () => context.goNamed(
-                      RouteNames.puzzle,
-                      pathParameters: {'levelId': '${level.id}'},
-                    )
-                  : null,
-            );
-          },
-        );
+          JourneySectionComplete(:final section) => SectionCompleteBanner(
+            section: section,
+            reached: widget.levels[section.endLevelId - 1].isCompleted,
+          ),
+          JourneyLevelNode(:final level) => Column(
+            children: [
+              if (level.id != ChapterCatalog.chapterForLevel(level.id).startLevelId)
+                JourneyPathSegment(
+                  fromLevelId: level.id - 1,
+                  toLevelId: level.id,
+                  color: level.isUnlocked
+                      ? level.difficulty.color
+                      : AppColors.border,
+                ),
+              Align(
+                alignment: Alignment(journeyWavePosition(level.id), 0),
+                child: LevelNodeCircle(
+                  level: level,
+                  isCurrent: level.id == widget.currentLevelId,
+                  onTap: level.isUnlocked
+                      ? () => showLevelCardSheet(context, level)
+                      : null,
+                ),
+              ),
+            ],
+          ),
+        };
       },
     );
   }

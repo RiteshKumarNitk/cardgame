@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 
-enum LevelDifficulty { easy, medium, hard, expert }
+// Appended-only: `LevelModel` persists this as an index, so new tiers
+// must always go at the end, never inserted in the middle.
+enum LevelDifficulty { easy, medium, hard, expert, master }
 
 /// A single puzzle level and the player's progress on it.
 ///

@@ -1,5 +1,6 @@
 import '../entities/level.dart';
 import '../repositories/levels_repository.dart';
+import 'chapter_catalog.dart';
 import 'demo_levels_generator.dart';
 
 /// Business rules for level progress: seeding, completion, and the
@@ -11,14 +12,19 @@ class LevelService {
 
   final LevelsRepository _repository;
 
-  /// Loads saved progress, seeding the 100 demo levels on first run.
+  /// Loads saved progress, seeding the full level catalog on first run —
+  /// or reseeding if the saved count no longer matches
+  /// [ChapterCatalog.totalLevelCount] (i.e. the catalog grew since this
+  /// progress was saved). This is a pre-release app, so a full reseed on
+  /// catalog change is an acceptable tradeoff for never getting stuck on
+  /// a stale, shorter catalog.
   Future<List<Level>> loadLevels() async {
     final levels = await _repository.loadLevels();
-    if (levels.isNotEmpty) return levels;
+    if (levels.length == ChapterCatalog.totalLevelCount) return levels;
 
-    final demoLevels = generateDemoLevels();
-    await _repository.saveLevels(demoLevels);
-    return demoLevels;
+    final catalog = generateLevelCatalog();
+    await _repository.saveLevels(catalog);
+    return catalog;
   }
 
   /// Unlocks the level right after [completedLevelId], if it isn't
@@ -67,12 +73,12 @@ class LevelService {
     return updated;
   }
 
-  /// Wipes progress back to a fresh set of demo levels (only level 1
-  /// unlocked, nothing completed).
+  /// Wipes progress back to a fresh level catalog (only level 1 unlocked,
+  /// nothing completed).
   Future<List<Level>> resetProgress() async {
-    final demoLevels = generateDemoLevels();
-    await _repository.saveLevels(demoLevels);
-    return demoLevels;
+    final catalog = generateLevelCatalog();
+    await _repository.saveLevels(catalog);
+    return catalog;
   }
 
   int? _better(int? current, int? candidate, {required bool lowerIsBetter}) {

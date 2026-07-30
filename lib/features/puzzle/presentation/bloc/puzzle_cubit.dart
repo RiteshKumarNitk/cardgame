@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../levels/domain/entities/chapter.dart';
 import '../../../levels/domain/entities/level.dart';
+import '../../../levels/domain/services/chapter_catalog.dart';
 import '../../../levels/domain/services/level_service.dart';
 import '../../domain/puzzle_board_size.dart';
 import '../../domain/tile_swap_engine.dart';
@@ -35,7 +37,7 @@ class PuzzleCubit extends Cubit<PuzzleState> {
       }
       final level = _levels[index];
       final arrangement = TileSwapEngine.shuffledArrangement(
-        pieceCount: boardDimensionsFor(level.difficulty).pieceCount,
+        pieceCount: boardDimensionsForLevel(level.id).pieceCount,
         seed: level.id,
       );
       emit(
@@ -74,7 +76,7 @@ class PuzzleCubit extends Cubit<PuzzleState> {
 
     if (solved) {
       _timer?.cancel();
-      await _levelService.completeLevel(
+      _levels = await _levelService.completeLevel(
         _levels,
         updated.level.id,
         stars: updated.stars,
@@ -90,6 +92,24 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     final current = state;
     if (current is! PuzzleLoaded) return null;
     return current.level.id < _levels.length ? current.level.id + 1 : null;
+  }
+
+  /// If [levelId] is the last level of its chapter, returns that chapter
+  /// (so the caller can show a Chapter Complete celebration instead of the
+  /// regular Victory screen); otherwise `null`. Call after `swapPieces`
+  /// has persisted the solve.
+  Chapter? chapterCompletedBy(int levelId) {
+    final chapter = ChapterCatalog.chapterForLevel(levelId);
+    return chapter.endLevelId == levelId ? chapter : null;
+  }
+
+  /// Total stars earned so far across every level in [chapter], based on
+  /// the freshest persisted progress. Call after `swapPieces` has
+  /// persisted the solve.
+  int starsEarnedIn(Chapter chapter) {
+    return _levels
+        .where((level) => chapter.containsLevel(level.id))
+        .fold(0, (sum, level) => sum + level.stars);
   }
 
   void _startTimer() {

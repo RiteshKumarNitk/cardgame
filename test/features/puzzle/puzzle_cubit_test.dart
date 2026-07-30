@@ -12,29 +12,19 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:puzzle_cards/features/levels/domain/entities/level.dart';
 import 'package:puzzle_cards/features/levels/domain/repositories/levels_repository.dart';
+import 'package:puzzle_cards/features/levels/domain/services/chapter_catalog.dart';
+import 'package:puzzle_cards/features/levels/domain/services/demo_levels_generator.dart';
 import 'package:puzzle_cards/features/levels/domain/services/level_service.dart';
 import 'package:puzzle_cards/features/puzzle/presentation/bloc/puzzle_cubit.dart';
 import 'package:puzzle_cards/features/puzzle/presentation/bloc/puzzle_state.dart';
 
+// Seeded with the real, full level catalog (not a hand-picked short list):
+// LevelService reseeds whenever the repository's stored count doesn't
+// match ChapterCatalog.totalLevelCount, so a short fake list would get
+// silently replaced on every load. Level 1 is in Chapter 1 ("The
+// Beginning", easy, 3 cols x 4 rows = 12 pieces).
 class _FakeLevelsRepository implements LevelsRepository {
-  List<Level> stored = [
-    const Level(
-      id: 1,
-      title: 'Level 1',
-      difficulty: LevelDifficulty.easy, // 3 cols x 4 rows = 12 pieces
-      stars: 0,
-      isCompleted: false,
-      isUnlocked: true,
-    ),
-    const Level(
-      id: 2,
-      title: 'Level 2',
-      difficulty: LevelDifficulty.easy,
-      stars: 0,
-      isCompleted: false,
-      isUnlocked: false,
-    ),
-  ];
+  List<Level> stored = generateLevelCatalog();
 
   @override
   Future<List<Level>> loadLevels() async => List.of(stored);
@@ -90,7 +80,7 @@ void main() {
   });
 
   test('emits an error for an unknown level id', () async {
-    await cubit.loadLevel(999);
+    await cubit.loadLevel(ChapterCatalog.totalLevelCount + 1);
 
     expect(cubit.state, isA<PuzzleError>());
   });
@@ -156,7 +146,7 @@ void main() {
     await cubit.loadLevel(1);
     expect(cubit.nextLevelId, 2);
 
-    await cubit.loadLevel(2);
-    expect(cubit.nextLevelId, isNull, reason: 'level 2 is the last in this fake repository');
+    await cubit.loadLevel(ChapterCatalog.totalLevelCount);
+    expect(cubit.nextLevelId, isNull, reason: 'this is the last level in the catalog');
   });
 }

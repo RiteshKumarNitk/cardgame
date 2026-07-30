@@ -8,6 +8,7 @@ abstract final class RoutePaths {
   static const String levels = '/levels';
   static const String puzzle = '/puzzle/:levelId';
   static const String victory = '/victory';
+  static const String chapterComplete = '/chapter-complete';
   static const String settings = '/settings';
   static const String dailyPuzzle = '/daily-puzzle';
   static const String achievements = '/achievements';
@@ -22,6 +23,7 @@ abstract final class RouteNames {
   static const String levels = 'levels';
   static const String puzzle = 'puzzle';
   static const String victory = 'victory';
+  static const String chapterComplete = 'chapterComplete';
   static const String settings = 'settings';
   static const String dailyPuzzle = 'dailyPuzzle';
   static const String achievements = 'achievements';

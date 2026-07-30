@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:puzzle_cards/features/levels/domain/entities/level.dart';
 import 'package:puzzle_cards/features/levels/domain/repositories/levels_repository.dart';
+import 'package:puzzle_cards/features/levels/domain/services/chapter_catalog.dart';
 import 'package:puzzle_cards/features/levels/domain/services/level_service.dart';
 
 class _FakeLevelsRepository implements LevelsRepository {
@@ -23,36 +24,58 @@ class _FakeLevelsRepository implements LevelsRepository {
 
 void main() {
   group('loadLevels', () {
-    test('seeds 100 demo levels with only level 1 unlocked when empty', () async {
+    test('seeds the full level catalog with only level 1 unlocked when empty', () async {
       final repository = _FakeLevelsRepository();
       final service = LevelService(repository);
 
       final levels = await service.loadLevels();
 
-      expect(levels, hasLength(100));
+      expect(levels, hasLength(ChapterCatalog.totalLevelCount));
       expect(levels.first.isUnlocked, isTrue);
       expect(levels.skip(1).every((l) => !l.isUnlocked), isTrue);
-      expect(repository.stored, hasLength(100));
+      expect(repository.stored, hasLength(ChapterCatalog.totalLevelCount));
     });
 
-    test('returns existing progress without reseeding', () async {
-      final existing = [
-        const Level(
-          id: 1,
-          title: 'Level 1',
+    test('returns existing progress without reseeding when it matches the catalog', () async {
+      final existing = List.generate(ChapterCatalog.totalLevelCount, (index) {
+        final id = index + 1;
+        return Level(
+          id: id,
+          title: 'Level $id',
           difficulty: LevelDifficulty.easy,
-          stars: 2,
-          isCompleted: true,
-          isUnlocked: true,
-        ),
-      ];
+          stars: id == 1 ? 2 : 0,
+          isCompleted: id == 1,
+          isUnlocked: id == 1,
+        );
+      });
       final repository = _FakeLevelsRepository()..stored = existing;
       final service = LevelService(repository);
 
       final levels = await service.loadLevels();
 
-      expect(levels, hasLength(1));
+      expect(levels, hasLength(ChapterCatalog.totalLevelCount));
       expect(levels.first.stars, 2);
+    });
+
+    test('reseeds when stored progress no longer matches the catalog size', () async {
+      final stale = [
+        const Level(
+          id: 1,
+          title: 'Level 1',
+          difficulty: LevelDifficulty.easy,
+          stars: 3,
+          isCompleted: true,
+          isUnlocked: true,
+        ),
+      ];
+      final repository = _FakeLevelsRepository()..stored = stale;
+      final service = LevelService(repository);
+
+      final levels = await service.loadLevels();
+
+      expect(levels, hasLength(ChapterCatalog.totalLevelCount));
+      expect(levels.first.isCompleted, isFalse, reason: 'stale progress should be wiped');
+      expect(repository.stored, hasLength(ChapterCatalog.totalLevelCount));
     });
   });
 
@@ -146,7 +169,7 @@ void main() {
   });
 
   group('resetProgress', () {
-    test('restores a fresh 100-level set with only level 1 unlocked', () async {
+    test('restores a fresh full catalog with only level 1 unlocked', () async {
       final repository = _FakeLevelsRepository()
         ..stored = [
           const Level(
@@ -162,7 +185,7 @@ void main() {
 
       final levels = await service.resetProgress();
 
-      expect(levels, hasLength(100));
+      expect(levels, hasLength(ChapterCatalog.totalLevelCount));
       expect(levels.first.isCompleted, isFalse);
       expect(levels.first.stars, 0);
       expect(repository.stored.first.isCompleted, isFalse);

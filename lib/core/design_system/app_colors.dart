@@ -33,4 +33,5 @@ abstract final class AppColors {
   static const Color difficultyMedium = Color(0xFF06B6D4);
   static const Color difficultyHard = Color(0xFFF59E0B);
   static const Color difficultyExpert = Color(0xFFEF4444);
+  static const Color difficultyMaster = Color(0xFF7C3AED);
 }

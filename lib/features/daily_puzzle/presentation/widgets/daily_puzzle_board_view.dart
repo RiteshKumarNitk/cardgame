@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/design_system/app_spacing.dart';
+import '../../../puzzle/domain/puzzle_board_size.dart';
 import '../../../puzzle/presentation/widgets/puzzle_board.dart';
 import '../../../puzzle/presentation/widgets/puzzle_preview_thumbnail.dart';
 import '../bloc/daily_challenge_cubit.dart';
@@ -22,7 +23,7 @@ class DailyPuzzleBoardView extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: PuzzleBoard(
-            difficulty: state.challenge.difficulty,
+            dimensions: boardDimensionsFor(state.challenge.difficulty),
             imageUrl: state.imageUrl,
             arrangement: state.arrangement,
             onSwap: (fromCell, toCell) => context

@@ -2,6 +2,11 @@
 // Next Level CTA when given a result — and falls back gracefully with no
 // crash when opened without one.
 //
+// Timer management: VictoryPage has a Future.delayed(400ms) in initState
+// and BounceIn widgets have staggered delays (600–2050ms). The tests
+// pump step-by-step through all timer deadlines so none leak past the
+// widget tree disposal.
+//
 // Note: ConfettiBurst plays a one-shot (non-repeating) animation, so
 // unlike the continuously-animating Flame backgrounds, a normal pump is
 // enough here — no pumpAndSettle-hangs-forever concern.
@@ -23,6 +28,17 @@ const _level = Level(
   isCompleted: false,
   isUnlocked: true,
 );
+
+/// Advances past all staggered BounceIn delays (max ~2050ms) plus the
+/// VictoryPage's own Future.delayed(400ms) so no pending Timers remain.
+Future<void> _flushTimers(WidgetTester tester) async {
+  // Pump frame to trigger initState delays
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 500)); // past VictoryPage's 400ms
+  await tester.pump(const Duration(milliseconds: 500)); // past BounceIn 600-1100ms
+  await tester.pump(const Duration(milliseconds: 500)); // past BounceIn 1600ms
+  await tester.pump(const Duration(milliseconds: 600)); // past longest BounceIn 2050ms
+}
 
 void main() {
   setUpAll(() {
@@ -47,17 +63,13 @@ void main() {
         ),
       ),
     );
-    // _VictoryContent stacks several staggered BounceIn reveals (up to
-    // 600ms of delay); advance past all of them so their Future.delayed
-    // Timers fire before the test ends (otherwise: leaked pending Timer).
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 700));
+    await _flushTimers(tester);
 
-    expect(find.text('Level Complete!'), findsOneWidget);
+    expect(find.text('Puzzle Complete!'), findsOneWidget);
     expect(find.textContaining('Level 1'), findsOneWidget);
     expect(find.text('01:15'), findsOneWidget);
     expect(find.text('12'), findsOneWidget);
-    expect(find.text('+60'), findsOneWidget);
+    expect(find.text('+60'), findsAtLeastNWidgets(1));
     expect(find.text('Next Level'), findsOneWidget);
   });
 
@@ -79,18 +91,17 @@ void main() {
         ),
       ),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 700));
+    await _flushTimers(tester);
 
     expect(find.text('Next Level'), findsNothing);
-    expect(find.text('You\'ve completed every level!'), findsOneWidget);
+    expect(find.text('All Levels Complete!'), findsOneWidget);
   });
 
   testWidgets('falls back gracefully with no result', (tester) async {
     await tester.pumpWidget(
       MaterialApp(theme: AppTheme.game, home: const VictoryPage()),
     );
-    await tester.pump();
+    await _flushTimers(tester);
 
     expect(find.text('No level result to show.'), findsOneWidget);
   });

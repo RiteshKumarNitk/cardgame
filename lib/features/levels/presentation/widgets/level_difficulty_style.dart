@@ -11,6 +11,7 @@ extension LevelDifficultyStyle on LevelDifficulty {
     LevelDifficulty.medium => AppColors.difficultyMedium,
     LevelDifficulty.hard => AppColors.difficultyHard,
     LevelDifficulty.expert => AppColors.difficultyExpert,
+    LevelDifficulty.master => AppColors.difficultyMaster,
   };
 
   String get label => switch (this) {
@@ -18,5 +19,6 @@ extension LevelDifficultyStyle on LevelDifficulty {
     LevelDifficulty.medium => 'Medium',
     LevelDifficulty.hard => 'Hard',
     LevelDifficulty.expert => 'Expert',
+    LevelDifficulty.master => 'Master',
   };
 }
