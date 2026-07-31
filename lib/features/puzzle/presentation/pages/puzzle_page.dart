@@ -86,7 +86,7 @@ class _PuzzleView extends StatelessWidget {
         showFloatingPieces: false,
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             child: BlocConsumer<PuzzleCubit, PuzzleState>(
               listenWhen: (previous, current) =>
                   previous is PuzzleLoaded &&
@@ -195,24 +195,20 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
 
     return Column(
       children: [
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
 
         // ── Top Bar ──
         _PuzzleTopBar(
           level: state,
           imageUrl: imageUrl,
-          onBack: () => context.goNamed(RouteNames.levels),
+          onBack: () => context.goNamed(RouteNames.home),
           onPause: () => _showPauseDialog(context),
+          onPreview: () => _showPreviewSheet(context, imageUrl),
         ),
 
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
 
-        // ── Preview Thumbnail ──
-        PuzzlePreviewThumbnail(imageUrl: imageUrl),
-
-        const SizedBox(height: AppSpacing.sm),
-
-        // ── Puzzle Board ──
+        // ── Puzzle Board — as much of the screen as possible ──
         Expanded(
           child: Stack(
             children: [
@@ -266,7 +262,7 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
           ),
         ),
 
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
 
         // ── Bottom Action Bar ──
         _BottomActionBar(
@@ -277,10 +273,25 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
           onPause: () => _showPauseDialog(context),
         ),
 
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
       ],
     );
   }
+}
+
+/// Shows the (coin-gated) reference preview in a bottom sheet instead of
+/// an always-on-screen card, so the board itself gets the full screen.
+void _showPreviewSheet(BuildContext context, String imageUrl) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: PuzzlePreviewThumbnail(imageUrl: imageUrl),
+      ),
+    ),
+  );
 }
 
 /// ────────────────────────────────────────────────────────────────────
@@ -292,12 +303,14 @@ class _PuzzleTopBar extends StatelessWidget {
     required this.imageUrl,
     required this.onBack,
     required this.onPause,
+    required this.onPreview,
   });
 
   final PuzzleLoaded level;
   final String imageUrl;
   final VoidCallback onBack;
   final VoidCallback onPause;
+  final VoidCallback onPreview;
 
   @override
   Widget build(BuildContext context) {
@@ -351,6 +364,12 @@ class _PuzzleTopBar extends StatelessWidget {
             ),
           ),
           CircleIconButton(
+            icon: Icons.visibility_rounded,
+            iconColor: AppColors.secondary,
+            onTap: onPreview,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          CircleIconButton(
             icon: Icons.pause_rounded,
             iconColor: AppColors.textSecondary,
             onTap: onPause,
@@ -384,17 +403,17 @@ class _BottomActionBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+        vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: AppRadius.xlRadius,
+        borderRadius: AppRadius.lgRadius,
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
             color: AppColors.shadow,
-            blurRadius: 16,
-            offset: const Offset(0, -4),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
           ),
         ],
       ),
@@ -457,7 +476,7 @@ class _ActionButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: color.withValues(alpha: 0.1),
@@ -466,9 +485,9 @@ class _ActionButton extends StatelessWidget {
                   width: 1.5,
                 ),
               ),
-              child: Icon(icon, color: color, size: 26),
+              child: Icon(icon, color: color, size: 22),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               label,
               style: textTheme.labelSmall?.copyWith(
@@ -536,9 +555,13 @@ void _showPauseDialog(BuildContext context) {
             ),
             const SizedBox(height: AppSpacing.sm),
             TextButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(dialogContext).pop();
-                dialogContext.goNamed(RouteNames.levels);
+                // Let the dialog's own close animation finish before the
+                // page transition starts, instead of both playing at
+                // once.
+                await Future.delayed(const Duration(milliseconds: 200));
+                if (context.mounted) context.goNamed(RouteNames.home);
               },
               icon: const Icon(Icons.exit_to_app_rounded, size: 18),
               label: const Text('Quit Puzzle'),

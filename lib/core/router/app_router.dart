@@ -5,8 +5,10 @@ import '../../features/achievements/presentation/pages/achievements_page.dart';
 import '../../features/daily_puzzle/presentation/pages/daily_puzzle_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/levels/domain/entities/chapter_complete_result.dart';
+import '../../features/levels/domain/entities/section_complete_result.dart';
 import '../../features/levels/presentation/pages/chapter_complete_page.dart';
 import '../../features/levels/presentation/pages/levels_page.dart';
+import '../../features/levels/presentation/pages/section_complete_page.dart';
 import '../../features/puzzle/presentation/pages/puzzle_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/shop/presentation/pages/shop_page.dart';
@@ -61,6 +63,14 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) => _fadePage(
         state,
         ChapterCompletePage(result: state.extra as ChapterCompleteResult?),
+      ),
+    ),
+    GoRoute(
+      path: RoutePaths.sectionComplete,
+      name: RouteNames.sectionComplete,
+      pageBuilder: (context, state) => _fadePage(
+        state,
+        SectionCompletePage(result: state.extra as SectionCompleteResult?),
       ),
     ),
     GoRoute(

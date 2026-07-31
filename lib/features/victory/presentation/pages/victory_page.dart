@@ -20,6 +20,8 @@ import '../../../levels/data/datasources/levels_local_datasource.dart';
 import '../../../levels/data/repositories/levels_repository_impl.dart';
 import '../../../levels/domain/entities/chapter.dart';
 import '../../../levels/domain/entities/chapter_complete_result.dart';
+import '../../../levels/domain/entities/section.dart';
+import '../../../levels/domain/entities/section_complete_result.dart';
 import '../../../levels/domain/services/chapter_catalog.dart';
 import '../../../levels/domain/services/level_service.dart';
 import '../../../levels/presentation/widgets/level_difficulty_style.dart';
@@ -178,7 +180,9 @@ class _VictoryContent extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final imageUrl = puzzleImageUrlFor(result.level.id);
     final chapter = ChapterCatalog.chapterForLevel(result.level.id);
+    final section = ChapterCatalog.sectionForLevel(result.level.id);
     final isChapterComplete = chapter.endLevelId == result.level.id;
+    final isSectionComplete = !isChapterComplete && section.endLevelId == result.level.id;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -238,10 +242,13 @@ class _VictoryContent extends StatelessWidget {
                       ),
                     ),
 
-                    // ── Chapter Complete Banner ──
+                    // ── Chapter/Section Complete Banner ──
                     if (isChapterComplete) ...[
                       const SizedBox(height: AppSpacing.sm),
                       _ChapterCompleteBanner(chapter: chapter),
+                    ] else if (isSectionComplete) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      _SectionCompleteBanner(section: section),
                     ],
                   ],
                 ),
@@ -498,6 +505,52 @@ class _ChapterCompleteBanner extends StatelessWidget {
 }
 
 /// ────────────────────────────────────────────────────────────────────
+/// Section Complete Banner
+/// ────────────────────────────────────────────────────────────────────
+class _SectionCompleteBanner extends StatelessWidget {
+  const _SectionCompleteBanner({required this.section});
+
+  final Section section;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.success,
+        borderRadius: AppRadius.pillRadius,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.success.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.collections_rounded, color: Colors.white, size: 18),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            'Section ${section.index} Complete!',
+            style: textTheme.labelMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ────────────────────────────────────────────────────────────────────
 /// Stars Row with Staggered Animation
 /// ────────────────────────────────────────────────────────────────────
 class _StarsRow extends StatelessWidget {
@@ -559,9 +612,12 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isChapterComplete =
-        ChapterCatalog.chapterForLevel(result.level.id).endLevelId ==
-            result.level.id;
+    final chapter = ChapterCatalog.chapterForLevel(result.level.id);
+    final section = ChapterCatalog.sectionForLevel(result.level.id);
+    final isChapterComplete = chapter.endLevelId == result.level.id;
+    // A chapter's last level is always its last section's last level too
+    // — when both are true, Chapter Complete's bigger celebration wins.
+    final isSectionComplete = !isChapterComplete && section.endLevelId == result.level.id;
 
     return Column(
       children: [
@@ -573,13 +629,16 @@ class _ActionButtons extends StatelessWidget {
               color: AppColors.primaryGradientEnd,
               borderRadius: AppRadius.pillRadius,
               child: GameButton(
-                label: isChapterComplete ? 'Continue to Chapter ${result.level.id ~/ 100 + 1}' : 'Next Level',
+                label: isChapterComplete
+                    ? 'Continue to Chapter ${chapter.id + 1}'
+                    : isSectionComplete
+                    ? 'Continue to Section ${section.index + 1}'
+                    : 'Next Level',
                 icon: Icons.double_arrow_rounded,
                 width: double.infinity,
                 height: 68,
                 onTap: () async {
                   if (isChapterComplete) {
-                    final chapter = ChapterCatalog.chapterForLevel(result.level.id);
                     final nextChapter = chapter.id < ChapterCatalog.chapters.length
                         ? ChapterCatalog.chapters[chapter.id]
                         : null;
@@ -599,6 +658,26 @@ class _ActionButtons extends StatelessWidget {
                         chapter: chapter,
                         totalStars: totalStars,
                         nextChapter: nextChapter,
+                      ),
+                    );
+                  } else if (isSectionComplete) {
+                    // Sum stars across every level in the section (not
+                    // just this one) for an accurate section total.
+                    final levelService = LevelService(
+                      LevelsRepositoryImpl(HiveLevelsLocalDataSource()),
+                    );
+                    final levels = await levelService.loadLevels();
+                    final totalStars = levels
+                        .where((level) => section.containsLevel(level.id))
+                        .fold(0, (sum, level) => sum + level.stars);
+                    if (!context.mounted) return;
+                    context.goNamed(
+                      RouteNames.sectionComplete,
+                      extra: SectionCompleteResult(
+                        chapter: chapter,
+                        section: section,
+                        totalStars: totalStars,
+                        nextLevelId: nextLevelId,
                       ),
                     );
                   } else {

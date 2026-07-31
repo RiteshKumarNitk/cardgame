@@ -8,10 +8,14 @@ import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/game_background.dart';
+import '../../../../shared/widgets/outlined_text.dart';
+import '../../../../shared/widgets/pulsing_glow.dart';
+import '../../../../shared/widgets/sparkle_particles.dart';
 
-/// Splash screen: soft brand gradient + glowing blobs + softly floating
-/// puzzle pieces (Flame) behind a fading/scaling logo and a loading
-/// indicator. Automatically advances to Home after a short delay.
+/// Splash screen: soft brand gradient + glowing blobs + drifting clouds +
+/// softly floating puzzle pieces (Flame) + a light sparkle layer, behind a
+/// fading/scaling, gently-glowing logo. Automatically advances to Home
+/// after a short delay.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -58,8 +62,12 @@ class _SplashPageState extends State<SplashPage>
 
     return Scaffold(
       body: GameBackground(
+        showClouds: true,
         child: Stack(
           children: [
+            const Positioned.fill(
+              child: IgnorePointer(child: SparkleParticles()),
+            ),
             Center(
               child: FadeTransition(
                 opacity: _fadeAnimation,
@@ -68,12 +76,19 @@ class _SplashPageState extends State<SplashPage>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const AppLogo(),
+                      PulsingGlow(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(60),
+                        blurRadius: 40,
+                        child: const AppLogo(),
+                      ),
                       const SizedBox(height: AppSpacing.lg),
-                      Text(
+                      OutlinedText(
                         AppConstants.appName,
+                        outlineWidth: 3,
                         style: textTheme.headlineMedium?.copyWith(
                           color: AppColors.primary,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: 0.5,
                         ),
                       ),

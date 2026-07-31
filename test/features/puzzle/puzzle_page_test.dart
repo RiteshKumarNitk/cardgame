@@ -62,8 +62,19 @@ void main() {
     await tester.pump();
 
     expect(find.text('Easy'), findsOneWidget);
-    // The reference preview is locked by default (unlockable with coins).
+
+    // The reference preview now lives in a bottom sheet (opened from the
+    // top bar's eye icon) instead of an always-visible card, so the board
+    // itself gets the full screen — locked by default (unlockable with
+    // coins).
+    await tester.tap(find.byIcon(Icons.visibility_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Preview locked'), findsOneWidget);
+    Navigator.of(tester.element(find.text('Preview locked'))).pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
     // A 3x4 (portrait) board for easy = 12 pieces; every cell always
     // renders a piece (locked or not), but exactly how many start locked
     // depends on the shuffle, so only the total tile count is asserted

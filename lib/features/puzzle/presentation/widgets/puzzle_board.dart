@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_shadows.dart';
 import '../../domain/puzzle_board_size.dart';
 import 'puzzle_image_tile.dart';
@@ -51,43 +50,52 @@ class PuzzleBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: AppRadius.lgRadius,
-        border: solvedProgress < borderFadeFraction
-            ? Border.all(color: AppColors.border)
-            : null,
-        boxShadow: AppShadows.card,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: AspectRatio(
-        aspectRatio: dimensions.aspectRatio,
-        child: GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: dimensions.cols,
-            crossAxisSpacing: 0,
-            mainAxisSpacing: 0,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Cells are always square (aspectRatio ties height to width via
+        // rows/cols), so this is the exact on-screen size of one cell —
+        // used to size the drag feedback so a dragged piece reads as the
+        // same physical card moving, not a differently-sized copy.
+        final cellSize = constraints.maxWidth / dimensions.cols;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            border: solvedProgress < borderFadeFraction
+                ? Border.all(color: AppColors.border)
+                : null,
+            boxShadow: AppShadows.card,
           ),
-          itemCount: dimensions.pieceCount,
-          itemBuilder: (context, cellIndex) {
-            final pieceIndex = arrangement[cellIndex];
-            return _BoardCell(
-              cellIndex: cellIndex,
-              pieceIndex: pieceIndex,
-              gridCols: dimensions.cols,
-              gridRows: dimensions.rows,
-              imageUrl: imageUrl,
-              correct: pieceIndex == cellIndex + 1,
-              onSwap: onSwap,
-              solvedProgress: solvedProgress,
-              snapFraction: snapFraction,
-              borderFadeFraction: borderFadeFraction,
-            );
-          },
-        ),
-      ),
+          child: AspectRatio(
+            aspectRatio: dimensions.aspectRatio,
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: dimensions.cols,
+                crossAxisSpacing: 0,
+                mainAxisSpacing: 0,
+              ),
+              itemCount: dimensions.pieceCount,
+              itemBuilder: (context, cellIndex) {
+                final pieceIndex = arrangement[cellIndex];
+                return _BoardCell(
+                  cellIndex: cellIndex,
+                  pieceIndex: pieceIndex,
+                  gridCols: dimensions.cols,
+                  gridRows: dimensions.rows,
+                  imageUrl: imageUrl,
+                  correct: pieceIndex == cellIndex + 1,
+                  onSwap: onSwap,
+                  solvedProgress: solvedProgress,
+                  snapFraction: snapFraction,
+                  borderFadeFraction: borderFadeFraction,
+                  cellSize: cellSize,
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -101,6 +109,7 @@ class _BoardCell extends StatefulWidget {
     required this.imageUrl,
     required this.correct,
     required this.onSwap,
+    required this.cellSize,
     this.solvedProgress = 0.0,
     this.snapFraction = 0.18,
     this.borderFadeFraction = 0.5,
@@ -113,6 +122,7 @@ class _BoardCell extends StatefulWidget {
   final String imageUrl;
   final bool correct;
   final void Function(int fromCell, int toCell) onSwap;
+  final double cellSize;
   final double solvedProgress;
   final double snapFraction;
   final double borderFadeFraction;
@@ -236,8 +246,8 @@ class _BoardCellState extends State<_BoardCell>
         return Draggable<int>(
           data: widget.cellIndex,
           feedback: SizedBox(
-            width: 72,
-            height: 72,
+            width: widget.cellSize,
+            height: widget.cellSize,
             child: Material(color: Colors.transparent, child: decorated),
           ),
           childWhenDragging: Opacity(opacity: 0.35, child: decorated),

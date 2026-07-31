@@ -114,7 +114,7 @@ class _PuzzlePreviewThumbnailState extends State<PuzzlePreviewThumbnail> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Spend coins to see the full photo',
+                        'Spend ${widget.unlockCost} coins to see the full photo',
                         style: textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondary,
                         ),

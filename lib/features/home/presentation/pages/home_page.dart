@@ -8,6 +8,7 @@ import '../../../../core/design_system/app_gradients.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_shadows.dart';
 import '../../../../core/design_system/app_spacing.dart';
+import '../../../../core/design_system/color_utils.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/game_progress_manager.dart';
 import '../../../../game/wallet_cubit.dart';
@@ -29,12 +30,13 @@ import '../../../levels/domain/entities/section.dart';
 import '../../../levels/domain/services/chapter_catalog.dart';
 import '../../../levels/domain/services/level_service.dart';
 import '../../../levels/presentation/widgets/level_difficulty_style.dart';
-import '../../../puzzle/domain/puzzle_board_size.dart';
-import '../../../puzzle/domain/puzzle_image.dart';
+import '../../../levels/presentation/widgets/section_mosaic.dart';
 
-/// Premium Home Hub: the player's landing page showing current progress,
-/// daily challenge, a large Continue button, and quick-access bottom
-/// actions — designed to feel alive like Royal Match / Candy Crush.
+/// Premium Home Hub: a collection-centric landing page. The player isn't
+/// shown a level list or long stats — just the artwork they're currently
+/// piecing together (one section = one collection) and a single "keep
+/// playing" action. Everything else (Daily Challenge, Shop, Achievements,
+/// the full Journey Map) is a small secondary icon, never the focus.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -80,63 +82,38 @@ class _HomePageState extends State<HomePage> {
         showFloatingPieces: true,
         showClouds: true,
         child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+          child: Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg,
               AppSpacing.sm,
               AppSpacing.lg,
-              AppSpacing.xxl * 2,
+              AppSpacing.lg,
             ),
             child: Column(
               children: [
-                // ── Top Bar ──
+                // ── Top Bar: Profile — Settings — Coins — Hints ──
                 _HomeTopBar(),
-                const SizedBox(height: AppSpacing.md),
 
-                // ── Hero: Current Chapter/Section/Level ──
-                if (progress != null && progress.currentLevelId != null) ...[
-                  _CurrentLevelHero(
-                    levelId: progress.currentLevelId!,
-                    levels: _levels,
+                // ── The Collection: current section's artwork ──
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: progress != null && progress.currentLevelId != null
+                          ? _CollectionFrame(
+                              levelId: progress.currentLevelId!,
+                              levels: _levels,
+                            )
+                          : progress != null &&
+                                progress.completedCount == progress.totalCount
+                          ? const _AllCompleteBanner()
+                          : const _LoadingShimmer(),
+                    ),
                   ),
-                ] else if (progress != null && progress.completedCount == progress.totalCount) ...[
-                  _AllCompleteBanner(),
-                ] else ...[
-                  const _LoadingShimmer(),
-                ],
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // ── Daily Challenge Card ──
-                BounceIn(
-                  delay: const Duration(milliseconds: 150),
-                  child: _DailyChallengeCard(),
                 ),
 
-                const SizedBox(height: AppSpacing.lg),
-
-                // ── Streak + Events Row ──
-                Row(
-                  children: [
-                    Expanded(child: _StreakCard()),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(child: _EventCard()),
-                  ],
-                ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // ── Season Pass ──
-                BounceIn(
-                  delay: const Duration(milliseconds: 450),
-                  child: _SeasonPassCard(),
-                ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // ── Bottom Action Row ──
-                _BottomActions(),
+                // ── Secondary features: small, never in the way ──
+                _QuickActionsRow(),
               ],
             ),
           ),
@@ -147,7 +124,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 /// ────────────────────────────────────────────────────────────────────
-/// Top Bar: Avatar, Coins, Hints, Settings
+/// Top Bar: Profile, Settings, Coins, Hints
 /// ────────────────────────────────────────────────────────────────────
 class _HomeTopBar extends StatelessWidget {
   @override
@@ -191,7 +168,7 @@ class _HomeTopBar extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
 
-        // ── Row 2: Coins — Logo — Daily ──
+        // ── Row 2: Coins — Logo — Hints ──
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -205,42 +182,10 @@ class _HomeTopBar extends StatelessWidget {
             const Expanded(
               child: Center(child: AppLogo(size: 44, wordmark: true)),
             ),
-            PressScale(
-              onTap: () => context.goNamed(RouteNames.dailyPuzzle),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: AppRadius.mdRadius,
-                  border: Border.all(color: AppColors.outline, width: 2.5),
-                  boxShadow: [
-                    const BoxShadow(
-                      color: AppColors.shadow,
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                    ...AppShadows.bevel(AppColors.card, depth: 3),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.event_rounded,
-                      color: AppColors.danger,
-                      size: 16,
-                    ),
-                    Text(
-                      '${DateTime.now().day}',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            const StatChip(
+              icon: Icons.lightbulb_rounded,
+              value: '5',
+              iconColor: AppColors.success,
             ),
           ],
         ),
@@ -250,10 +195,12 @@ class _HomeTopBar extends StatelessWidget {
 }
 
 /// ────────────────────────────────────────────────────────────────────
-/// Hero: Current Level Card with Continue Button
+/// The Collection: an artwork frame showing every piece (level) of the
+/// player's current section — collected pieces reveal their photo,
+/// locked ones stay silhouettes — plus the single "keep playing" button.
 /// ────────────────────────────────────────────────────────────────────
-class _CurrentLevelHero extends StatelessWidget {
-  const _CurrentLevelHero({required this.levelId, required this.levels});
+class _CollectionFrame extends StatelessWidget {
+  const _CollectionFrame({required this.levelId, required this.levels});
 
   final int levelId;
   final List<Level> levels;
@@ -262,79 +209,65 @@ class _CurrentLevelHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final chapter = ChapterCatalog.chapterForLevel(levelId);
     final section = ChapterCatalog.sectionForLevel(levelId);
-    final completedInSection = levels
-        .where((l) => section.containsLevel(l.id) && l.isCompleted)
-        .length;
-    final imageUrl = puzzleImageUrlFor(levelId);
+    final sectionLevels = levels.sublist(
+      section.startLevelId - 1,
+      section.endLevelId,
+    );
+    final completedInSection = sectionLevels.where((l) => l.isCompleted).length;
+    final fraction = section.levelCount == 0
+        ? 0.0
+        : completedInSection / section.levelCount;
 
     return BounceIn(
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.topCenter,
         children: [
-          // ── Main card: puzzle preview + section progress ──
+          // ── Artwork frame: mosaic + collected-pieces progress ──
           Padding(
             padding: const EdgeInsets.only(top: 22, bottom: 30),
-            child: GameCard(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.xl,
-                AppSpacing.md,
-                AppSpacing.md,
-              ),
-              borderRadius: AppRadius.xlRadius,
-              child: Column(
-                children: [
-                  ClipRRect(
-                    borderRadius: AppRadius.lgRadius,
-                    child: AspectRatio(
-                      aspectRatio: boardDimensionsForLevel(levelId).aspectRatio,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: chapter.difficulty.color,
-                            width: 3,
-                          ),
-                        ),
-                        child: Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, progress) =>
-                              progress == null
-                              ? child
-                              : const ColoredBox(color: AppColors.border),
-                          errorBuilder: (context, error, stackTrace) =>
-                              const ColoredBox(
-                                color: AppColors.border,
-                                child: Icon(
-                                  Icons.image_not_supported_rounded,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                        ),
+            child: SizedBox(
+              width: 300,
+              child: GameCard(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
+                borderRadius: AppRadius.xlRadius,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SectionMosaic(
+                      levels: sectionLevels,
+                      accentColor: chapter.difficulty.color,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _AnimatedPiecesProgress(
+                      fraction: fraction,
+                      color: chapter.difficulty.color,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      '$completedInSection / ${section.levelCount} Pieces Collected',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppColors.textDark,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    '$completedInSection / ${section.levelCount}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: chapter.difficulty.color,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
 
-          // ── Section banner, overlapping the card's top edge ──
+          // ── Section banner, overlapping the frame's top edge ──
           Positioned(
             top: 0,
             child: _SectionBanner(section: section, color: chapter.difficulty.color),
           ),
 
-          // ── "Level N" button, overlapping the card's bottom edge ──
+          // ── "Level N" button, overlapping the frame's bottom edge ──
           Positioned(
             bottom: 0,
             left: AppSpacing.lg,
@@ -360,7 +293,7 @@ class _CurrentLevelHero extends StatelessWidget {
 }
 
 /// Chunky pill banner naming the current section — sits overlapping the
-/// hero card's top edge, matching a "ribbon tab" look.
+/// collection frame's top edge, matching a "ribbon tab" look.
 class _SectionBanner extends StatelessWidget {
   const _SectionBanner({required this.section, required this.color});
 
@@ -392,237 +325,38 @@ class _SectionBanner extends StatelessWidget {
   }
 }
 
-/// ────────────────────────────────────────────────────────────────────
-/// Daily Challenge Card
-/// ────────────────────────────────────────────────────────────────────
-class _DailyChallengeCard extends StatelessWidget {
+/// A smoothly-filling progress bar — animates from empty to [fraction] on
+/// first build, rather than snapping straight to its value, so collecting
+/// a new piece always reads as motion rather than a static counter.
+class _AnimatedPiecesProgress extends StatelessWidget {
+  const _AnimatedPiecesProgress({required this.fraction, required this.color});
+
+  final double fraction;
+  final Color color;
+
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return PressScale(
-      onTap: () => context.goNamed(RouteNames.dailyPuzzle),
-      child: GameCard(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
+    return SizedBox(
+      width: double.infinity,
+      height: 10,
+      child: ClipRRect(
+        borderRadius: AppRadius.pillRadius,
+        child: Stack(
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.accent.withValues(alpha: 0.12),
-                borderRadius: AppRadius.mdRadius,
-              ),
-              child: const Icon(
-                Icons.card_giftcard_rounded,
-                color: AppColors.accent,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Daily Challenge',
-                        style: textTheme.titleMedium?.copyWith(
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent,
-                          borderRadius: AppRadius.pillRadius,
-                        ),
-                        child: Text(
-                          'NEW',
-                          style: textTheme.labelSmall?.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'A fresh puzzle awaits you today',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
+            const ColoredBox(color: AppColors.border),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: fraction.clamp(0.0, 1.0)),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) => FractionallySizedBox(
+                widthFactor: value,
+                alignment: Alignment.centerLeft,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color, color.lighten(0.12)],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textSecondary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ────────────────────────────────────────────────────────────────────
-/// Streak Card
-/// ────────────────────────────────────────────────────────────────────
-class _StreakCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return PressScale(
-      onTap: () {},
-      child: GameCard(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.local_fire_department_rounded,
-                  color: AppColors.danger,
-                  size: 22,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '3',
-                  style: textTheme.titleLarge?.copyWith(
-                    color: AppColors.textDark,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Day Streak',
-              style: textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ────────────────────────────────────────────────────────────────────
-/// Events Card
-/// ────────────────────────────────────────────────────────────────────
-class _EventCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return PressScale(
-      onTap: () {},
-      child: GameCard(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          children: [
-            const Icon(
-              Icons.celebration_rounded,
-              color: AppColors.primary,
-              size: 22,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'No Events',
-              style: textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ────────────────────────────────────────────────────────────────────
-/// Season Pass Card
-/// ────────────────────────────────────────────────────────────────────
-class _SeasonPassCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return PressScale(
-      onTap: () {},
-      child: GameCard(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.premiumGradientStart,
-            Color(0xFFFF8A65),
-          ],
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.auto_awesome_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        'Season Pass',
-                        style: textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Coming Soon',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: Colors.white70,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.25),
-                borderRadius: AppRadius.pillRadius,
-              ),
-              child: Text(
-                'SOON',
-                style: textTheme.labelSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
@@ -634,40 +368,47 @@ class _SeasonPassCard extends StatelessWidget {
 }
 
 /// ────────────────────────────────────────────────────────────────────
-/// Bottom Actions: Shop, Achievements, Levels
+/// Quick Actions: Daily Challenge, Shop, Achievements, Journey — small
+/// floating icon buttons so secondary features never compete with the
+/// collection for attention.
 /// ────────────────────────────────────────────────────────────────────
-class _BottomActions extends StatelessWidget {
+class _QuickActionsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        Expanded(child: _NavCard(
+        _QuickAction(
+          icon: Icons.card_giftcard_rounded,
+          label: 'Daily Challenge',
+          color: AppColors.accent,
+          onTap: () => context.goNamed(RouteNames.dailyPuzzle),
+        ),
+        _QuickAction(
           icon: Icons.storefront_rounded,
           label: 'Shop',
           color: AppColors.secondary,
           onTap: () => context.goNamed(RouteNames.shop),
-        )),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(child: _NavCard(
+        ),
+        _QuickAction(
           icon: Icons.emoji_events_rounded,
           label: 'Achievements',
-          color: AppColors.accent,
+          color: AppColors.premiumGradientEnd,
           onTap: () => context.goNamed(RouteNames.achievements),
-        )),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(child: _NavCard(
+        ),
+        _QuickAction(
           icon: Icons.map_rounded,
           label: 'Journey',
           color: AppColors.primary,
           onTap: () => context.goNamed(RouteNames.levels),
-        )),
+        ),
       ],
     );
   }
 }
 
-class _NavCard extends StatelessWidget {
-  const _NavCard({
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
     required this.icon,
     required this.label,
     required this.color,
@@ -681,32 +422,40 @@ class _NavCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return PressScale(
       onTap: onTap,
-      child: GameCard(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        borderRadius: AppRadius.lgRadius,
+      child: SizedBox(
+        width: 68,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: AppColors.card,
                 shape: BoxShape.circle,
-                border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
+                border: Border.all(color: AppColors.outline, width: 2.5),
+                boxShadow: [
+                  const BoxShadow(
+                    color: AppColors.shadow,
+                    blurRadius: 10,
+                    offset: Offset(0, 3),
+                  ),
+                  ...AppShadows.bevel(AppColors.card, depth: 3),
+                ],
               ),
               child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               label,
-              style: textTheme.labelMedium?.copyWith(
-                color: AppColors.textDark,
-              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -719,6 +468,8 @@ class _NavCard extends StatelessWidget {
 /// All Complete Banner
 /// ────────────────────────────────────────────────────────────────────
 class _AllCompleteBanner extends StatelessWidget {
+  const _AllCompleteBanner();
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -732,6 +483,7 @@ class _AllCompleteBanner extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
               Icons.celebration_rounded,
@@ -740,7 +492,7 @@ class _AllCompleteBanner extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'All Levels Complete!',
+              'Collection Complete!',
               style: textTheme.headlineSmall?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w800,
@@ -748,10 +500,8 @@ class _AllCompleteBanner extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'More levels coming soon...',
-              style: textTheme.bodyMedium?.copyWith(
-                color: Colors.white70,
-              ),
+              'More artwork coming soon...',
+              style: textTheme.bodyMedium?.copyWith(color: Colors.white70),
             ),
           ],
         ),
