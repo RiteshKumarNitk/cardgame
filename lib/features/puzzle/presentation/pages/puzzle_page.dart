@@ -339,7 +339,7 @@ class _PreviewSheetContentState extends State<_PreviewSheetContent> {
     final textTheme = Theme.of(context).textTheme;
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: GameCard(
           padding: const EdgeInsets.all(AppSpacing.lg),
