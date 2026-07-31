@@ -12,7 +12,6 @@ import '../../../../shared/widgets/confetti_burst.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
-import '../../../../shared/widgets/press_scale.dart';
 import '../../../../shared/utils/duration_format.dart';
 import '../../../../shared/utils/number_format.dart';
 import '../../../../shared/widgets/stat_chip.dart';
@@ -27,10 +26,10 @@ import '../../domain/puzzle_image.dart';
 import '../bloc/puzzle_cubit.dart';
 import '../bloc/puzzle_state.dart';
 import '../widgets/puzzle_board.dart';
-import '../widgets/puzzle_preview_thumbnail.dart';
 
-/// Puzzle (gameplay) screen: premium top bar with difficulty, timer, moves,
-/// reference preview thumbnail, drag-and-drop board, and bottom action bar.
+/// Puzzle (gameplay) screen: a compact top bar (difficulty, coins, hints,
+/// timer, moves, preview) over a drag-and-drop board that fills the rest
+/// of the screen — no footer, no pause menu; back always returns Home.
 ///
 /// On solve, the completed board receives a satisfying glow + confetti burst,
 /// then after a brief celebration delay navigates to Victory with the
@@ -162,6 +161,11 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
   late final AnimationController _solvedController;
   bool _wasSolved = false;
 
+  /// Session-only: once unlocked, stays unlocked for the rest of this
+  /// puzzle screen's lifetime, so reopening the preview sheet doesn't
+  /// charge coins a second time.
+  bool _previewUnlocked = false;
+
   @override
   void initState() {
     super.initState();
@@ -202,8 +206,7 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
           level: state,
           imageUrl: imageUrl,
           onBack: () => context.goNamed(RouteNames.home),
-          onPause: () => _showPauseDialog(context),
-          onPreview: () => _showPreviewSheet(context, imageUrl),
+          onPreview: () => _showPreviewSheet(context, state.level.id, imageUrl),
         ),
 
         const SizedBox(height: AppSpacing.xs),
@@ -263,35 +266,156 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
         ),
 
         const SizedBox(height: AppSpacing.xs),
-
-        // ── Bottom Action Bar ──
-        _BottomActionBar(
-          isSolved: state.isSolved,
-          onShuffle: () {},
-          onHint: () {},
-          onUndo: () {},
-          onPause: () => _showPauseDialog(context),
-        ),
-
-        const SizedBox(height: AppSpacing.xs),
       ],
+    );
+  }
+
+  /// Shows the (coin-gated) reference preview large, in a bottom sheet,
+  /// instead of an always-on-screen card — so the board itself gets the
+  /// full screen, and tapping the preview shows the photo properly
+  /// instead of a small inline thumbnail.
+  Future<void> _showPreviewSheet(
+    BuildContext context,
+    int levelId,
+    String imageUrl,
+  ) {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => _PreviewSheetContent(
+        imageUrl: imageUrl,
+        dimensions: boardDimensionsForLevel(levelId),
+        unlocked: _previewUnlocked,
+        onUnlocked: () => setState(() => _previewUnlocked = true),
+      ),
     );
   }
 }
 
-/// Shows the (coin-gated) reference preview in a bottom sheet instead of
-/// an always-on-screen card, so the board itself gets the full screen.
-void _showPreviewSheet(BuildContext context, String imageUrl) {
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) => SafeArea(
+/// ────────────────────────────────────────────────────────────────────
+/// Large Preview Sheet
+/// ────────────────────────────────────────────────────────────────────
+class _PreviewSheetContent extends StatefulWidget {
+  const _PreviewSheetContent({
+    required this.imageUrl,
+    required this.dimensions,
+    required this.unlocked,
+    required this.onUnlocked,
+    this.unlockCost = 15,
+  });
+
+  final String imageUrl;
+  final BoardDimensions dimensions;
+  final bool unlocked;
+  final VoidCallback onUnlocked;
+  final int unlockCost;
+
+  @override
+  State<_PreviewSheetContent> createState() => _PreviewSheetContentState();
+}
+
+class _PreviewSheetContentState extends State<_PreviewSheetContent> {
+  bool _unlocking = false;
+
+  Future<void> _unlock() async {
+    setState(() => _unlocking = true);
+    final success = await context.read<WalletCubit>().spendCoins(
+      widget.unlockCost,
+    );
+    if (!mounted) return;
+    setState(() => _unlocking = false);
+    if (success) {
+      widget.onUnlocked();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Not enough coins')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: PuzzlePreviewThumbnail(imageUrl: imageUrl),
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: GameCard(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: AppRadius.lgRadius,
+                child: AspectRatio(
+                  aspectRatio: widget.dimensions.aspectRatio,
+                  child: widget.unlocked
+                      ? Image.network(
+                          widget.imageUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, progress) =>
+                              progress == null
+                              ? child
+                              : const ColoredBox(color: AppColors.border),
+                          errorBuilder: (context, error, stackTrace) =>
+                              const ColoredBox(
+                                color: AppColors.border,
+                                child: Icon(
+                                  Icons.image_not_supported_rounded,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                        )
+                      : const ColoredBox(
+                          color: AppColors.border,
+                          child: Icon(
+                            Icons.lock_rounded,
+                            size: 48,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (widget.unlocked)
+                Text(
+                  'Reference Photo',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: AppColors.textDark,
+                  ),
+                )
+              else ...[
+                Text(
+                  'Preview locked',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Spend ${widget.unlockCost} coins to see the full photo',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                GameButton(
+                  label: _unlocking
+                      ? 'Unlocking...'
+                      : 'Unlock for ${widget.unlockCost} coins',
+                  icon: Icons.monetization_on_rounded,
+                  variant: GameButtonVariant.premium,
+                  width: double.infinity,
+                  onTap: _unlocking ? () {} : _unlock,
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// ────────────────────────────────────────────────────────────────────
@@ -302,14 +426,12 @@ class _PuzzleTopBar extends StatelessWidget {
     required this.level,
     required this.imageUrl,
     required this.onBack,
-    required this.onPause,
     required this.onPreview,
   });
 
   final PuzzleLoaded level;
   final String imageUrl;
   final VoidCallback onBack;
-  final VoidCallback onPause;
   final VoidCallback onPreview;
 
   @override
@@ -368,209 +490,10 @@ class _PuzzleTopBar extends StatelessWidget {
             iconColor: AppColors.secondary,
             onTap: onPreview,
           ),
-          const SizedBox(width: AppSpacing.xs),
-          CircleIconButton(
-            icon: Icons.pause_rounded,
-            iconColor: AppColors.textSecondary,
-            onTap: onPause,
-          ),
         ],
       ),
     );
   }
-}
-
-/// ────────────────────────────────────────────────────────────────────
-/// Bottom Action Bar (Shuffle, Hint, Undo, Pause)
-/// ────────────────────────────────────────────────────────────────────
-class _BottomActionBar extends StatelessWidget {
-  const _BottomActionBar({
-    required this.isSolved,
-    required this.onShuffle,
-    required this.onHint,
-    required this.onUndo,
-    required this.onPause,
-  });
-
-  final bool isSolved;
-  final VoidCallback onShuffle;
-  final VoidCallback onHint;
-  final VoidCallback onUndo;
-  final VoidCallback onPause;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: AppRadius.lgRadius,
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 12,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _ActionButton(
-            icon: Icons.shuffle_rounded,
-            label: 'Shuffle',
-            color: AppColors.secondary,
-            onTap: isSolved ? null : onShuffle,
-          ),
-          _ActionButton(
-            icon: Icons.lightbulb_rounded,
-            label: 'Hint',
-            color: AppColors.accent,
-            onTap: isSolved ? null : onHint,
-          ),
-          _ActionButton(
-            icon: Icons.undo_rounded,
-            label: 'Undo',
-            color: AppColors.primary,
-            onTap: isSolved ? null : onUndo,
-          ),
-          _ActionButton(
-            icon: Icons.pause_rounded,
-            label: 'Pause',
-            color: AppColors.textSecondary,
-            onTap: onPause,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final isEnabled = onTap != null;
-
-    return PressScale(
-      onTap: isEnabled ? onTap! : () {},
-      child: Opacity(
-        opacity: isEnabled ? 1.0 : 0.4,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.1),
-                border: Border.all(
-                  color: color.withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: textTheme.labelSmall?.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ────────────────────────────────────────────────────────────────────
-/// Pause Dialog
-/// ────────────────────────────────────────────────────────────────────
-void _showPauseDialog(BuildContext context) {
-  showDialog<void>(
-    context: context,
-    builder: (dialogContext) => Dialog(
-      backgroundColor: Colors.transparent,
-      child: GameCard(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.1),
-              ),
-              child: const Icon(
-                Icons.pause_circle_filled_rounded,
-                size: 48,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Paused',
-              style: Theme.of(dialogContext)
-                  .textTheme
-                  .headlineMedium
-                  ?.copyWith(color: AppColors.textDark),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Take a break. Your puzzle is waiting.',
-              style: Theme.of(dialogContext)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: AppColors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            GameButton(
-              label: 'Resume',
-              icon: Icons.play_arrow_rounded,
-              width: double.infinity,
-              height: 60,
-              onTap: () => Navigator.of(dialogContext).pop(),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextButton.icon(
-              onPressed: () async {
-                Navigator.of(dialogContext).pop();
-                // Let the dialog's own close animation finish before the
-                // page transition starts, instead of both playing at
-                // once.
-                await Future.delayed(const Duration(milliseconds: 200));
-                if (context.mounted) context.goNamed(RouteNames.home);
-              },
-              icon: const Icon(Icons.exit_to_app_rounded, size: 18),
-              label: const Text('Quit Puzzle'),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 class _PuzzleMessage extends StatelessWidget {
