@@ -23,11 +23,13 @@ import 'package:hive/hive.dart';
 
 import 'package:puzzle_cards/core/app/puzzle_cards_app.dart';
 import 'package:puzzle_cards/core/constants/app_constants.dart';
+import 'package:puzzle_cards/features/achievements/presentation/bloc/achievements_cubit.dart';
 import 'package:puzzle_cards/features/levels/data/models/level_model.dart';
 import 'package:puzzle_cards/features/splash/presentation/pages/splash_page.dart';
 import 'package:puzzle_cards/game/ads_cubit.dart';
 import 'package:puzzle_cards/game/wallet_cubit.dart';
 
+import 'helpers/fake_achievements_repository.dart';
 import 'helpers/fake_ads_service.dart';
 import 'helpers/fake_wallet_service.dart';
 
@@ -66,6 +68,7 @@ void main() {
       PuzzleCardsApp(
         walletCubit: WalletCubit(FakeWalletService()),
         adsCubit: AdsCubit(FakeAdsService()),
+        achievementsCubit: AchievementsCubit(FakeAchievementsRepository()),
       ),
     );
     await tester.pump(const Duration(milliseconds: 100));

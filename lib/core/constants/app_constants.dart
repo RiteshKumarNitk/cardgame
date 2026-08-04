@@ -16,5 +16,7 @@ abstract final class AppConstants {
   static const String adsRemovedKey = 'adsRemoved';
   static const String soundEnabledKey = 'soundEnabled';
   static const String musicEnabledKey = 'musicEnabled';
-  static const String hapticsEnabledKey = 'hapticsEnabled';
+  static const String achievementsBoxName = 'achievements_box';
+  static const String achievementsCountersKey = 'counters';
+  static const String achievementsUnlockedKey = 'unlocked';
 }

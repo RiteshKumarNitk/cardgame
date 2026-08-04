@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../achievements/domain/services/achievement_events.dart';
 import '../../../levels/domain/entities/level.dart';
 import '../../../levels/domain/services/level_service.dart';
 import '../../domain/puzzle_board_size.dart';
@@ -18,11 +19,23 @@ import 'puzzle_state.dart';
 /// — the same unlock-next-level/best-score logic built in Phase 5, now
 /// wired to real gameplay for the first time.
 class PuzzleCubit extends Cubit<PuzzleState> {
-  PuzzleCubit(this._levelService) : super(const PuzzleInitial());
+  PuzzleCubit(this._levelService, {AchievementEvents? achievementEvents})
+    : _achievementEvents = achievementEvents,
+      super(const PuzzleInitial());
 
   final LevelService _levelService;
+
+  /// Optional sink for milestone events (achievements). Nullable so the
+  /// cubit stays constructible standalone in tests.
+  final AchievementEvents? _achievementEvents;
+
   List<Level> _levels = [];
   Timer? _timer;
+
+  /// How many times the current level has been restarted, so each restart
+  /// re-shuffles into a different arrangement instead of restoring the
+  /// exact same board (the base seed is the level id).
+  int _restartCount = 0;
 
   Future<void> loadLevel(int levelId) async {
     emit(const PuzzleLoading());
@@ -36,7 +49,7 @@ class PuzzleCubit extends Cubit<PuzzleState> {
       final level = _levels[index];
       final arrangement = TileSwapEngine.shuffledArrangement(
         pieceCount: boardDimensionsForLevel(level.id).pieceCount,
-        seed: level.id,
+        seed: level.id + _restartCount,
       );
       emit(
         PuzzleLoaded(
@@ -49,6 +62,30 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     } catch (e) {
       emit(PuzzleError(e.toString()));
     }
+  }
+
+  /// Re-loads the current level from scratch: fresh shuffle, zero moves
+  /// and time. No-op unless a level is loaded.
+  Future<void> restart() async {
+    final current = state;
+    if (current is! PuzzleLoaded) return;
+    _restartCount += 1;
+    await loadLevel(current.level.id);
+  }
+
+  /// Stops the elapsed clock while [paused] is true and resumes it when
+  /// false, so time never ticks while the pause menu is up. No-op on a
+  /// non-loaded or already-solved puzzle.
+  void setPaused(bool paused) {
+    final current = state;
+    if (current is! PuzzleLoaded || current.isSolved) return;
+    if (paused) {
+      _timer?.cancel();
+      _timer = null;
+    } else {
+      _startTimer();
+    }
+    emit(current.copyWith(isPaused: paused));
   }
 
   /// Swaps the pieces in [fromCell] and [toCell]. A no-op if either cell
@@ -80,6 +117,10 @@ class PuzzleCubit extends Cubit<PuzzleState> {
         stars: updated.stars,
         timeSeconds: updated.elapsedSeconds,
         moves: updated.moves,
+      );
+      await _achievementEvents?.onPuzzleCompleted(
+        stars: updated.stars,
+        timeSeconds: updated.elapsedSeconds,
       );
     }
   }

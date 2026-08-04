@@ -25,6 +25,7 @@ final class PuzzleLoaded extends PuzzleState {
     this.moves = 0,
     this.elapsedSeconds = 0,
     this.isSolved = false,
+    this.isPaused = false,
   });
 
   final Level level;
@@ -39,6 +40,7 @@ final class PuzzleLoaded extends PuzzleState {
   final int moves;
   final int elapsedSeconds;
   final bool isSolved;
+  final bool isPaused;
 
   /// 1-3, derived from how close [moves] is to [minimalSwaps] — the
   /// single source of truth for star rating, read by both the
@@ -58,6 +60,7 @@ final class PuzzleLoaded extends PuzzleState {
     int? moves,
     int? elapsedSeconds,
     bool? isSolved,
+    bool? isPaused,
   }) {
     return PuzzleLoaded(
       level: level,
@@ -66,6 +69,7 @@ final class PuzzleLoaded extends PuzzleState {
       moves: moves ?? this.moves,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       isSolved: isSolved ?? this.isSolved,
+      isPaused: isPaused ?? this.isPaused,
     );
   }
 
@@ -77,6 +81,7 @@ final class PuzzleLoaded extends PuzzleState {
     moves,
     elapsedSeconds,
     isSolved,
+    isPaused,
   ];
 }
 

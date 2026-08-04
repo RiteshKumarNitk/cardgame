@@ -288,11 +288,6 @@ class _VictoryContent extends StatelessWidget {
                       value: '${result.moves}',
                       iconColor: AppColors.primary,
                     ),
-                    StatChip(
-                      icon: Icons.auto_awesome_rounded,
-                      value: '+${result.experienceEarned} XP',
-                      iconColor: AppColors.success,
-                    ),
                   ],
                 ),
               ),
@@ -340,7 +335,6 @@ class _VictoryContent extends StatelessWidget {
 /// ────────────────────────────────────────────────────────────────────
 class _AnimatedPuzzleImage extends StatelessWidget {
   const _AnimatedPuzzleImage({
-    super.key,
     required this.imageUrl,
     required this.reveal,
     required this.glow,

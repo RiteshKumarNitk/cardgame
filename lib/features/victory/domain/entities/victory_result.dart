@@ -22,9 +22,6 @@ class VictoryResult {
   final int timeSeconds;
   final int coinsEarned;
 
-  /// Experience points earned, scaled with stars.
-  int get experienceEarned => stars * 25;
-
   /// Null if [level] was the last one.
   final int? nextLevelId;
 }

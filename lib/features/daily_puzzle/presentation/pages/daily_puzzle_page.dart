@@ -6,7 +6,9 @@ import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/wallet_cubit.dart';
+import '../../../../shared/utils/context_read_or_null.dart';
 import '../../../../shared/widgets/game_background.dart';
+import '../../../achievements/presentation/bloc/achievements_cubit.dart';
 import '../../data/daily_challenge_repository_impl.dart';
 import '../../domain/services/daily_challenge_service.dart';
 import '../bloc/daily_challenge_cubit.dart';
@@ -29,10 +31,11 @@ class DailyPuzzlePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
+      create: (context) =>
           DailyChallengeCubit(
               _service ??
                   DailyChallengeService(HiveDailyChallengeRepository()),
+              achievementEvents: context.readOrNull<AchievementsCubit>(),
             )
             ..load(),
       child: const _DailyPuzzleView(),

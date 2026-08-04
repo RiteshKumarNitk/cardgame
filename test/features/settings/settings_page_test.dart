@@ -68,8 +68,7 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Sound Effects'), findsOneWidget);
     expect(find.text('Music'), findsOneWidget);
-    expect(find.text('Vibration'), findsOneWidget);
-    expect(find.byType(Switch), findsNWidgets(3));
+    expect(find.byType(Switch), findsNWidgets(2));
     expect(find.text('v1.0.0'), findsOneWidget);
   });
 

@@ -1,36 +1,39 @@
 // Run: dart tools/generate_audio.dart
-// Generates minimal placeholder WAV files under assets/audio/ so the
-// AudioService can reference them without crashing.
+// Generates minimal placeholder WAV files under assets/audio/sfx/ and
+// assets/audio/music/ so the AudioService can reference them without
+// crashing.
 
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
 const _sampleRate = 22050;
-const _outputDir = 'assets/audio';
+const _sfxDir = 'assets/audio/sfx';
+const _musicDir = 'assets/audio/music';
 
 void main() {
-  Directory(_outputDir).createSync(recursive: true);
+  Directory(_sfxDir).createSync(recursive: true);
+  Directory(_musicDir).createSync(recursive: true);
 
-  _generate('tap', _tap());
-  _generate('piece_snap', _pieceSnap());
-  _generate('victory', _victory());
-  _generate('chapter_complete', _chapterComplete());
-  _generate('coins', _coins());
-  _generate('hover', _hover());
-  _generate('level_start', _levelStart());
-  _generate('bgm_loop', _bgmLoop());
+  _generate('tap', _tap(), dir: _sfxDir);
+  _generate('piece_snap', _pieceSnap(), dir: _sfxDir);
+  _generate('victory', _victory(), dir: _sfxDir);
+  _generate('chapter_complete', _chapterComplete(), dir: _sfxDir);
+  _generate('coins', _coins(), dir: _sfxDir);
+  _generate('hover', _hover(), dir: _sfxDir);
+  _generate('level_start', _levelStart(), dir: _sfxDir);
+  _generate('bgm_loop', _bgmLoop(), dir: _musicDir);
 
-  print('✅ Placeholder audio files generated in $_outputDir');
+  print('✅ Placeholder audio files generated in $_sfxDir and $_musicDir');
   print('📢 Replace them with real .wav files before release.');
 }
 
 // ── WAV helpers ──
 
-void _generate(String name, List<double> samples) {
+void _generate(String name, List<double> samples, {required String dir}) {
   final bytes = _wavBytes(samples);
-  File('$_outputDir/$name.wav').writeAsBytesSync(bytes);
-  print('  wrote $_outputDir/$name.wav (${samples.length} samples, '
+  File('$dir/$name.wav').writeAsBytesSync(bytes);
+  print('  wrote $dir/$name.wav (${samples.length} samples, '
       '${(samples.length / _sampleRate * 1000).round()}ms)');
 }
 

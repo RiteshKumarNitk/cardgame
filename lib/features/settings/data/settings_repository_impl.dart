@@ -13,14 +13,11 @@ class HiveSettingsRepository implements SettingsRepository {
         (_box.get(AppConstants.soundEnabledKey) as bool?) ?? true,
     musicEnabled:
         (_box.get(AppConstants.musicEnabledKey) as bool?) ?? true,
-    hapticsEnabled:
-        (_box.get(AppConstants.hapticsEnabledKey) as bool?) ?? true,
   );
 
   @override
   Future<void> save(AppSettings settings) async {
     await _box.put(AppConstants.soundEnabledKey, settings.soundEnabled);
     await _box.put(AppConstants.musicEnabledKey, settings.musicEnabled);
-    await _box.put(AppConstants.hapticsEnabledKey, settings.hapticsEnabled);
   }
 }

@@ -8,6 +8,7 @@ import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/wallet_cubit.dart';
+import '../../../../shared/utils/context_read_or_null.dart';
 import '../../../../shared/widgets/confetti_burst.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
@@ -15,8 +16,10 @@ import '../../../../shared/widgets/game_card.dart';
 import '../../../../shared/utils/duration_format.dart';
 import '../../../../shared/utils/number_format.dart';
 import '../../../../shared/widgets/stat_chip.dart';
+import '../../../../shared/widgets/bounce_in.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/difficulty_badge.dart';
+import '../../../achievements/presentation/bloc/achievements_cubit.dart';
 import '../../../levels/data/datasources/levels_local_datasource.dart';
 import '../../../levels/data/repositories/levels_repository_impl.dart';
 import '../../../levels/domain/services/level_service.dart';
@@ -27,9 +30,12 @@ import '../bloc/puzzle_cubit.dart';
 import '../bloc/puzzle_state.dart';
 import '../widgets/puzzle_board.dart';
 
-/// Puzzle (gameplay) screen: a compact top bar (difficulty, coins, hints,
-/// timer, moves, preview) over a drag-and-drop board that fills the rest
-/// of the screen — no footer, no pause menu; back always returns Home.
+/// Puzzle (gameplay) screen: a compact top bar (difficulty, coins,
+/// timer, moves, preview, pause) over a drag-and-drop board that fills
+/// the rest of the screen — no footer. Leaving mid-puzzle is always an
+/// explicit choice: the system back button and the top-bar back arrow
+/// open the pause menu (Resume / Restart / Give Up) instead of exiting,
+/// and the elapsed clock stops while it's up.
 ///
 /// On solve, the completed board receives a satisfying glow + confetti burst,
 /// then after a brief celebration delay navigates to Victory with the
@@ -51,10 +57,11 @@ class PuzzlePage extends StatelessWidget {
     final parsedId = int.tryParse(levelId);
 
     return BlocProvider(
-      create: (_) {
+      create: (context) {
         final cubit = PuzzleCubit(
           _levelService ??
               LevelService(LevelsRepositoryImpl(HiveLevelsLocalDataSource())),
+          achievementEvents: context.readOrNull<AchievementsCubit>(),
         );
         if (parsedId != null) cubit.loadLevel(parsedId);
         return cubit;
@@ -73,53 +80,114 @@ const _snapFraction = 0.18;
 /// Fraction of [_celebrationDelay] dedicated to the border-fade animation.
 const _borderFadeFraction = 0.5;
 
-class _PuzzleView extends StatelessWidget {
+class _PuzzleView extends StatefulWidget {
   const _PuzzleView({required this.levelIdIsValid});
 
   final bool levelIdIsValid;
 
   @override
+  State<_PuzzleView> createState() => _PuzzleViewState();
+}
+
+class _PuzzleViewState extends State<_PuzzleView> {
+  /// Whether the pause menu is up. The menu is a full-screen overlay, so
+  /// this lives here rather than in [PuzzleCubit] — the cubit only
+  /// mirrors it as [PuzzleLoaded.isPaused] to stop the clock.
+  bool _isPaused = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: GameBackground(
-        showFloatingPieces: false,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-            child: BlocConsumer<PuzzleCubit, PuzzleState>(
-              listenWhen: (previous, current) =>
-                  previous is PuzzleLoaded &&
-                  current is PuzzleLoaded &&
-                  !previous.isSolved &&
-                  current.isSolved,
-              listener: (context, state) {
-                final solved = state as PuzzleLoaded;
-                context.read<WalletCubit>().addCoins(solved.coinsAwarded);
-                _celebrateThenNavigate(context, solved);
-              },
-              builder: (context, state) {
-                if (!levelIdIsValid) {
-                  return const _PuzzleMessage(
-                    message: 'Invalid level.',
-                    isError: true,
-                  );
-                }
-                return switch (state) {
-                  PuzzleInitial() || PuzzleLoading() => const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
+    // While a puzzle is loaded, the system back button never leaves the
+    // screen: it toggles the pause menu instead. Loading/error/invalid
+    // states keep the default pop behavior.
+    final canPop = context.read<PuzzleCubit>().state is! PuzzleLoaded;
+
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _togglePause();
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            GameBackground(
+              showFloatingPieces: false,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                  child: BlocConsumer<PuzzleCubit, PuzzleState>(
+                    listenWhen: (previous, current) =>
+                        previous is PuzzleLoaded &&
+                        current is PuzzleLoaded &&
+                        !previous.isSolved &&
+                        current.isSolved,
+                    listener: (context, state) {
+                      final solved = state as PuzzleLoaded;
+                      context.read<WalletCubit>().addCoins(solved.coinsAwarded);
+                      _celebrateThenNavigate(context, solved);
+                    },
+                    builder: (context, state) {
+                      if (!widget.levelIdIsValid) {
+                        return const _PuzzleMessage(
+                          message: 'Invalid level.',
+                          isError: true,
+                        );
+                      }
+                      return switch (state) {
+                        PuzzleInitial() || PuzzleLoading() => const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        PuzzleError(:final message) => _PuzzleMessage(
+                          message: 'Failed to load level: $message',
+                          isError: true,
+                        ),
+                        PuzzleLoaded() => _LoadedPuzzle(
+                          state: state,
+                          onPause: _togglePause,
+                        ),
+                      };
+                    },
                   ),
-                  PuzzleError(:final message) => _PuzzleMessage(
-                    message: 'Failed to load level: $message',
-                    isError: true,
-                  ),
-                  PuzzleLoaded() => _LoadedPuzzle(state: state),
-                };
-              },
+                ),
+              ),
             ),
-          ),
+            if (_isPaused)
+              Positioned.fill(
+                child: _PauseOverlay(
+                  onResume: _togglePause,
+                  onRestart: _restart,
+                  onQuit: _quit,
+                ),
+              ),
+          ],
         ),
       ),
     );
+  }
+
+  /// Opens the pause menu (or closes it when already up), keeping the
+  /// [PuzzleCubit]'s clock in sync. No-op while the solve celebration is
+  /// playing — the puzzle is already over at that point.
+  void _togglePause() {
+    final current = context.read<PuzzleCubit>().state;
+    if (current is! PuzzleLoaded || current.isSolved) return;
+    final next = !_isPaused;
+    context.read<PuzzleCubit>().setPaused(next);
+    setState(() => _isPaused = next);
+  }
+
+  /// Closes the menu and re-shuffles the level from scratch.
+  void _restart() {
+    setState(() => _isPaused = false);
+    context.read<PuzzleCubit>().restart();
+  }
+
+  /// Gives up: back to Home, losing current progress on this level.
+  void _quit() {
+    context.goNamed(RouteNames.home);
   }
 
   Future<void> _celebrateThenNavigate(
@@ -148,9 +216,10 @@ class _PuzzleView extends StatelessWidget {
 }
 
 class _LoadedPuzzle extends StatefulWidget {
-  const _LoadedPuzzle({super.key, required this.state});
+  const _LoadedPuzzle({required this.state, required this.onPause});
 
   final PuzzleLoaded state;
+  final VoidCallback onPause;
 
   @override
   State<_LoadedPuzzle> createState() => _LoadedPuzzleState();
@@ -205,8 +274,9 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
         _PuzzleTopBar(
           level: state,
           imageUrl: imageUrl,
-          onBack: () => context.goNamed(RouteNames.home),
+          onBack: widget.onPause,
           onPreview: () => _showPreviewSheet(context, state.level.id, imageUrl),
+          onPause: widget.onPause,
         ),
 
         const SizedBox(height: AppSpacing.xs),
@@ -293,6 +363,9 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
   }
 }
 
+/// How much a locked reference preview costs to unlock, in coins.
+const _previewUnlockCost = 15;
+
 /// ────────────────────────────────────────────────────────────────────
 /// Large Preview Sheet
 /// ────────────────────────────────────────────────────────────────────
@@ -302,14 +375,12 @@ class _PreviewSheetContent extends StatefulWidget {
     required this.dimensions,
     required this.unlocked,
     required this.onUnlocked,
-    this.unlockCost = 15,
   });
 
   final String imageUrl;
   final BoardDimensions dimensions;
   final bool unlocked;
   final VoidCallback onUnlocked;
-  final int unlockCost;
 
   @override
   State<_PreviewSheetContent> createState() => _PreviewSheetContentState();
@@ -321,7 +392,7 @@ class _PreviewSheetContentState extends State<_PreviewSheetContent> {
   Future<void> _unlock() async {
     setState(() => _unlocking = true);
     final success = await context.read<WalletCubit>().spendCoins(
-      widget.unlockCost,
+      _previewUnlockCost,
     );
     if (!mounted) return;
     setState(() => _unlocking = false);
@@ -394,7 +465,7 @@ class _PreviewSheetContentState extends State<_PreviewSheetContent> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Spend ${widget.unlockCost} coins to see the full photo',
+                  'Spend $_previewUnlockCost coins to see the full photo',
                   style: textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -403,7 +474,7 @@ class _PreviewSheetContentState extends State<_PreviewSheetContent> {
                 GameButton(
                   label: _unlocking
                       ? 'Unlocking...'
-                      : 'Unlock for ${widget.unlockCost} coins',
+                      : 'Unlock for $_previewUnlockCost coins',
                   icon: Icons.monetization_on_rounded,
                   variant: GameButtonVariant.premium,
                   width: double.infinity,
@@ -427,12 +498,14 @@ class _PuzzleTopBar extends StatelessWidget {
     required this.imageUrl,
     required this.onBack,
     required this.onPreview,
+    required this.onPause,
   });
 
   final PuzzleLoaded level;
   final String imageUrl;
   final VoidCallback onBack;
   final VoidCallback onPreview;
+  final VoidCallback onPause;
 
   @override
   Widget build(BuildContext context) {
@@ -458,15 +531,6 @@ class _PuzzleTopBar extends StatelessWidget {
               ),
             ),
           ),
-          // Hints (placeholder count)
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.xs),
-            child: StatChip(
-              icon: Icons.lightbulb_rounded,
-              value: '5',
-              iconColor: AppColors.success,
-            ),
-          ),
           // Timer
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.xs),
@@ -490,7 +554,107 @@ class _PuzzleTopBar extends StatelessWidget {
             iconColor: AppColors.secondary,
             onTap: onPreview,
           ),
+          const SizedBox(width: AppSpacing.sm),
+          CircleIconButton(
+            icon: Icons.pause_rounded,
+            iconColor: AppColors.secondary,
+            onTap: onPause,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// ────────────────────────────────────────────────────────────────────
+/// Pause Menu
+/// ────────────────────────────────────────────────────────────────────
+/// Full-screen scrim with a centered card offering Resume, Restart and
+/// Give Up. While it's up, PuzzleCubit.setPaused keeps the elapsed clock
+/// stopped, and the board underneath is covered so no stray drag can
+/// land on it. The card pops in with [BounceIn].
+class _PauseOverlay extends StatelessWidget {
+  const _PauseOverlay({
+    required this.onResume,
+    required this.onRestart,
+    required this.onQuit,
+  });
+
+  final VoidCallback onResume;
+  final VoidCallback onRestart;
+  final VoidCallback onQuit;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return ColoredBox(
+      color: AppColors.background.withValues(alpha: 0.92),
+      child: Center(
+        child: BounceIn(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: GameCard(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.pause_circle_rounded,
+                    size: 56,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Paused',
+                    style: textTheme.headlineMedium?.copyWith(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'The clock is stopped — take your time.',
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  GameButton(
+                    label: 'Resume',
+                    icon: Icons.play_arrow_rounded,
+                    width: double.infinity,
+                    onTap: onResume,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  GameButton(
+                    label: 'Restart',
+                    icon: Icons.restart_alt_rounded,
+                    variant: GameButtonVariant.secondary,
+                    width: double.infinity,
+                    onTap: onRestart,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  TextButton.icon(
+                    onPressed: onQuit,
+                    icon: const Icon(
+                      Icons.exit_to_app_rounded,
+                      color: AppColors.danger,
+                    ),
+                    label: Text(
+                      'Give Up',
+                      style: TextStyle(
+                        color: AppColors.danger,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

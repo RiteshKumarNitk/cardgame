@@ -20,7 +20,7 @@ class _FakeSettingsRepository implements SettingsRepository {
 }
 
 void main() {
-  test('defaults to sound/music/haptics all on before loading', () {
+  test('defaults to sound and music on before loading', () {
     final cubit = SettingsCubit(_FakeSettingsRepository());
     expect(cubit.state, const AppSettings());
   });
@@ -44,7 +44,6 @@ void main() {
 
     expect(cubit.state.soundEnabled, isFalse);
     expect(cubit.state.musicEnabled, isTrue);
-    expect(cubit.state.hapticsEnabled, isTrue);
     expect(repository.stored.soundEnabled, isFalse);
   });
 
@@ -58,17 +57,5 @@ void main() {
     expect(cubit.state.musicEnabled, isFalse);
     expect(cubit.state.soundEnabled, isTrue);
     expect(repository.stored.musicEnabled, isFalse);
-  });
-
-  test('toggleHaptics flips only haptics and persists', () async {
-    final repository = _FakeSettingsRepository();
-    final cubit = SettingsCubit(repository);
-    await cubit.load();
-
-    await cubit.toggleHaptics();
-
-    expect(cubit.state.hapticsEnabled, isFalse);
-    expect(cubit.state.soundEnabled, isTrue);
-    expect(repository.stored.hapticsEnabled, isFalse);
   });
 }

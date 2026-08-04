@@ -18,8 +18,8 @@ import '../../domain/entities/app_settings.dart';
 import '../../domain/repositories/settings_repository.dart';
 import '../bloc/settings_cubit.dart';
 
-/// Settings screen: sound/music/haptics toggles and a (confirmed) reset
-/// of level progress.
+/// Settings screen: sound/music toggles and a (confirmed) reset of level
+/// progress.
 ///
 /// Uses the [SettingsCubit] provided by [PuzzleCardsApp] at the app root,
 /// so the audio service stays in sync across all screens. Falls back to
@@ -103,7 +103,7 @@ class _SettingsView extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Audio & Haptics',
+                          'Audio',
                           style: textTheme.titleSmall?.copyWith(
                             color: AppColors.textDark,
                           ),
@@ -128,16 +128,6 @@ class _SettingsView extends StatelessWidget {
                                 value: settings.musicEnabled,
                                 onChanged: (_) =>
                                     context.read<SettingsCubit>().toggleMusic(),
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              _SettingToggle(
-                                icon: Icons.vibration_rounded,
-                                title: 'Vibration',
-                                subtitle: 'Haptic feedback',
-                                value: settings.hapticsEnabled,
-                                onChanged: (_) => context
-                                    .read<SettingsCubit>()
-                                    .toggleHaptics(),
                               ),
                             ],
                           ),

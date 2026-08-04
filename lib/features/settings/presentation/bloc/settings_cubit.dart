@@ -20,10 +20,6 @@ class SettingsCubit extends Cubit<AppSettings> {
     (settings) => settings.copyWith(musicEnabled: !settings.musicEnabled),
   );
 
-  Future<void> toggleHaptics() => _update(
-    (settings) => settings.copyWith(hapticsEnabled: !settings.hapticsEnabled),
-  );
-
   Future<void> _update(AppSettings Function(AppSettings) transform) async {
     final updated = transform(state);
     emit(updated);

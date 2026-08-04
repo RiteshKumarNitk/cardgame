@@ -10,8 +10,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:puzzle_cards/core/router/route_paths.dart';
 import 'package:puzzle_cards/core/theme/app_theme.dart';
 import 'package:puzzle_cards/game/wallet_cubit.dart';
 import '../../helpers/fake_wallet_service.dart';
@@ -108,5 +110,154 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('Failed to load level'), findsOneWidget);
+  });
+
+  testWidgets('pause opens the pause menu; Resume closes it', (tester) async {
+    final levelService = LevelService(_FakeLevelsRepository());
+
+    await tester.pumpWidget(
+      BlocProvider<WalletCubit>(
+        create: (_) => WalletCubit(FakeWalletService()),
+        child: MaterialApp(
+          theme: AppTheme.game,
+          home: PuzzlePage(levelId: '1', levelService: levelService),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.pause_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Paused'), findsOneWidget);
+    expect(find.text('Resume'), findsOneWidget);
+    expect(find.text('Restart'), findsOneWidget);
+    expect(find.text('Give Up'), findsOneWidget);
+
+    await tester.tap(find.text('Resume'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Paused'), findsNothing);
+    expect(find.byType(PuzzleImageTile), findsNWidgets(12));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('system back toggles pause instead of leaving mid-puzzle', (
+    tester,
+  ) async {
+    final levelService = LevelService(_FakeLevelsRepository());
+
+    await tester.pumpWidget(
+      BlocProvider<WalletCubit>(
+        create: (_) => WalletCubit(FakeWalletService()),
+        child: MaterialApp(
+          theme: AppTheme.game,
+          home: PuzzlePage(levelId: '1', levelService: levelService),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    // Android-style back: must open the pause menu, never exit.
+    final dynamic widgetsApp = tester.state(find.byType(WidgetsApp));
+    await widgetsApp.didPopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Paused'), findsOneWidget);
+
+    // A second back resumes play.
+    await widgetsApp.didPopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Paused'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Restart from the pause menu re-shuffles the board', (
+    tester,
+  ) async {
+    final levelService = LevelService(_FakeLevelsRepository());
+
+    await tester.pumpWidget(
+      BlocProvider<WalletCubit>(
+        create: (_) => WalletCubit(FakeWalletService()),
+        child: MaterialApp(
+          theme: AppTheme.game,
+          home: PuzzlePage(levelId: '1', levelService: levelService),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.pause_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.text('Restart'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Paused'), findsNothing);
+    expect(find.text('Easy'), findsOneWidget);
+    expect(find.byType(PuzzleImageTile), findsNWidgets(12));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Give Up from the pause menu returns Home', (tester) async {
+    final levelService = LevelService(_FakeLevelsRepository());
+    final router = GoRouter(
+      initialLocation: RoutePaths.puzzleWithId('1'),
+      routes: [
+        GoRoute(
+          path: RoutePaths.puzzle,
+          name: RouteNames.puzzle,
+          pageBuilder: (context, state) => MaterialPage(
+            child: PuzzlePage(
+              levelId: state.pathParameters['levelId']!,
+              levelService: levelService,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: RoutePaths.home,
+          name: RouteNames.home,
+          pageBuilder: (context, state) => const MaterialPage(
+            child: Scaffold(body: Center(child: Text('Home Page'))),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      BlocProvider<WalletCubit>(
+        create: (_) => WalletCubit(FakeWalletService()),
+        child: MaterialApp.router(
+          theme: AppTheme.game,
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.pause_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.text('Give Up'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(PuzzlePage), findsNothing);
+    expect(find.text('Home Page'), findsOneWidget);
   });
 }

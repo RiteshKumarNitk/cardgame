@@ -149,4 +149,54 @@ void main() {
     await cubit.loadLevel(ChapterCatalog.totalLevelCount);
     expect(cubit.nextLevelId, isNull, reason: 'this is the last level in the catalog');
   });
+
+  test('setPaused stops the clock and resumes it on unpause', () async {
+    await cubit.loadLevel(1);
+    expect((cubit.state as PuzzleLoaded).isPaused, isFalse);
+
+    cubit.setPaused(true);
+    expect((cubit.state as PuzzleLoaded).isPaused, isTrue);
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    expect(
+      (cubit.state as PuzzleLoaded).elapsedSeconds,
+      0,
+      reason: 'the clock must not tick while the pause menu is up',
+    );
+
+    cubit.setPaused(false);
+    expect((cubit.state as PuzzleLoaded).isPaused, isFalse);
+    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    expect(
+      (cubit.state as PuzzleLoaded).elapsedSeconds,
+      greaterThanOrEqualTo(1),
+      reason: 'the clock resumes once unpaused',
+    );
+  });
+
+  test('setPaused is a no-op before a level is loaded', () {
+    cubit.setPaused(true);
+    expect(cubit.state, isA<PuzzleInitial>());
+    cubit.setPaused(false);
+    expect(cubit.state, isA<PuzzleInitial>());
+  });
+
+  test('restart deals a fresh shuffle and resets moves and time', () async {
+    await cubit.loadLevel(1);
+    await cubit.swapPieces(0, 1);
+    final before = (cubit.state as PuzzleLoaded).arrangement;
+
+    await cubit.restart();
+
+    final state = cubit.state as PuzzleLoaded;
+    expect(state.level.id, 1);
+    expect(state.isSolved, isFalse);
+    expect(state.moves, 0);
+    expect(state.isPaused, isFalse);
+    expect(state.arrangement.toSet(), Set.of(List.generate(12, (i) => i + 1)));
+    expect(
+      state.arrangement,
+      isNot(equals(before)),
+      reason: 'a restart re-shuffles instead of restoring the old board',
+    );
+  });
 }

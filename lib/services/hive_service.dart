@@ -14,5 +14,6 @@ abstract final class HiveService {
     await Hive.openBox(AppConstants.dailyChallengeBoxName);
     await Hive.openBox(AppConstants.monetizationBoxName);
     await Hive.openBox(AppConstants.settingsBoxName);
+    await Hive.openBox(AppConstants.achievementsBoxName);
   }
 }
