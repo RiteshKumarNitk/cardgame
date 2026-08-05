@@ -293,12 +293,16 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
                 dimensions: boardDimensionsForLevel(state.level.id),
                 imageUrl: imageUrl,
                 arrangement: state.arrangement,
+                rotations: state.rotations,
                 solvedProgress: solvedProgress,
                 snapFraction: _snapFraction,
                 borderFadeFraction: _borderFadeFraction,
                 onSwap: (fromCell, toCell) => context
                     .read<PuzzleCubit>()
                     .swapPieces(fromCell, toCell),
+                onRotate: (cell) => context
+                    .read<PuzzleCubit>()
+                    .rotatePiece(cell),
               ),
 
               // Solved celebration overlay
@@ -551,6 +555,24 @@ class _PuzzleTopBar extends StatelessWidget {
               icon: Icons.touch_app_rounded,
               value: '${level.moves}',
               iconColor: AppColors.primary,
+            ),
+          ),
+          // Hint Button
+          BlocBuilder<WalletCubit, int>(
+            builder: (context, coins) => Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: CircleIconButton(
+                icon: Icons.lightbulb_rounded,
+                iconColor: coins >= 10 ? AppColors.warning : AppColors.border,
+                onTap: coins >= 10
+                    ? () async {
+                        final success = await context.read<WalletCubit>().spendCoins(10);
+                        if (success && context.mounted) {
+                          context.read<PuzzleCubit>().useHint();
+                        }
+                      }
+                    : null,
+              ),
             ),
           ),
           CircleIconButton(

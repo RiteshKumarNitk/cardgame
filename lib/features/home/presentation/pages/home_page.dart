@@ -23,6 +23,7 @@ import '../../../../shared/widgets/outlined_text.dart';
 import '../../../../shared/widgets/press_scale.dart';
 import '../../../../shared/widgets/pulsing_glow.dart';
 import '../../../../shared/widgets/stat_chip.dart';
+import '../../../daily_reward/domain/daily_reward_service.dart';
 import '../../../levels/data/datasources/levels_local_datasource.dart';
 import '../../../levels/data/repositories/levels_repository_impl.dart';
 import '../../../levels/domain/entities/level.dart';
@@ -53,6 +54,35 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadProgress();
     AudioService().startBgm();
+    
+    // Check daily reward after a short delay so page transitions finish
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkDailyReward();
+    });
+  }
+
+  Future<void> _checkDailyReward() async {
+    final service = DailyRewardService();
+    if (service.isRewardAvailable()) {
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) return;
+      
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        isDismissible: false,
+        enableDrag: false,
+        builder: (sheetContext) => _DailyRewardSheet(
+          onClaim: () async {
+            await service.claimReward();
+            if (!mounted) return;
+            context.read<WalletCubit>().addCoins(50);
+            Navigator.of(sheetContext).pop();
+          },
+        ),
+      );
+    }
   }
 
   @override
@@ -391,6 +421,12 @@ class _QuickActionsRow extends StatelessWidget {
           onTap: () => context.goNamed(RouteNames.shop),
         ),
         _QuickAction(
+          icon: Icons.photo_library_rounded,
+          label: 'Gallery',
+          color: AppColors.success,
+          onTap: () => context.goNamed(RouteNames.gallery),
+        ),
+        _QuickAction(
           icon: Icons.emoji_events_rounded,
           label: 'Achievements',
           color: AppColors.premiumGradientEnd,
@@ -425,13 +461,13 @@ class _QuickAction extends StatelessWidget {
     return PressScale(
       onTap: onTap,
       child: SizedBox(
-        width: 68,
+        width: 60,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 52,
-              height: 52,
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
                 color: AppColors.card,
                 shape: BoxShape.circle,
@@ -455,7 +491,7 @@ class _QuickAction extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
-              ).textTheme.labelSmall?.copyWith(color: AppColors.textSecondary),
+              ).textTheme.labelSmall?.copyWith(color: AppColors.textSecondary, fontSize: 10),
             ),
           ],
         ),
@@ -522,6 +558,77 @@ class _LoadingShimmer extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+  }
+}
+
+/// ────────────────────────────────────────────────────────────────────
+/// Daily Reward Sheet
+/// ────────────────────────────────────────────────────────────────────
+class _DailyRewardSheet extends StatelessWidget {
+  const _DailyRewardSheet({required this.onClaim});
+
+  final VoidCallback onClaim;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: BounceIn(
+          child: GameCard(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.card_giftcard_rounded,
+                  size: 64,
+                  color: AppColors.warning,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Daily Reward',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: AppColors.textDark,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Here is a gift to help you piece together more art!',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.monetization_on_rounded, color: AppColors.accent, size: 36),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      '+50 Coins',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                GameButton(
+                  label: 'Claim Reward',
+                  icon: Icons.check_rounded,
+                  width: double.infinity,
+                  onTap: onClaim,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

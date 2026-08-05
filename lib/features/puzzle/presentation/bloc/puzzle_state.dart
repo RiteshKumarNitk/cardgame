@@ -21,6 +21,7 @@ final class PuzzleLoaded extends PuzzleState {
   const PuzzleLoaded({
     required this.level,
     required this.arrangement,
+    required this.rotations,
     required this.minimalSwaps,
     this.moves = 0,
     this.elapsedSeconds = 0,
@@ -33,6 +34,9 @@ final class PuzzleLoaded extends PuzzleState {
   /// `arrangement[cell]` is the 1-based piece index currently sitting in
   /// that (0-based) cell — see [TileSwapEngine].
   final List<int> arrangement;
+
+  /// `rotations[cell]` is the 0-3 quarter-turns clockwise rotation of the piece.
+  final List<int> rotations;
 
   /// The fewest swaps this shuffle could be solved in — the baseline for
   /// [stars].
@@ -57,6 +61,7 @@ final class PuzzleLoaded extends PuzzleState {
 
   PuzzleLoaded copyWith({
     List<int>? arrangement,
+    List<int>? rotations,
     int? moves,
     int? elapsedSeconds,
     bool? isSolved,
@@ -65,6 +70,7 @@ final class PuzzleLoaded extends PuzzleState {
     return PuzzleLoaded(
       level: level,
       arrangement: arrangement ?? this.arrangement,
+      rotations: rotations ?? this.rotations,
       minimalSwaps: minimalSwaps,
       moves: moves ?? this.moves,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
@@ -77,6 +83,7 @@ final class PuzzleLoaded extends PuzzleState {
   List<Object?> get props => [
     level,
     arrangement,
+    rotations,
     minimalSwaps,
     moves,
     elapsedSeconds,

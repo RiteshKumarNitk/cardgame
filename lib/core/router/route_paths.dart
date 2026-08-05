@@ -14,6 +14,7 @@ abstract final class RoutePaths {
   static const String dailyPuzzle = '/daily-puzzle';
   static const String achievements = '/achievements';
   static const String shop = '/shop';
+  static const String gallery = '/gallery';
 
   static String puzzleWithId(String levelId) => '/puzzle/$levelId';
 }
@@ -30,4 +31,5 @@ abstract final class RouteNames {
   static const String dailyPuzzle = 'dailyPuzzle';
   static const String achievements = 'achievements';
   static const String shop = 'shop';
+  static const String gallery = 'gallery';
 }

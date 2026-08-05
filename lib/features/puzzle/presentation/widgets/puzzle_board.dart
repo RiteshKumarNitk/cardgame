@@ -22,7 +22,9 @@ class PuzzleBoard extends StatelessWidget {
     required this.dimensions,
     required this.imageUrl,
     required this.arrangement,
+    required this.rotations,
     required this.onSwap,
+    required this.onRotate,
     this.solvedProgress = 0.0,
     this.snapFraction = 0.18,
     this.borderFadeFraction = 0.5,
@@ -36,7 +38,11 @@ class PuzzleBoard extends StatelessWidget {
 
   /// `arrangement[cell]` is the 1-based piece index in that cell.
   final List<int> arrangement;
+  /// `rotations[cell]` is the 0-3 quarter-turns for the piece in that cell.
+  final List<int> rotations;
+  
   final void Function(int fromCell, int toCell) onSwap;
+  final void Function(int cell) onRotate;
 
   /// 0.0–1.0 progress of the puzzle-solved celebration animation.
   /// 0 = just solved, 1 = about to navigate to Victory.
@@ -78,14 +84,18 @@ class PuzzleBoard extends StatelessWidget {
               itemCount: dimensions.pieceCount,
               itemBuilder: (context, cellIndex) {
                 final pieceIndex = arrangement[cellIndex];
+                final rotation = rotations[cellIndex];
+                
                 return _BoardCell(
                   cellIndex: cellIndex,
                   pieceIndex: pieceIndex,
+                  rotation: rotation,
                   gridCols: dimensions.cols,
                   gridRows: dimensions.rows,
                   imageUrl: imageUrl,
-                  correct: pieceIndex == cellIndex + 1,
+                  correct: pieceIndex == cellIndex + 1 && rotation == 0,
                   onSwap: onSwap,
+                  onRotate: onRotate,
                   solvedProgress: solvedProgress,
                   snapFraction: snapFraction,
                   borderFadeFraction: borderFadeFraction,
@@ -104,11 +114,13 @@ class _BoardCell extends StatefulWidget {
   const _BoardCell({
     required this.cellIndex,
     required this.pieceIndex,
+    required this.rotation,
     required this.gridCols,
     required this.gridRows,
     required this.imageUrl,
     required this.correct,
     required this.onSwap,
+    required this.onRotate,
     required this.cellSize,
     this.solvedProgress = 0.0,
     this.snapFraction = 0.18,
@@ -117,11 +129,13 @@ class _BoardCell extends StatefulWidget {
 
   final int cellIndex;
   final int pieceIndex;
+  final int rotation;
   final int gridCols;
   final int gridRows;
   final String imageUrl;
   final bool correct;
   final void Function(int fromCell, int toCell) onSwap;
+  final void Function(int cell) onRotate;
   final double cellSize;
   final double solvedProgress;
   final double snapFraction;
@@ -205,6 +219,14 @@ class _BoardCellState extends State<_BoardCell>
       opacity: tileOpacity.clamp(0.0, 1.0),
     );
 
+    // Apply rotation
+    final rotatedContent = AnimatedRotation(
+      turns: widget.rotation / 4.0,
+      duration: AppAnimations.medium,
+      curve: Curves.easeOut,
+      child: content,
+    );
+
     final decorated = Container(
       decoration: BoxDecoration(
         border: Border.all(
@@ -215,7 +237,7 @@ class _BoardCellState extends State<_BoardCell>
             ? AppShadows.glow(AppColors.success, opacity: 0.3)
             : null,
       ),
-      child: content,
+      child: rotatedContent,
     );
 
     // Apply snap scale
@@ -243,15 +265,18 @@ class _BoardCellState extends State<_BoardCell>
               )
             : popped;
 
-        return Draggable<int>(
-          data: widget.cellIndex,
-          feedback: SizedBox(
-            width: widget.cellSize,
-            height: widget.cellSize,
-            child: Material(color: Colors.transparent, child: decorated),
+        return GestureDetector(
+          onTap: () => widget.onRotate(widget.cellIndex),
+          child: Draggable<int>(
+            data: widget.cellIndex,
+            feedback: SizedBox(
+              width: widget.cellSize,
+              height: widget.cellSize,
+              child: Material(color: Colors.transparent, child: decorated),
+            ),
+            childWhenDragging: Opacity(opacity: 0.35, child: decorated),
+            child: hoverRing,
           ),
-          childWhenDragging: Opacity(opacity: 0.35, child: decorated),
-          child: hoverRing,
         );
       },
     );

@@ -1,57 +1,71 @@
 import 'dart:math';
 
-/// The full rules of the "swap tiles on the grid" mechanic, shared by
-/// regular Puzzle levels and the Daily Challenge — pure and
-/// framework-agnostic so it's trivial to test in isolation.
-///
-/// An arrangement is a `List<int>` where `arrangement[cell]` is the
-/// 1-based piece index currently sitting in that (0-based) `cell`. A cell
-/// is "solved"/locked when `arrangement[cell] == cell + 1`.
+/// A record representing the full physical state of the board.
+typedef BoardState = ({List<int> arrangement, List<int> rotations});
+
+/// The full rules of the "swap tiles on the grid" mechanic.
 abstract final class TileSwapEngine {
-  /// A shuffled arrangement of [pieceCount] pieces — deterministic for a
-  /// given [seed], and guaranteed not to already be solved.
-  static List<int> shuffledArrangement({
+  /// A shuffled arrangement. Pieces may optionally spawn randomly rotated
+  /// (by 90-degree increments) if [withRotation] is true.
+  static BoardState shuffledArrangement({
     required int pieceCount,
     required int seed,
+    required bool withRotation,
   }) {
     var attempt = seed;
     var arrangement = List.generate(pieceCount, (i) => i + 1);
+    var rotations = List.filled(pieceCount, 0);
+    
     do {
+      final random = Random(attempt);
       arrangement = List.generate(pieceCount, (i) => i + 1)
-        ..shuffle(Random(attempt));
+        ..shuffle(random);
+      
+      rotations = List.generate(
+        pieceCount,
+        (_) => withRotation ? random.nextInt(4) : 0,
+      );
+      
       attempt++;
-    } while (isSolved(arrangement));
-    return arrangement;
+    } while (isSolved((arrangement: arrangement, rotations: rotations)));
+    return (arrangement: arrangement, rotations: rotations);
   }
 
-  static bool isSolved(List<int> arrangement) {
-    for (var i = 0; i < arrangement.length; i++) {
-      if (arrangement[i] != i + 1) return false;
+  static bool isSolved(BoardState state) {
+    for (var i = 0; i < state.arrangement.length; i++) {
+      if (state.arrangement[i] != i + 1) return false;
+      if (state.rotations[i] != 0) return false;
     }
     return true;
   }
 
-  static bool isCellLocked(List<int> arrangement, int cell) =>
-      arrangement[cell] == cell + 1;
+  static bool isCellLocked(BoardState state, int cell) =>
+      state.arrangement[cell] == cell + 1 && state.rotations[cell] == 0;
 
-  /// Swaps the pieces at [fromCell] and [toCell]. A no-op (returns the
-  /// same list) if either cell is already locked, or the cells are equal.
-  static List<int> swap(List<int> arrangement, int fromCell, int toCell) {
-    if (fromCell == toCell) return arrangement;
-    if (isCellLocked(arrangement, fromCell) ||
-        isCellLocked(arrangement, toCell)) {
-      return arrangement;
+  /// Swaps the pieces at [fromCell] and [toCell], including their rotations.
+  static BoardState swap(BoardState state, int fromCell, int toCell) {
+    if (fromCell == toCell) return state;
+    if (isCellLocked(state, fromCell) || isCellLocked(state, toCell)) {
+      return state;
     }
-    final updated = List<int>.of(arrangement);
-    final temp = updated[fromCell];
-    updated[fromCell] = updated[toCell];
-    updated[toCell] = temp;
-    return updated;
+    final newArr = List<int>.of(state.arrangement);
+    final newRot = List<int>.of(state.rotations);
+
+    final tempArr = newArr[fromCell];
+    newArr[fromCell] = newArr[toCell];
+    newArr[toCell] = tempArr;
+
+    final tempRot = newRot[fromCell];
+    newRot[fromCell] = newRot[toCell];
+    newRot[toCell] = tempRot;
+
+    return (arrangement: newArr, rotations: newRot);
   }
 
-  /// The fewest swaps that could solve [arrangement] from here, via cycle
-  /// decomposition (swaps needed = elements - cycles). Used as the
-  /// baseline for star ratings — playing at this count is a perfect run.
+  /// Calculates minimal swaps needed (not accounting for rotations, as rotations
+  /// don't count towards the 'move' count stringency in the same way, or you can
+  /// just treat each rotation as a move). For simplicity, we keep the cycle decomposition
+  /// for positional swaps.
   static int minimalSwaps(List<int> arrangement) {
     final visited = List.filled(arrangement.length, false);
     var swaps = 0;

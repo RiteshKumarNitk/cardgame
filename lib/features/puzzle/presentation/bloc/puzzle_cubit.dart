@@ -47,15 +47,21 @@ class PuzzleCubit extends Cubit<PuzzleState> {
         return;
       }
       final level = _levels[index];
-      final arrangement = TileSwapEngine.shuffledArrangement(
+      final withRotation = level.difficulty == LevelDifficulty.hard ||
+          level.difficulty == LevelDifficulty.expert ||
+          level.difficulty == LevelDifficulty.master;
+
+      final state = TileSwapEngine.shuffledArrangement(
         pieceCount: boardDimensionsForLevel(level.id).pieceCount,
         seed: level.id + _restartCount,
+        withRotation: withRotation,
       );
       emit(
         PuzzleLoaded(
           level: level,
-          arrangement: arrangement,
-          minimalSwaps: TileSwapEngine.minimalSwaps(arrangement),
+          arrangement: state.arrangement,
+          rotations: state.rotations,
+          minimalSwaps: TileSwapEngine.minimalSwaps(state.arrangement),
         ),
       );
       _startTimer();
@@ -94,17 +100,65 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     final current = state;
     if (current is! PuzzleLoaded || current.isSolved) return;
 
-    final arrangement = TileSwapEngine.swap(
-      current.arrangement,
+    final newState = TileSwapEngine.swap(
+      (arrangement: current.arrangement, rotations: current.rotations),
       fromCell,
       toCell,
     );
-    if (identical(arrangement, current.arrangement)) return;
+    if (identical(newState.arrangement, current.arrangement) && identical(newState.rotations, current.rotations)) return;
+    
+    // Check equality properly, since identical on records or generated lists might be false even if nothing changed. 
+    // But swap already returns the same state if nothing changes due to locks.
+    
+    _checkSolveAndEmit(current, newState, movesDelta: 1);
+  }
 
-    final solved = TileSwapEngine.isSolved(arrangement);
+  /// Rotates the piece in [cellIndex] by 90 degrees clockwise.
+  Future<void> rotatePiece(int cellIndex) async {
+    final current = state;
+    if (current is! PuzzleLoaded || current.isSolved) return;
+    if (TileSwapEngine.isCellLocked((arrangement: current.arrangement, rotations: current.rotations), cellIndex)) return;
+
+    final newRotations = List<int>.of(current.rotations);
+    newRotations[cellIndex] = (newRotations[cellIndex] + 1) % 4;
+
+    _checkSolveAndEmit(current, (arrangement: current.arrangement, rotations: newRotations), movesDelta: 1);
+  }
+
+  /// Automatically finds a piece that is in the wrong place, finds its correct home,
+  /// swaps it into place, and fixes its rotation.
+  Future<void> useHint() async {
+    final current = state;
+    if (current is! PuzzleLoaded || current.isSolved) return;
+
+    final boardState = (arrangement: current.arrangement, rotations: current.rotations);
+    
+    // Find first cell that is not locked
+    for (int i = 0; i < current.arrangement.length; i++) {
+      if (!TileSwapEngine.isCellLocked(boardState, i)) {
+        // The cell i is not locked. We want to place piece (i + 1) here.
+        // Where is piece (i + 1)?
+        final targetPiece = i + 1;
+        final currentPosOfTarget = current.arrangement.indexOf(targetPiece);
+        
+        // Swap them and fix rotation
+        var newState = TileSwapEngine.swap(boardState, i, currentPosOfTarget);
+        final newRotations = List<int>.of(newState.rotations);
+        newRotations[i] = 0; // Fix rotation of the hinted cell
+        newState = (arrangement: newState.arrangement, rotations: newRotations);
+
+        _checkSolveAndEmit(current, newState, movesDelta: 1);
+        return;
+      }
+    }
+  }
+
+  void _checkSolveAndEmit(PuzzleLoaded current, BoardState newState, {required int movesDelta}) async {
+    final solved = TileSwapEngine.isSolved(newState);
     final updated = current.copyWith(
-      arrangement: arrangement,
-      moves: current.moves + 1,
+      arrangement: newState.arrangement,
+      rotations: newState.rotations,
+      moves: current.moves + movesDelta,
       isSolved: solved,
     );
     emit(updated);
