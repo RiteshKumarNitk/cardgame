@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
+import '../../../../core/router/route_paths.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/stat_chip.dart';
 import '../../../../shared/widgets/pulsing_glow.dart';
@@ -57,6 +59,11 @@ class DailyChallengeTopBar extends StatelessWidget {
           icon: Icons.local_fire_department_rounded,
           value: '$streak',
           iconColor: AppColors.accent,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        CircleIconButton(
+          icon: Icons.emoji_events_rounded,
+          onTap: () => context.goNamed(RouteNames.leaderboard),
         ),
       ],
     );

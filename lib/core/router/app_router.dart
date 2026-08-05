@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/achievements/presentation/pages/achievements_page.dart';
 import '../../features/daily_puzzle/presentation/pages/daily_puzzle_page.dart';
+import '../../features/daily_puzzle/presentation/pages/leaderboard_page.dart';
 import '../../features/gallery/presentation/pages/gallery_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/levels/domain/entities/chapter_complete_result.dart';
@@ -84,6 +85,12 @@ final GoRouter appRouter = GoRouter(
       name: RouteNames.dailyPuzzle,
       pageBuilder: (context, state) =>
           _fadePage(state, const DailyPuzzlePage()),
+    ),
+    GoRoute(
+      path: RoutePaths.leaderboard,
+      name: RouteNames.leaderboard,
+      pageBuilder: (context, state) =>
+          _fadePage(state, const LeaderboardPage()),
     ),
     GoRoute(
       path: RoutePaths.achievements,

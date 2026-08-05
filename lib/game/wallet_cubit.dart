@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../services/cloud_save_service.dart';
 import 'wallet_service.dart';
 
 /// The player's coin balance, live across the whole app. State is just
@@ -13,6 +14,7 @@ class WalletCubit extends Cubit<int> {
     if (amount <= 0) return;
     await _service.addCoins(amount);
     emit(_service.balance);
+    CloudSaveService().backupWallet(_service.balance);
   }
 
   /// Attempts to spend [amount] coins. Returns whether it succeeded —
@@ -21,7 +23,10 @@ class WalletCubit extends Cubit<int> {
   Future<bool> spendCoins(int amount) async {
     if (amount <= 0) return true;
     final success = await _service.spendCoins(amount);
-    if (success) emit(_service.balance);
+    if (success) {
+      emit(_service.balance);
+      CloudSaveService().backupWallet(_service.balance);
+    }
     return success;
   }
 }

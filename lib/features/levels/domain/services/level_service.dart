@@ -1,3 +1,5 @@
+import '../../../../game/game_progress_manager.dart';
+import '../../../../services/cloud_save_service.dart';
 import '../entities/level.dart';
 import '../repositories/levels_repository.dart';
 import 'chapter_catalog.dart';
@@ -70,6 +72,11 @@ class LevelService {
     updated = unlockNextLevel(updated, levelId);
 
     await _repository.saveLevels(updated);
+    
+    // Backup to cloud
+    final progress = GameProgressManager.computeFrom(updated);
+    CloudSaveService().backupProgress(progress, updated);
+    
     return updated;
   }
 

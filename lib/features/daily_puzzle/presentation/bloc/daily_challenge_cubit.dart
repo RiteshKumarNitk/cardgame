@@ -3,9 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../achievements/domain/services/achievement_events.dart';
+import 'package:flutter/services.dart';
+import '../../../../services/audio_service.dart';
 import '../../../puzzle/domain/puzzle_board_size.dart';
 import '../../../puzzle/domain/puzzle_image.dart';
 import '../../../puzzle/domain/tile_swap_engine.dart';
+import '../../../../services/leaderboard_service.dart';
 import '../../domain/entities/daily_challenge.dart';
 import '../../domain/services/daily_challenge_service.dart';
 import 'daily_challenge_state.dart';
@@ -84,9 +87,13 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
       }
       
       if (current.timeRemainingSeconds > 0) {
+        if (current.timeRemainingSeconds <= 10) {
+          AudioService().playTick();
+        }
         emit(current.copyWith(timeRemainingSeconds: current.timeRemainingSeconds - 1));
       } else {
         _timer?.cancel();
+        HapticFeedback.heavyImpact();
         emit(current.copyWith(isFailed: true));
       }
     });
@@ -143,6 +150,9 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     // Base 100 + Streak Bonus + Speed Bonus (2 coins per remaining second)
     final speedBonus = current.timeRemainingSeconds * 2;
     final coins = coinsFor(completed.streak) + speedBonus;
+    
+    // Submit to global leaderboard
+    LeaderboardService().submitTimeAttackScore(current.timeRemainingSeconds);
     
     emit(
       current.copyWith(

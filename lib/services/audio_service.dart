@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 /// Central audio service for all game sounds. Plays SFX (tap, snap,
@@ -25,7 +26,7 @@ class AudioService {
   // first. 3 is enough for our heaviest concurrent use (confetti +
   // victory + coins on the victory screen).
   final List<AudioPlayer> _sfxPlayers = List.generate(
-    3,
+    5,
     (_) => AudioPlayer(),
   );
   int _nextSfxIndex = 0;
@@ -45,19 +46,42 @@ class AudioService {
 
   // ── SFX ──
 
-  Future<void> playTap() => _playSfx('tap.wav');
+  Future<void> playTap() async {
+    HapticFeedback.selectionClick();
+    return _playSfx('tap.wav');
+  }
 
-  Future<void> playPieceSnap() => _playSfx('piece_snap.wav');
+  Future<void> playPieceSnap() async {
+    HapticFeedback.lightImpact();
+    return _playSfx('piece_snap.wav');
+  }
 
-  Future<void> playVictory() => _playSfx('victory.wav');
+  Future<void> playVictory() async {
+    HapticFeedback.vibrate();
+    return _playSfx('victory.wav');
+  }
 
-  Future<void> playChapterComplete() => _playSfx('chapter_complete.wav');
+  Future<void> playChapterComplete() async {
+    HapticFeedback.vibrate();
+    return _playSfx('chapter_complete.wav');
+  }
 
-  Future<void> playCoinReward() => _playSfx('coins.wav');
+  Future<void> playCoinReward() async {
+    HapticFeedback.mediumImpact();
+    return _playSfx('coins.wav');
+  }
 
-  Future<void> playButtonHover() => _playSfx('hover.wav');
+  Future<void> playButtonHover() async {
+    HapticFeedback.selectionClick();
+    return _playSfx('hover.wav');
+  }
 
   Future<void> playLevelStart() => _playSfx('level_start.wav');
+  
+  Future<void> playTick() async {
+    HapticFeedback.selectionClick(); // Soft tick feel
+    return _playSfx('tick.wav');
+  }
 
   // ── BGM ──
 
