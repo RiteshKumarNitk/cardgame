@@ -8,13 +8,12 @@ import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/wallet_cubit.dart';
+import '../../../../services/ad_service.dart';
 import '../../../../shared/utils/context_read_or_null.dart';
 import '../../../../shared/widgets/confetti_burst.dart';
 import '../../../../shared/widgets/app_image.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
-import '../../../../shared/widgets/glass_panel.dart';
-import '../../../../shared/widgets/top_bar.dart';
 import '../../../../shared/widgets/game_card.dart';
 import '../../../../shared/utils/duration_format.dart';
 import '../../../../shared/utils/number_format.dart';
@@ -563,15 +562,18 @@ class _PuzzleTopBar extends StatelessWidget {
               padding: const EdgeInsets.only(right: AppSpacing.sm),
               child: CircleIconButton(
                 icon: Icons.lightbulb_rounded,
-                iconColor: coins >= 10 ? AppColors.warning : AppColors.border,
-                onTap: coins >= 10
-                    ? () async {
-                        final success = await context.read<WalletCubit>().spendCoins(10);
-                        if (success && context.mounted) {
-                          context.read<PuzzleCubit>().useHint();
-                        }
-                      }
-                    : null,
+                iconColor: coins >= 10 ? AppColors.warning : AppColors.primary,
+                onTap: () async {
+                  if (coins >= 10) {
+                    final success = await context.read<WalletCubit>().spendCoins(10);
+                    if (success && context.mounted) {
+                      context.read<PuzzleCubit>().useHint();
+                    }
+                  } else {
+                    // Not enough coins? Offer a rewarded ad!
+                    _showRewardedAdOffer(context);
+                  }
+                },
               ),
             ),
           ),
@@ -585,6 +587,54 @@ class _PuzzleTopBar extends StatelessWidget {
             icon: Icons.pause_rounded,
             iconColor: AppColors.secondary,
             onTap: onPause,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRewardedAdOffer(BuildContext context) {
+    onPause(); // Pause the game while ad offer is showing
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.lgRadius),
+        title: Text(
+          'Need Hints?',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: AppColors.textDark, fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          'Watch a short video to earn 50 coins instantly!',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              onPause(); // Resume game
+            },
+            child: const Text('No Thanks', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              AdService().showRewardedAd(
+                onReward: () {
+                  context.read<WalletCubit>().addCoins(50);
+                },
+                onAdDismissed: () {
+                  onPause(); // Resume game
+                },
+              );
+            },
+            icon: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+            label: const Text('Watch Ad', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.pillRadius),
+            ),
           ),
         ],
       ),

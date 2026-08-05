@@ -14,6 +14,7 @@ import '../../../../game/game_progress_manager.dart';
 import '../../../../game/wallet_cubit.dart';
 import '../../../../shared/utils/number_format.dart';
 import '../../../../shared/widgets/app_logo.dart';
+import '../../../../shared/widgets/banner_ad_widget.dart';
 import '../../../../shared/widgets/bounce_in.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/game_background.dart';
@@ -144,6 +145,9 @@ class _HomePageState extends State<HomePage> {
 
                 // ── Secondary features: small, never in the way ──
                 _QuickActionsRow(),
+                
+                const SizedBox(height: AppSpacing.md),
+                const BannerAdWidget(),
               ],
             ),
           ),

@@ -42,6 +42,9 @@ dependencies:
   flame: ^1.35.1
   audioplayers: ^6.4.0
   google_fonts: ^8.1.0
+  google_mobile_ads: ^5.1.0
+  purchases_flutter: ^8.2.0
+  confetti: ^0.7.0
 
 dev_dependencies:
   flutter_test:
@@ -55,10 +58,24 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.4.13
   hive_generator: ^2.0.1
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.1
 
   # Build-time artwork generation (tools/generate_artwork.dart) — never
   # shipped in the app itself.
   image: ^4.5.4
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icon.png"
+
+flutter_native_splash:
+  color: "#F0F8FF"
+  image: "assets/images/icon.png"
+  android_12:
+    image: "assets/images/icon.png"
+    icon_background_color: "#F0F8FF"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

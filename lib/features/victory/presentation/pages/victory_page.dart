@@ -14,7 +14,6 @@ import '../../../../shared/widgets/fireworks_burst.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/app_image.dart';
 import '../../../../shared/widgets/game_button.dart';
-import '../../../../shared/widgets/glass_panel.dart';
 import '../../../../shared/widgets/pulsing_glow.dart';
 import '../../../../shared/widgets/sparkle_particles.dart';
 import '../../../../shared/widgets/stat_chip.dart';
@@ -52,6 +51,7 @@ class VictoryPage extends StatefulWidget {
 class _VictoryPageState extends State<VictoryPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  late final ConfettiController _confettiController;
   late final Animation<double> _imageReveal;
   late final Animation<double> _imageGlow;
   late final Animation<double> _contentSlide;
@@ -119,9 +119,19 @@ class _VictoryPageState extends State<VictoryPage>
             if (result != null && _showCelebration)
               const Positioned.fill(child: FireworksBurst()),
             if (result != null && _showCelebration)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: ConfettiBurst(particleCount: 40),
+              Align(
+                alignment: Alignment.topCenter,
+                child: ConfettiWidget(
+                  confettiController: _confettiController,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  shouldLoop: false,
+                  colors: const [
+                    AppColors.primary,
+                    AppColors.secondary,
+                    AppColors.accent,
+                    AppColors.success,
+                    AppColors.danger,
+                  ],
                 ),
               ),
             if (result != null && _showCelebration)

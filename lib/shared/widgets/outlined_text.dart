@@ -12,39 +12,42 @@ import '../../core/design_system/app_colors.dart';
 /// match in existing widget tests (`findsOneWidget`, `tester.tap`, etc.).
 class OutlinedText extends StatelessWidget {
   const OutlinedText(
-    this.text, {
+    this.data, {
     super.key,
-    required this.style,
-    this.outlineColor = AppColors.outline,
-    this.outlineWidth = 2,
+    this.style,
+    this.outlineColor = const Color(0x33000000),
+    this.outlineWidth = 2.0,
     this.textAlign,
-    this.overflow,
   });
 
-  final String text;
+  final String data;
   final TextStyle? style;
   final Color outlineColor;
   final double outlineWidth;
   final TextAlign? textAlign;
-  final TextOverflow? overflow;
 
   @override
   Widget build(BuildContext context) {
+    final baseStyle = style ?? const TextStyle();
+    
+    // Replace the heavy stroke with a soft double-shadow for a clean bubble aesthetic
     return Text(
-      text,
+      data,
       textAlign: textAlign,
-      overflow: overflow,
-      style: style?.copyWith(shadows: _outlineRing()),
-    );
-  }
-
-  List<Shadow> _outlineRing() => [
-    for (final dx in [-1.0, 0.0, 1.0])
-      for (final dy in [-1.0, 0.0, 1.0])
-        if (dx != 0 || dy != 0)
+      style: baseStyle.copyWith(
+        shadows: [
           Shadow(
             color: outlineColor,
-            offset: Offset(dx * outlineWidth, dy * outlineWidth),
+            offset: const Offset(0, 1.5),
+            blurRadius: outlineWidth,
           ),
-  ];
+          Shadow(
+            color: outlineColor,
+            offset: const Offset(0, 3),
+            blurRadius: outlineWidth * 2,
+          ),
+        ],
+      ),
+    );
+  }
 }

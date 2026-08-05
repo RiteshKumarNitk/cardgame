@@ -5,6 +5,7 @@ import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../shared/widgets/app_image.dart';
+import '../../../../shared/widgets/banner_ad_widget.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_card.dart';
@@ -111,6 +112,8 @@ class _GalleryPageState extends State<GalleryPage> {
                         },
                       ),
               ),
+              
+              const BannerAdWidget(),
             ],
           ),
         ),
