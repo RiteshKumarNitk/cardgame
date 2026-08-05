@@ -82,6 +82,7 @@ class _DailyPuzzleView extends StatelessWidget {
                     children: [
                       DailyChallengeTopBar(
                         streak: state.challenge.streak,
+                        timeRemainingSeconds: state.isComplete ? null : state.timeRemainingSeconds,
                         onBack: () => context.goNamed(RouteNames.home),
                       ),
                       const SizedBox(height: AppSpacing.sm),
