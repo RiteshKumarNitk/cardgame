@@ -4,39 +4,40 @@ import 'package:flutter/material.dart';
 /// never from raw hex literals or `Colors.*` sprinkled through widgets —
 /// so the whole app can be re-themed from this one file.
 abstract final class AppColors {
-  static const Color primary = Color(0xFF4F46E5);
-  static const Color secondary = Color(0xFF06B6D4);
-  static const Color accent = Color(0xFFF59E0B);
-  static const Color success = Color(0xFF22C55E);
-  static const Color danger = Color(0xFFEF4444);
+  // Soft, clear bubble colors
+  static const Color primary = Color(0xFF4CA1AF); // Soft Ocean Blue
+  static const Color secondary = Color(0xFF2C3E50); // Deep Water Blue
+  static const Color accent = Color(0xFFFFB75E); // Sunlit Amber
+  static const Color success = Color(0xFF81D4FA); // Light Cyan
+  static const Color danger = Color(0xFFFF8A65); // Soft Coral
 
-  static const Color background = Color(0xFFEEF6FF);
-  static const Color card = Color(0xFFFFFFFF);
+  // Material 3 Light Surfaces
+  static const Color background = Color(0xFFF0F8FF); // Alice Blue / Water tint
+  static const Color card = Color(0xFFFFFFFF); // Pure White
 
-  static const Color textDark = Color(0xFF1E293B);
-  static const Color textSecondary = Color(0xFF64748B);
-  static const Color border = Color(0xFFD9E6F2);
-  static const Color shadow = Color(0x1A0F172A); // rgba(15,23,42,0.10)
+  // Crisp Text
+  static const Color textDark = Color(0xFF263238); // Blue Grey 900
+  static const Color textSecondary = Color(0xFF78909C); // Blue Grey 400
+  static const Color border = Color(0xFFCFD8DC); // Blue Grey 100
+  static const Color shadow = Color(0x1F000000); // 12% black for soft shadows
 
-  /// Thick dark-navy outline used by every chunky "3D toy" surface
-  /// (buttons, cards, chips) — the one constant line color that ties the
-  /// whole bevel treatment together, regardless of a surface's own fill.
-  static const Color outline = Color(0xFF1E2A4A);
+  /// Soft translucent outline used for bubble effects
+  static const Color outline = Color(0x33FFFFFF); // 20% white gloss
 
-  // Gradient stops — see AppGradients for the assembled LinearGradients.
-  static const Color primaryGradientStart = Color(0xFF5B5BF7);
-  static const Color primaryGradientEnd = Color(0xFF3A7BFF);
+  // Gradient stops for water bubble glossy buttons
+  static const Color primaryGradientStart = Color(0xFF89F7FE); // Cyan bright
+  static const Color primaryGradientEnd = Color(0xFF66A6FF); // Soft blue
 
-  static const Color secondaryGradientStart = Color(0xFF6EE7B7);
-  static const Color secondaryGradientEnd = Color(0xFF34D399);
+  static const Color secondaryGradientStart = Color(0xFFA1C4FD); // Light sky
+  static const Color secondaryGradientEnd = Color(0xFFC2E9FB); // Pale blue
 
-  static const Color premiumGradientStart = Color(0xFFFFD54A);
-  static const Color premiumGradientEnd = Color(0xFFF59E0B);
+  static const Color premiumGradientStart = Color(0xFFFFE259); // Yellow glow
+  static const Color premiumGradientEnd = Color(0xFFFFA751); // Soft orange
 
   // Difficulty tiers (Level Selection).
-  static const Color difficultyEasy = Color(0xFF22C55E);
-  static const Color difficultyMedium = Color(0xFF06B6D4);
-  static const Color difficultyHard = Color(0xFFF59E0B);
-  static const Color difficultyExpert = Color(0xFFEF4444);
-  static const Color difficultyMaster = Color(0xFF7C3AED);
+  static const Color difficultyEasy = Color(0xFF81D4FA);
+  static const Color difficultyMedium = Color(0xFF4FC3F7);
+  static const Color difficultyHard = Color(0xFFFFB74D);
+  static const Color difficultyExpert = Color(0xFFFF8A65);
+  static const Color difficultyMaster = Color(0xFFBA68C8);
 }

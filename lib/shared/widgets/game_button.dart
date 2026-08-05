@@ -64,10 +64,14 @@ class GameButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: _gradient(ext),
           borderRadius: AppRadius.pillRadius,
-          border: Border.all(color: AppColors.outline, width: 3),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
           boxShadow: [
             ...ext.buttonShadow,
-            ...AppShadows.bevel(_baseColor(), depth: 5),
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.3),
+              offset: const Offset(0, 2),
+              blurRadius: 4,
+            ), // Inner top gloss effect (faked with drop shadow)
           ],
         ),
         child: Row(
@@ -89,10 +93,9 @@ class GameButton extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
             ],
             Flexible(
-              child: OutlinedText(
+              child: Text(
                 label,
                 style: textStyle,
-                outlineWidth: 3,
                 overflow: TextOverflow.ellipsis,
               ),
             ),

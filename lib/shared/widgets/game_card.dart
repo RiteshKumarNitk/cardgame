@@ -58,13 +58,10 @@ class GameCard extends StatelessWidget {
             : null,
         gradient: gradient,
         borderRadius: radius,
-        border: Border.all(
-          color: glass ? Colors.white.withValues(alpha: 0.32) : AppColors.outline,
-          width: glass ? 1 : 3,
-        ),
-        boxShadow: glass
-            ? null
-            : [...ext.cardShadow, ...AppShadows.bevel(_bevelBase(), depth: 5)],
+        border: glass
+            ? Border.all(color: Colors.white.withValues(alpha: 0.32), width: 1)
+            : Border.all(color: AppColors.outline, width: 1), // Thin glossy outline
+        boxShadow: glass ? null : ext.cardShadow,
       ),
       child: child,
     );

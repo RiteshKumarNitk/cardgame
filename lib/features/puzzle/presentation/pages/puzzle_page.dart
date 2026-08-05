@@ -113,44 +113,42 @@ class _PuzzleViewState extends State<_PuzzleView> {
           children: [
             GameBackground(
               showFloatingPieces: false,
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                  child: BlocConsumer<PuzzleCubit, PuzzleState>(
-                    listenWhen: (previous, current) =>
-                        previous is PuzzleLoaded &&
-                        current is PuzzleLoaded &&
-                        !previous.isSolved &&
-                        current.isSolved,
-                    listener: (context, state) {
-                      final solved = state as PuzzleLoaded;
-                      context.read<WalletCubit>().addCoins(solved.coinsAwarded);
-                      _celebrateThenNavigate(context, solved);
-                    },
-                    builder: (context, state) {
-                      if (!widget.levelIdIsValid) {
-                        return const _PuzzleMessage(
-                          message: 'Invalid level.',
-                          isError: true,
-                        );
-                      }
-                      return switch (state) {
-                        PuzzleInitial() || PuzzleLoading() => const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
-                          ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                child: BlocConsumer<PuzzleCubit, PuzzleState>(
+                  listenWhen: (previous, current) =>
+                      previous is PuzzleLoaded &&
+                      current is PuzzleLoaded &&
+                      !previous.isSolved &&
+                      current.isSolved,
+                  listener: (context, state) {
+                    final solved = state as PuzzleLoaded;
+                    context.read<WalletCubit>().addCoins(solved.coinsAwarded);
+                    _celebrateThenNavigate(context, solved);
+                  },
+                  builder: (context, state) {
+                    if (!widget.levelIdIsValid) {
+                      return const _PuzzleMessage(
+                        message: 'Invalid level.',
+                        isError: true,
+                      );
+                    }
+                    return switch (state) {
+                      PuzzleInitial() || PuzzleLoading() => const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
                         ),
-                        PuzzleError(:final message) => _PuzzleMessage(
-                          message: 'Failed to load level: $message',
-                          isError: true,
-                        ),
-                        PuzzleLoaded() => _LoadedPuzzle(
-                          state: state,
-                          onPause: _togglePause,
-                        ),
-                      };
-                    },
-                  ),
+                      ),
+                      PuzzleError(:final message) => _PuzzleMessage(
+                        message: 'Failed to load level: $message',
+                        isError: true,
+                      ),
+                      PuzzleLoaded() => _LoadedPuzzle(
+                        state: state,
+                        onPause: _togglePause,
+                      ),
+                    };
+                  },
                 ),
               ),
             ),
@@ -271,12 +269,15 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
         const SizedBox(height: AppSpacing.xs),
 
         // ── Top Bar ──
-        _PuzzleTopBar(
-          level: state,
-          imageUrl: imageUrl,
-          onBack: widget.onPause,
-          onPreview: () => _showPreviewSheet(context, state.level.id, imageUrl),
-          onPause: widget.onPause,
+        SafeArea(
+          bottom: false,
+          child: _PuzzleTopBar(
+            level: state,
+            imageUrl: imageUrl,
+            onBack: widget.onPause,
+            onPreview: () => _showPreviewSheet(context, state.level.id, imageUrl),
+            onPause: widget.onPause,
+          ),
         ),
 
         const SizedBox(height: AppSpacing.xs),
@@ -388,6 +389,13 @@ class _PreviewSheetContent extends StatefulWidget {
 
 class _PreviewSheetContentState extends State<_PreviewSheetContent> {
   bool _unlocking = false;
+  late bool _unlocked;
+
+  @override
+  void initState() {
+    super.initState();
+    _unlocked = widget.unlocked;
+  }
 
   Future<void> _unlock() async {
     setState(() => _unlocking = true);
@@ -395,10 +403,15 @@ class _PreviewSheetContentState extends State<_PreviewSheetContent> {
       _previewUnlockCost,
     );
     if (!mounted) return;
-    setState(() => _unlocking = false);
+    
     if (success) {
+      setState(() {
+        _unlocking = false;
+        _unlocked = true;
+      });
       widget.onUnlocked();
     } else {
+      setState(() => _unlocking = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Not enough coins')),
       );
@@ -421,10 +434,10 @@ class _PreviewSheetContentState extends State<_PreviewSheetContent> {
                 borderRadius: AppRadius.lgRadius,
                 child: AspectRatio(
                   aspectRatio: widget.dimensions.aspectRatio,
-                  child: widget.unlocked
+                  child: _unlocked
                       ? Image.network(
                           widget.imageUrl,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.fill,
                           loadingBuilder: (context, child, progress) =>
                               progress == null
                               ? child
@@ -449,7 +462,7 @@ class _PreviewSheetContentState extends State<_PreviewSheetContent> {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              if (widget.unlocked)
+              if (_unlocked)
                 Text(
                   'Reference Photo',
                   style: textTheme.titleMedium?.copyWith(

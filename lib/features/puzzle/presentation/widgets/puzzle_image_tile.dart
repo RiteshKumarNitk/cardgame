@@ -49,7 +49,7 @@ class PuzzleImageTile extends StatelessWidget {
                   imageUrl,
                   width: fullWidth,
                   height: fullHeight,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.fill,
                   loadingBuilder: (context, child, progress) {
                     if (progress == null) return child;
                     return const ColoredBox(color: AppColors.border);

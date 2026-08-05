@@ -7,43 +7,33 @@ import 'color_utils.dart';
 /// tile) picks one of these instead of hand-rolling a `BoxShadow`.
 abstract final class AppShadows {
   static const List<BoxShadow> card = [
-    BoxShadow(color: AppColors.shadow, blurRadius: 16, offset: Offset(0, 6)),
+    BoxShadow(color: AppColors.shadow, blurRadius: 10, offset: Offset(0, 4), spreadRadius: -2),
+    BoxShadow(color: AppColors.shadow, blurRadius: 4, offset: Offset(0, 2), spreadRadius: -1),
   ];
 
   static const List<BoxShadow> button = [
-    BoxShadow(color: AppColors.shadow, blurRadius: 14, offset: Offset(0, 8)),
+    BoxShadow(color: AppColors.shadow, blurRadius: 8, offset: Offset(0, 4), spreadRadius: -2),
   ];
 
   static const List<BoxShadow> floating = [
-    BoxShadow(color: AppColors.shadow, blurRadius: 24, offset: Offset(0, 12)),
+    BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: Offset(0, 10), spreadRadius: -4),
   ];
 
   static List<BoxShadow> glow(Color color, {double opacity = 0.45}) => [
     BoxShadow(
       color: color.withValues(alpha: opacity),
-      blurRadius: 20,
-      spreadRadius: 1,
-      offset: const Offset(0, 6),
+      blurRadius: 24,
+      spreadRadius: 2,
+      offset: const Offset(0, 8),
     ),
   ];
 
-  /// A crisp, un-blurred "3D bevel" band the same shape as the surface
-  /// itself, offset straight down by [depth] — reads as a chunky toy-block
-  /// base sitting under a button/card/chip. [fillColor] is darkened to
-  /// derive the band's color, so it always matches whatever brand color a
-  /// widget was given instead of needing a hand-picked shade per call
-  /// site. Pair with a thick `AppColors.outline` border on the surface
-  /// itself.
+  /// We no longer use a chunky "3D bevel" band beneath for the water bubble
+  /// theme, so this returns an empty list, but the method remains to avoid
+  /// breaking existing call sites that still pass it.
   static List<BoxShadow> bevel(
     Color fillColor, {
     double depth = 5,
     double darkenAmount = 0.16,
-  }) => [
-    BoxShadow(
-      color: fillColor.darken(darkenAmount),
-      offset: Offset(0, depth),
-      blurRadius: 0,
-      spreadRadius: 0,
-    ),
-  ];
+  }) => const [];
 }

@@ -10,39 +10,39 @@ import 'app_colors.dart';
 abstract final class AppTypography {
   static TextTheme textTheme([Color color = AppColors.textDark]) {
     final base = TextTheme(
-      displayLarge: GoogleFonts.baloo2(
+      displayLarge: GoogleFonts.quicksand(
         fontSize: 57,
         fontWeight: FontWeight.w800,
       ),
-      displayMedium: GoogleFonts.baloo2(
+      displayMedium: GoogleFonts.quicksand(
         fontSize: 45,
         fontWeight: FontWeight.w800,
       ),
-      displaySmall: GoogleFonts.baloo2(
+      displaySmall: GoogleFonts.quicksand(
         fontSize: 36,
         fontWeight: FontWeight.w700,
       ),
-      headlineLarge: GoogleFonts.baloo2(
+      headlineLarge: GoogleFonts.quicksand(
         fontSize: 32,
         fontWeight: FontWeight.w700,
       ),
-      headlineMedium: GoogleFonts.baloo2(
+      headlineMedium: GoogleFonts.quicksand(
         fontSize: 28,
         fontWeight: FontWeight.w700,
       ),
-      headlineSmall: GoogleFonts.baloo2(
+      headlineSmall: GoogleFonts.quicksand(
         fontSize: 24,
         fontWeight: FontWeight.w700,
       ),
-      titleLarge: GoogleFonts.baloo2(fontSize: 22, fontWeight: FontWeight.w700),
-      titleMedium: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800),
-      titleSmall: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w800),
-      bodyLarge: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w600),
-      bodyMedium: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w600),
-      bodySmall: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w600),
-      labelLarge: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w800),
-      labelMedium: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w800),
-      labelSmall: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w800),
+      titleLarge: GoogleFonts.quicksand(fontSize: 22, fontWeight: FontWeight.w700),
+      titleMedium: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w700),
+      titleSmall: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w700),
+      bodyLarge: GoogleFonts.roboto(fontSize: 16, fontWeight: FontWeight.w500),
+      bodyMedium: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w500),
+      bodySmall: GoogleFonts.roboto(fontSize: 12, fontWeight: FontWeight.w500),
+      labelLarge: GoogleFonts.roboto(fontSize: 14, fontWeight: FontWeight.w700),
+      labelMedium: GoogleFonts.roboto(fontSize: 12, fontWeight: FontWeight.w700),
+      labelSmall: GoogleFonts.roboto(fontSize: 11, fontWeight: FontWeight.w700),
     );
     return base.apply(displayColor: color, bodyColor: color);
   }
