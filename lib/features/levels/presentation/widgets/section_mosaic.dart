@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/design_system/app_colors.dart';
+import '../../../../shared/widgets/app_image.dart';
 import '../../../puzzle/domain/puzzle_image.dart';
 import '../../domain/entities/level.dart';
 
@@ -51,13 +52,9 @@ class _MosaicTile extends StatelessWidget {
     if (level.isCompleted) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(4),
-        child: Image.network(
-          puzzleImageUrlFor(level.id),
+        child: AppImage(
+          imagePath: puzzleImageUrlFor(level.id),
           fit: BoxFit.cover,
-          loadingBuilder: (context, child, progress) =>
-              progress == null ? child : const ColoredBox(color: AppColors.border),
-          errorBuilder: (context, error, stackTrace) =>
-              const ColoredBox(color: AppColors.border),
         ),
       );
     }

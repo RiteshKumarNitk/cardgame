@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 
+import '../../../../shared/widgets/app_image.dart';
+
 /// Renders the (row, col) cell of a [gridCols] x [gridRows] crop of the
 /// image at [imageUrl] — without needing any image-decoding/cropping
 /// package. The trick: render the *whole* image at
@@ -45,23 +47,11 @@ class PuzzleImageTile extends StatelessWidget {
               offset: Offset(-col * tileExtent, -row * tileExtent),
               child: Opacity(
                 opacity: opacity,
-                child: Image.network(
-                  imageUrl,
+                child: AppImage(
+                  imagePath: imageUrl,
                   width: fullWidth,
                   height: fullHeight,
                   fit: BoxFit.fill,
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return const ColoredBox(color: AppColors.border);
-                  },
-                  errorBuilder: (context, error, stackTrace) =>
-                      const ColoredBox(
-                        color: AppColors.border,
-                        child: Icon(
-                          Icons.image_not_supported_rounded,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
                 ),
               ),
             ),

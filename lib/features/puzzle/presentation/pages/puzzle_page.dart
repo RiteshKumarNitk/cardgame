@@ -10,8 +10,11 @@ import '../../../../core/router/route_paths.dart';
 import '../../../../game/wallet_cubit.dart';
 import '../../../../shared/utils/context_read_or_null.dart';
 import '../../../../shared/widgets/confetti_burst.dart';
+import '../../../../shared/widgets/app_image.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
+import '../../../../shared/widgets/glass_panel.dart';
+import '../../../../shared/widgets/top_bar.dart';
 import '../../../../shared/widgets/game_card.dart';
 import '../../../../shared/utils/duration_format.dart';
 import '../../../../shared/utils/number_format.dart';
@@ -435,21 +438,9 @@ class _PreviewSheetContentState extends State<_PreviewSheetContent> {
                 child: AspectRatio(
                   aspectRatio: widget.dimensions.aspectRatio,
                   child: _unlocked
-                      ? Image.network(
-                          widget.imageUrl,
+                      ? AppImage(
+                          imagePath: widget.imageUrl,
                           fit: BoxFit.fill,
-                          loadingBuilder: (context, child, progress) =>
-                              progress == null
-                              ? child
-                              : const ColoredBox(color: AppColors.border),
-                          errorBuilder: (context, error, stackTrace) =>
-                              const ColoredBox(
-                                color: AppColors.border,
-                                child: Icon(
-                                  Icons.image_not_supported_rounded,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
                         )
                       : const ColoredBox(
                           color: AppColors.border,

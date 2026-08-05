@@ -12,7 +12,9 @@ import '../../../../shared/widgets/coin_reward_chip.dart';
 import '../../../../shared/widgets/confetti_burst.dart';
 import '../../../../shared/widgets/fireworks_burst.dart';
 import '../../../../shared/widgets/game_background.dart';
+import '../../../../shared/widgets/app_image.dart';
 import '../../../../shared/widgets/game_button.dart';
+import '../../../../shared/widgets/glass_panel.dart';
 import '../../../../shared/widgets/pulsing_glow.dart';
 import '../../../../shared/widgets/sparkle_particles.dart';
 import '../../../../shared/widgets/stat_chip.dart';
@@ -381,30 +383,10 @@ class _AnimatedPuzzleImage extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   // The seamless image
-                  Image.network(
-                    imageUrl,
+                  AppImage(
+                    imagePath: imageUrl,
                     fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return Container(
-                        color: AppColors.border,
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) =>
-                        Container(
-                          color: AppColors.border,
-                          child: const Icon(
-                            Icons.image_not_supported_rounded,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
                   ),
-
                   // Grid lines that fade away as reveal progresses
                   // to simulate borders dissolving
                   ...List.generate(3, (index) {

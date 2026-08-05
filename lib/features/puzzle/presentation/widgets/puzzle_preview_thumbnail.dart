@@ -5,6 +5,7 @@ import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../game/wallet_cubit.dart';
+import '../../../../shared/widgets/app_image.dart';
 import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
 
@@ -158,11 +159,9 @@ class _UnlockedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.network(
-      imageUrl,
+    return AppImage(
+      imagePath: imageUrl,
       fit: BoxFit.cover,
-      loadingBuilder: (context, child, progress) =>
-          progress == null ? child : const ColoredBox(color: AppColors.border),
       errorBuilder: (context, error, stackTrace) => const ColoredBox(
         color: AppColors.border,
         child: Icon(
