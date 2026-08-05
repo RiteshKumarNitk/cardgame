@@ -8,6 +8,7 @@ import '../../../../services/audio_service.dart';
 import '../../../puzzle/domain/puzzle_board_size.dart';
 import '../../../puzzle/domain/puzzle_image.dart';
 import '../../../puzzle/domain/tile_swap_engine.dart';
+import '../../../puzzle/domain/tile_swap_engine.dart';
 import '../../../../services/leaderboard_service.dart';
 import '../../domain/entities/daily_challenge.dart';
 import '../../domain/services/daily_challenge_service.dart';
@@ -37,44 +38,73 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     try {
       final now = DateTime.now();
       final challenge = await _service.loadToday(now);
-      _initBoard(challenge);
+      
+      final size = boardDimensionsFor(challenge.difficulty);
+      final pieceCount = size.pieceCount;
+      final seed = challenge.dateKey.hashCode;
+      
+      final board = TileSwapEngine.shuffledArrangement(
+        pieceCount: pieceCount,
+        seed: seed,
+        withRotation: true,
+      );
+      
+      if (!challenge.alreadyCompletedToday) {
+        emit(
+          DailyChallengeReady(
+            challenge: challenge,
+            imageUrl: puzzleImageUrlForDaily(challenge.dateKey),
+            arrangement: board.arrangement,
+            rotations: board.rotations,
+            timeRemainingSeconds: 60, // 60 seconds Time Attack!
+            isFailed: false,
+          ),
+        );
+        _startTimer();
+      } else {
+        emit(DailyChallengeReady(
+          challenge: challenge,
+          imageUrl: puzzleImageUrlForDaily(challenge.dateKey),
+          arrangement: List.generate(pieceCount, (i) => i + 1),
+          rotations: List.filled(pieceCount, 0),
+          timeRemainingSeconds: 0,
+          justSolved: true,
+        ));
+      }
     } catch (e) {
       emit(DailyChallengeError(e.toString()));
     }
   }
 
-  void _initBoard(DailyChallenge challenge) {
-      final pieceCount = boardDimensionsFor(challenge.difficulty).pieceCount;
-      final seed = challenge.dateKey.hashCode + DateTime.now().millisecondsSinceEpoch;
-      
-      final arrangement = TileSwapEngine.shuffledArrangement(
-        pieceCount: pieceCount,
-        seed: seed,
-      );
-      
-      final random = math.Random(seed);
-      final rotations = List.generate(pieceCount, (_) => random.nextInt(4));
-      
-      emit(
-        DailyChallengeReady(
-          challenge: challenge,
-          imageUrl: puzzleImageUrlForDaily(challenge.dateKey),
-          arrangement: arrangement,
-          rotations: rotations,
-          timeRemainingSeconds: 60, // 60 seconds Time Attack!
-          isFailed: false,
-        ),
-      );
-      
-      if (!challenge.alreadyCompletedToday) {
-        _startTimer();
-      }
-  }
-
-  void retry() {
+  /// Retries the current failed daily challenge for a cost of 50 coins.
+  Future<bool> retry(Future<bool> Function(int) spendCoins) async {
     final current = state;
-    if (current is! DailyChallengeReady) return;
-    _initBoard(current.challenge);
+    if (current is! DailyChallengeReady || !current.isFailed) return false;
+
+    // Deduct cost
+    final success = await spendCoins(50);
+    if (!success) return false;
+
+    final size = boardDimensionsFor(current.challenge.difficulty);
+    final pieceCount = size.pieceCount;
+    final board = TileSwapEngine.shuffledArrangement(
+      pieceCount: pieceCount,
+      seed: current.challenge.dateKey.hashCode + DateTime.now().millisecondsSinceEpoch,
+      withRotation: true,
+    );
+
+    // Emit fresh state and restart timer
+    emit(
+      current.copyWith(
+        isFailed: false,
+        arrangement: board.arrangement,
+        rotations: board.rotations,
+        timeRemainingSeconds: 60,
+        moves: 0,
+      ),
+    );
+    _startTimer();
+    return true;
   }
 
   void _startTimer() {
@@ -103,43 +133,37 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     final current = state;
     if (current is! DailyChallengeReady || current.isComplete || current.isFailed) return;
 
-    final arrangement = TileSwapEngine.swap(
-      current.arrangement,
+    final newState = TileSwapEngine.swap(
+      (arrangement: current.arrangement, rotations: current.rotations),
       fromCell,
       toCell,
     );
     
-    // Swap rotations to match the pieces
-    final rotations = List<int>.from(current.rotations);
-    final tempRot = rotations[fromCell];
-    rotations[fromCell] = rotations[toCell];
-    rotations[toCell] = tempRot;
+    emit(current.copyWith(
+      arrangement: newState.arrangement,
+      rotations: newState.rotations,
+      moves: current.moves + 1,
+    ));
 
-    if (identical(arrangement, current.arrangement)) return;
-
-    final solved = TileSwapEngine.isSolved(arrangement) && rotations.every((r) => r == 0);
-    if (!solved) {
-      emit(current.copyWith(arrangement: arrangement, rotations: rotations, moves: current.moves + 1));
-      return;
+    if (TileSwapEngine.isSolved(newState)) {
+      _onSolved(current, newState.arrangement, newState.rotations);
     }
-
-    _onSolved(current, arrangement, rotations);
   }
-  
+
   Future<void> rotatePiece(int cell) async {
     final current = state;
     if (current is! DailyChallengeReady || current.isComplete || current.isFailed) return;
 
-    final rotations = List<int>.from(current.rotations);
-    rotations[cell] = (rotations[cell] + 1) % 4;
+    // Daily challenges are time attacks; maybe rotation doesn't add a move, 
+    // or maybe it does. Let's add a move for simplicity.
+    final newRotations = List<int>.of(current.rotations);
+    newRotations[cell] = (newRotations[cell] + 1) % 4;
 
-    final solved = TileSwapEngine.isSolved(current.arrangement) && rotations.every((r) => r == 0);
-    if (!solved) {
-      emit(current.copyWith(rotations: rotations, moves: current.moves + 1));
-      return;
+    emit(current.copyWith(rotations: newRotations, moves: current.moves + 1));
+
+    if (TileSwapEngine.isSolved((arrangement: current.arrangement, rotations: newRotations))) {
+      _onSolved(current, current.arrangement, newRotations);
     }
-
-    _onSolved(current, current.arrangement, rotations);
   }
 
   Future<void> _onSolved(DailyChallengeReady current, List<int> arrangement, List<int> rotations) async {

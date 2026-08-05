@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:confetti/confetti.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../services/audio_service.dart';

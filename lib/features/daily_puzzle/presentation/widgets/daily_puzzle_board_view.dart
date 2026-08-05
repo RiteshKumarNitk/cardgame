@@ -82,17 +82,8 @@ class DailyPuzzleBoardView extends StatelessWidget {
                                       icon: Icons.replay_rounded,
                                       width: double.infinity,
                                       variant: coins >= 50 ? GameButtonVariant.primary : GameButtonVariant.secondary,
-                                      onTap: () async {
-                                        if (coins >= 50) {
-                                          final success = await context.read<WalletCubit>().spendCoins(50);
-                                          if (success && context.mounted) {
-                                            context.read<DailyChallengeCubit>().retry();
-                                          }
-                                        } else {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Not enough coins to retry!')),
-                                          );
-                                        }
+                                      onTap: () {
+                                        context.read<DailyChallengeCubit>().retry((amount) => context.read<WalletCubit>().spendCoins(amount));
                                       },
                                     );
                                   }

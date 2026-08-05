@@ -9,6 +9,7 @@ abstract final class AppColors {
   static const Color secondary = Color(0xFF2C3E50); // Deep Water Blue
   static const Color accent = Color(0xFFFFB75E); // Sunlit Amber
   static const Color success = Color(0xFF81D4FA); // Light Cyan
+  static const Color warning = Color(0xFFFFA000); // Amber
   static const Color danger = Color(0xFFFF8A65); // Soft Coral
 
   // Material 3 Light Surfaces

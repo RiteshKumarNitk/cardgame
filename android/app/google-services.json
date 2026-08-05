@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "101885473060",
+    "project_id": "cardgame-3ad8c",
+    "storage_bucket": "cardgame-3ad8c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:101885473060:android:139dc5aaf10b29774343b1",
+        "android_client_info": {
+          "package_name": "com.puzzlecards.puzzle_cards"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2BTwQVcP6LLRMJNQekIQR7B4uj9QqWNc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -162,14 +162,6 @@ class _UnlockedImage extends StatelessWidget {
     return AppImage(
       imagePath: imageUrl,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => const ColoredBox(
-        color: AppColors.border,
-        child: Icon(
-          Icons.image_not_supported_rounded,
-          size: 20,
-          color: AppColors.textSecondary,
-        ),
-      ),
     );
   }
 }
