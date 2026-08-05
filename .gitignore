@@ -48,3 +48,7 @@ app.*.map.json
 google-services.json
 android/app/google-services.json
 firebase_options.dart
+
+# Keystore
+upload-keystore.jks
+android/app/upload-keystore.jks
