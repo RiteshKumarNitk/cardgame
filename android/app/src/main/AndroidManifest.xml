@@ -3,7 +3,7 @@
          puzzle images via Image.network. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="puzzle_cards"
+        android:label="SuitClash"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -92,7 +92,7 @@ class AudioService {
     final player = AudioPlayer();
     _bgmPlayer = player;
     try {
-      await player.setSource(AssetSource('audio/bgm_loop.wav'));
+      await player.setSource(AssetSource('audio/music/bgm_loop.wav'));
       await player.setVolume(_bgmVolume);
       await player.setReleaseMode(ReleaseMode.loop);
       await player.resume();
@@ -117,7 +117,7 @@ class AudioService {
 
     try {
       await player.stop();
-      await player.setSource(AssetSource('audio/$filename'));
+      await player.setSource(AssetSource('audio/sfx/$filename'));
       await player.setVolume(_sfxVolume);
       await player.resume();
     } catch (_) {

@@ -75,6 +75,7 @@ class PuzzleBoard extends StatelessWidget {
             boxShadow: AppShadows.card,
           ),
           child: GridView.builder(
+            padding: EdgeInsets.zero,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: dimensions.cols,

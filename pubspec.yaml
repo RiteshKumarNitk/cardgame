@@ -74,13 +74,18 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/icon.png"
+  web:
+    generate: true
+    image_path: "assets/images/suitclash.png"
+    background_color: "#0175C2"
+    theme_color: "#0175C2"
+  image_path: "assets/images/suitclash.png"
 
 flutter_native_splash:
   color: "#F0F8FF"
-  image: "assets/images/icon.png"
+  image: "assets/images/suitclash.png"
   android_12:
-    image: "assets/images/icon.png"
+    image: "assets/images/suitclash.png"
     icon_background_color: "#F0F8FF"
 
 # For information on the generic Dart part of this file, see the
