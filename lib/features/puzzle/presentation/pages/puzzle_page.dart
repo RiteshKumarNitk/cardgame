@@ -561,6 +561,7 @@ class _PuzzleTopBar extends StatelessWidget {
   const _PuzzleTopBar({
     required this.level,
     required this.imageUrl,
+    required this.walletKey,
     required this.onBack,
     required this.onPreview,
     required this.onPause,
@@ -568,6 +569,7 @@ class _PuzzleTopBar extends StatelessWidget {
 
   final PuzzleLoaded level;
   final String imageUrl;
+  final GlobalKey walletKey;
   final VoidCallback onBack;
   final VoidCallback onPreview;
   final VoidCallback onPause;
