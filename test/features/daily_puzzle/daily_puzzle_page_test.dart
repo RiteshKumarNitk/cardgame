@@ -8,8 +8,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:puzzle_cards/core/router/route_paths.dart';
 import 'package:puzzle_cards/core/theme/app_theme.dart';
 import 'package:puzzle_cards/features/daily_puzzle/domain/repositories/daily_challenge_repository.dart';
 import 'package:puzzle_cards/features/daily_puzzle/domain/services/daily_challenge_service.dart';
@@ -92,5 +94,113 @@ void main() {
       // Dispose the CountdownTimer's repeating Timer before the test ends.
       await tester.pumpWidget(const SizedBox.shrink());
     },
+  );
+
+  testWidgets('system back mid-challenge asks before leaving', (
+    tester,
+  ) async {
+    final router = _buildRouter(DailyChallengeService(_FakeDailyChallengeRepository()));
+
+    await tester.pumpWidget(
+      MaterialApp.router(theme: AppTheme.game, routerConfig: router),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    // Challenge is live.
+    expect(find.text('60s'), findsOneWidget);
+
+    // System back must NOT silently discard the run: ask first.
+    await router.routerDelegate.popRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Leave Daily Challenge?'), findsOneWidget);
+
+    // "Keep Solving" dismisses and stays on the challenge.
+    await tester.tap(find.text('Keep Solving'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Leave Daily Challenge?'), findsNothing);
+    expect(find.text('60s'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('giving up mid-challenge from the back dialog returns Home', (
+    tester,
+  ) async {
+    final router = _buildRouter(DailyChallengeService(_FakeDailyChallengeRepository()));
+
+    await tester.pumpWidget(
+      MaterialApp.router(theme: AppTheme.game, routerConfig: router),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await router.routerDelegate.popRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Leave Daily Challenge?'), findsOneWidget);
+
+    await tester.tap(find.text('Give Up'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(DailyPuzzlePage), findsNothing);
+    expect(find.text('Home Page'), findsOneWidget);
+  });
+
+  testWidgets('system back when already completed goes straight Home', (
+    tester,
+  ) async {
+    final todayKey = DailyChallengeService.dateKeyFor(DateTime.now());
+    final router = _buildRouter(
+      DailyChallengeService(
+        _FakeDailyChallengeRepository()
+          ..lastCompletedDate = todayKey
+          ..streak = 2,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp.router(theme: AppTheme.game, routerConfig: router),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Come back tomorrow!'), findsOneWidget);
+
+    // Nothing to lose: back leaves without a confirmation dialog.
+    await router.routerDelegate.popRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(DailyPuzzlePage), findsNothing);
+    expect(find.text('Home Page'), findsOneWidget);
+  });
+}
+
+GoRouter _buildRouter(DailyChallengeService service) {
+  return GoRouter(
+    initialLocation: RoutePaths.dailyPuzzle,
+    routes: [
+      GoRoute(
+        path: RoutePaths.dailyPuzzle,
+        name: RouteNames.dailyPuzzle,
+        pageBuilder: (context, state) => MaterialPage<dynamic>(
+          child: BlocProvider<WalletCubit>(
+            create: (_) => WalletCubit(FakeWalletService()),
+            child: DailyPuzzlePage(service: service),
+          ),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.home,
+        name: RouteNames.home,
+        pageBuilder: (context, state) => const MaterialPage<dynamic>(
+          child: Scaffold(body: Center(child: Text('Home Page'))),
+        ),
+      ),
+    ],
   );
 }

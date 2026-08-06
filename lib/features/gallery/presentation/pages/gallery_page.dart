@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
+import '../../../../core/router/route_paths.dart';
 import '../../../../shared/widgets/app_image.dart';
 import '../../../../shared/widgets/banner_ad_widget.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
@@ -60,7 +61,13 @@ class _GalleryPageState extends State<GalleryPage> {
                   children: [
                     CircleIconButton(
                       icon: Icons.arrow_back_rounded,
-                      onTap: () => context.pop(),
+                      onTap: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.goNamed(RouteNames.home);
+                        }
+                      },
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(

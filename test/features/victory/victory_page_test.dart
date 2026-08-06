@@ -13,8 +13,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:puzzle_cards/core/router/route_paths.dart';
 import 'package:puzzle_cards/core/theme/app_theme.dart';
 import 'package:puzzle_cards/features/levels/domain/entities/level.dart';
 import 'package:puzzle_cards/features/victory/domain/entities/victory_result.dart';
@@ -38,6 +40,36 @@ Future<void> _flushTimers(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 500)); // past BounceIn 600-1100ms
   await tester.pump(const Duration(milliseconds: 500)); // past BounceIn 1600ms
   await tester.pump(const Duration(milliseconds: 600)); // past longest BounceIn 2050ms
+}
+
+GoRouter _victoryRouter() {
+  const result = VictoryResult(
+    level: _level,
+    stars: 3,
+    moves: 12,
+    timeSeconds: 75,
+    coinsEarned: 60,
+    nextLevelId: 2,
+  );
+  return GoRouter(
+    initialLocation: RoutePaths.victory,
+    routes: [
+      GoRoute(
+        path: RoutePaths.victory,
+        name: RouteNames.victory,
+        pageBuilder: (context, state) => const MaterialPage<dynamic>(
+          child: VictoryPage(result: result),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.home,
+        name: RouteNames.home,
+        pageBuilder: (context, state) => const MaterialPage<dynamic>(
+          child: Scaffold(body: Center(child: Text('Home Page'))),
+        ),
+      ),
+    ],
+  );
 }
 
 void main() {
@@ -104,5 +136,39 @@ void main() {
     await _flushTimers(tester);
 
     expect(find.text('No level result to show.'), findsOneWidget);
+  });
+
+  testWidgets('back arrow returns Home instead of dead-ending', (tester) async {
+    final router = _victoryRouter();
+
+    await tester.pumpWidget(
+      MaterialApp.router(theme: AppTheme.game, routerConfig: router),
+    );
+    await _flushTimers(tester);
+
+    // On-screen back arrow goes Home.
+    expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Home Page'), findsOneWidget);
+  });
+
+  testWidgets('system back returns Home instead of exiting mid-celebration', (
+    tester,
+  ) async {
+    final router = _victoryRouter();
+
+    await tester.pumpWidget(
+      MaterialApp.router(theme: AppTheme.game, routerConfig: router),
+    );
+    await _flushTimers(tester);
+
+    await router.routerDelegate.popRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(VictoryPage), findsNothing);
+    expect(find.text('Home Page'), findsOneWidget);
   });
 }

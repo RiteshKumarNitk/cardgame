@@ -9,6 +9,7 @@ import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../shared/utils/duration_format.dart';
 import '../../../../shared/widgets/bounce_in.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/coin_reward_chip.dart';
 import '../../../../shared/widgets/fireworks_burst.dart';
 import '../../../../shared/widgets/game_background.dart';
@@ -116,62 +117,86 @@ class _VictoryPageState extends State<VictoryPage>
   Widget build(BuildContext context) {
     final result = widget.result;
 
-    return Scaffold(
-      body: GameBackground(
-        showFloatingPieces: false,
-        child: Stack(
-          children: [
-            // Fireworks & Confetti (after brief delay)
-            if (result != null && _showCelebration)
-              const Positioned.fill(child: FireworksBurst()),
-            if (result != null && _showCelebration)
-              Align(
-                alignment: Alignment.topCenter,
-                child: ConfettiWidget(
-                  confettiController: _confettiController,
-                  blastDirectionality: BlastDirectionality.explosive,
-                  shouldLoop: false,
-                  colors: const [
-                    AppColors.primary,
-                    AppColors.secondary,
-                    AppColors.accent,
-                    AppColors.success,
-                    AppColors.danger,
-                  ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        // System back never exits the app mid-celebration: it goes Home,
+        // matching the on-screen back arrow and Home button.
+        if (didPop) return;
+        context.goNamed(RouteNames.home);
+      },
+      child: Scaffold(
+        body: GameBackground(
+          showFloatingPieces: false,
+          child: Stack(
+            children: [
+              // Fireworks & Confetti (after brief delay)
+              if (result != null && _showCelebration)
+                const Positioned.fill(child: FireworksBurst()),
+              if (result != null && _showCelebration)
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: ConfettiWidget(
+                    confettiController: _confettiController,
+                    blastDirectionality: BlastDirectionality.explosive,
+                    shouldLoop: false,
+                    colors: const [
+                      AppColors.primary,
+                      AppColors.secondary,
+                      AppColors.accent,
+                      AppColors.success,
+                      AppColors.danger,
+                    ],
+                  ),
                 ),
-              ),
-            if (result != null && _showCelebration)
-              const Positioned.fill(
-                child: IgnorePointer(child: SparkleParticles()),
+              if (result != null && _showCelebration)
+                const Positioned.fill(
+                  child: IgnorePointer(child: SparkleParticles()),
+                ),
+
+              // Camera Flash overlay
+              if (result != null)
+                FadeTransition(
+                  opacity: _flashOpacity,
+                  child: const IgnorePointer(
+                    child: ColoredBox(color: Colors.white),
+                  ),
+                ),
+
+              // Main content
+              SafeArea(
+                child: result == null
+                    ? const _NoResultContent()
+                    : AnimatedBuilder(
+                        animation: _controller,
+                        builder: (context, _) {
+                          return _VictoryContent(
+                            result: result,
+                            imageReveal: _imageReveal.value,
+                            imageGlow: _imageGlow.value,
+                            contentSlide: _contentSlide.value,
+                            celebrationDelay: _celebrationDelay,
+                          );
+                        },
+                      ),
               ),
 
-            // Camera Flash overlay
-            if (result != null)
-              FadeTransition(
-                opacity: _flashOpacity,
-                child: const IgnorePointer(
-                  child: ColoredBox(color: Colors.white),
-                ),
-              ),
-
-            // Main content
-            SafeArea(
-              child: result == null
-                  ? const _NoResultContent()
-                  : AnimatedBuilder(
-                      animation: _controller,
-                      builder: (context, _) {
-                        return _VictoryContent(
-                          result: result,
-                          imageReveal: _imageReveal.value,
-                          imageGlow: _imageGlow.value,
-                          contentSlide: _contentSlide.value,
-                          celebrationDelay: _celebrationDelay,
-                        );
-                      },
+              // Top-left back arrow — never a dead end: always returns
+              // Home. Painted last so it sits above the scrollable content.
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: CircleIconButton(
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () => context.goNamed(RouteNames.home),
                     ),
-            ),
-          ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

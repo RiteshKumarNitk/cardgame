@@ -5,6 +5,7 @@ import '../../../../core/design_system/app_colors.dart';
 import '../../../../services/audio_service.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../shared/widgets/bounce_in.dart';
 import '../../../../shared/widgets/coin_reward_chip.dart';
@@ -86,30 +87,55 @@ class _SectionCompletePageState extends State<SectionCompletePage>
   Widget build(BuildContext context) {
     final result = widget.result;
 
-    return Scaffold(
-      body: GameBackground(
-        showFloatingPieces: false,
-        child: Stack(
-          children: [
-            if (result != null) ...[
-              const Positioned.fill(child: FireworksBurst(burstCount: 5)),
-              const Positioned.fill(child: ConfettiBurst(particleCount: 46)),
-              const Positioned.fill(child: SparkleParticles()),
-            ],
-            SafeArea(
-              child: result == null
-                  ? const _NoResultContent()
-                  : AnimatedBuilder(
-                      animation: _controller,
-                      builder: (context, _) => _SectionCompleteContent(
-                        result: result,
-                        artworkScale: _artworkScale.value,
-                        artworkGlow: _artworkGlow.value,
-                        contentSlide: _contentSlide.value,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        // System back never exits the app mid-celebration: it goes Home,
+        // matching the on-screen back arrow and Home action.
+        if (didPop) return;
+        context.goNamed(RouteNames.home);
+      },
+      child: Scaffold(
+        body: GameBackground(
+          showFloatingPieces: false,
+          child: Stack(
+            children: [
+              if (result != null) ...[
+                const Positioned.fill(child: FireworksBurst(burstCount: 5)),
+                const Positioned.fill(child: ConfettiBurst(particleCount: 46)),
+                const Positioned.fill(child: SparkleParticles()),
+              ],
+              // Main content
+              SafeArea(
+                child: result == null
+                    ? const _NoResultContent()
+                    : AnimatedBuilder(
+                        animation: _controller,
+                        builder: (context, _) => _SectionCompleteContent(
+                          result: result,
+                          artworkScale: _artworkScale.value,
+                          artworkGlow: _artworkGlow.value,
+                          contentSlide: _contentSlide.value,
+                        ),
                       ),
+              ),
+              // Top-left back arrow — never a dead end: always returns
+              // Home, so the celebration screen can't strand the player.
+              // Painted last so it sits above the scrollable content.
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: CircleIconButton(
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () => context.goNamed(RouteNames.home),
                     ),
-            ),
-          ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

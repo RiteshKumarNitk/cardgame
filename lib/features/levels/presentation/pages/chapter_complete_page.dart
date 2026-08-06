@@ -7,6 +7,7 @@ import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../shared/widgets/bounce_in.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/coin_reward_chip.dart';
 import '../../../../shared/widgets/confetti_burst.dart';
 import '../../../../shared/widgets/fireworks_burst.dart';
@@ -83,37 +84,61 @@ class _ChapterCompletePageState extends State<ChapterCompletePage>
   Widget build(BuildContext context) {
     final result = widget.result;
 
-    return Scaffold(
-      body: GameBackground(
-        showFloatingPieces: false,
-        child: Stack(
-          children: [
-            // Celebration effects
-            if (result != null) ...[
-              const Positioned.fill(child: FireworksBurst(burstCount: 6)),
-              const Positioned.fill(
-                child: ConfettiBurst(particleCount: 50),
-              ),
-              const Positioned.fill(child: SparkleParticles()),
-            ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        // System back never exits the app mid-celebration: it goes Home,
+        // matching the on-screen back arrow and Home / View Map actions.
+        if (didPop) return;
+        context.goNamed(RouteNames.home);
+      },
+      child: Scaffold(
+        body: GameBackground(
+          showFloatingPieces: false,
+          child: Stack(
+            children: [
+              // Celebration effects
+              if (result != null) ...[
+                const Positioned.fill(child: FireworksBurst(burstCount: 6)),
+                const Positioned.fill(
+                  child: ConfettiBurst(particleCount: 50),
+                ),
+                const Positioned.fill(child: SparkleParticles()),
+              ],
 
-            // Main content
-            SafeArea(
-              child: result == null
-                  ? const _NoResultContent()
-                  : AnimatedBuilder(
-                      animation: _controller,
-                      builder: (context, _) {
-                        return _ChapterCompleteContent(
-                          result: result,
-                          badgeScale: _badgeScale.value,
-                          badgeGlow: _badgeGlow.value,
-                          contentSlide: _contentSlide.value,
-                        );
-                      },
+              // Main content
+              SafeArea(
+                child: result == null
+                    ? const _NoResultContent()
+                    : AnimatedBuilder(
+                        animation: _controller,
+                        builder: (context, _) {
+                          return _ChapterCompleteContent(
+                            result: result,
+                            badgeScale: _badgeScale.value,
+                            badgeGlow: _badgeGlow.value,
+                            contentSlide: _contentSlide.value,
+                          );
+                        },
+                      ),
+              ),
+
+              // Top-left back arrow — never a dead end: always returns
+              // Home. Painted last so it sits above the scrollable content.
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: CircleIconButton(
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () => context.goNamed(RouteNames.home),
                     ),
-            ),
-          ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

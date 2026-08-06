@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -49,6 +50,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   GameProgress? _progress;
   List<Level> _levels = [];
+  DateTime? _lastBackPressed; // for double-back-to-exit
 
   @override
   void initState() {
@@ -105,51 +107,83 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  /// Home is the app's hub (a single-entry go route), so system back must
+  /// never exit silently: a double-back confirms exit, otherwise we nudge.
+  void _handleSystemBack() {
+    final now = DateTime.now();
+    final last = _lastBackPressed;
+    if (last != null && now.difference(last) < const Duration(seconds: 2)) {
+      _lastBackPressed = null;
+      SystemNavigator.pop();
+      return;
+    }
+    _lastBackPressed = now;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Press back again to exit'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadius.pillRadius,
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final progress = _progress;
 
-    return Scaffold(
-      body: GameBackground(
-        showFloatingPieces: true,
-        showClouds: true,
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.sm,
-              AppSpacing.lg,
-              AppSpacing.lg,
-            ),
-            child: Column(
-              children: [
-                // ── Top Bar: Profile — Settings — Coins — Hints ──
-                _HomeTopBar(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleSystemBack();
+      },
+      child: Scaffold(
+        body: GameBackground(
+          showFloatingPieces: true,
+          showClouds: true,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                children: [
+                  // ── Top Bar: Profile — Settings — Coins — Hints ──
+                  _HomeTopBar(),
 
-                // ── The Collection: current section's artwork ──
-                Expanded(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: progress != null && progress.currentLevelId != null
-                          ? _CollectionFrame(
-                              levelId: progress.currentLevelId!,
-                              levels: _levels,
-                            )
-                          : progress != null &&
-                                progress.completedCount == progress.totalCount
-                          ? const _AllCompleteBanner()
-                          : const _LoadingShimmer(),
+                  // ── The Collection: current section's artwork ──
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: progress != null && progress.currentLevelId != null
+                            ? _CollectionFrame(
+                                levelId: progress.currentLevelId!,
+                                levels: _levels,
+                              )
+                            : progress != null &&
+                                  progress.completedCount == progress.totalCount
+                              ? const _AllCompleteBanner()
+                              : const _LoadingShimmer(),
+                      ),
                     ),
                   ),
-                ),
 
-                // ── Secondary features: small, never in the way ──
-                _QuickActionsRow(),
-                
-                const SizedBox(height: AppSpacing.md),
-                const BannerAdWidget(),
-              ],
+                  // ── Secondary features: small, never in the way ──
+                  _QuickActionsRow(),
+
+                  const SizedBox(height: AppSpacing.md),
+                  const BannerAdWidget(),
+                ],
+              ),
             ),
           ),
         ),

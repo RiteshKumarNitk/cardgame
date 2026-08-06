@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
+import '../../../../core/router/route_paths.dart';
 import '../../../../services/leaderboard_service.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/game_background.dart';
@@ -127,7 +128,13 @@ class _LeaderboardTopBar extends StatelessWidget {
       children: [
         CircleIconButton(
           icon: Icons.arrow_back_rounded,
-          onTap: () => context.pop(),
+          onTap: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.goNamed(RouteNames.home);
+            }
+          },
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
