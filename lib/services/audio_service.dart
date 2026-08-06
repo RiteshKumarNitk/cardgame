@@ -97,12 +97,10 @@ class AudioService {
     final player = AudioPlayer();
     _bgmPlayer = player;
     try {
-      await player.setSource(AssetSource('audio/music/bgm_loop.wav'));
-      await player.setVolume(_bgmVolume);
       await player.setReleaseMode(ReleaseMode.loop);
-      await player.resume();
-    } catch (_) {
-      // Missing audio file — silently ignore.
+      await player.play(AssetSource('audio/music/bgm_loop.wav'), volume: _bgmVolume);
+    } catch (e) {
+      print('BGM ERROR: $e');
     }
   }
 
@@ -121,12 +119,9 @@ class AudioService {
     _nextSfxIndex = (_nextSfxIndex + 1) % _sfxPlayers.length;
 
     try {
-      await player.stop();
-      await player.setSource(AssetSource('audio/sfx/$filename'));
-      await player.setVolume(_sfxVolume);
-      await player.resume();
-    } catch (_) {
-      // Missing audio file — silently ignore.
+      await player.play(AssetSource('audio/sfx/$filename'), volume: _sfxVolume);
+    } catch (e) {
+      print('SFX ERROR ($filename): $e');
     }
   }
 
