@@ -6,12 +6,12 @@ import '../../../../core/design_system/app_shadows.dart';
 import '../../domain/puzzle_board_size.dart';
 import 'puzzle_image_tile.dart';
 
-/// The puzzle board: a portrait grid (more rows than columns, matching a
-/// portrait reference photo) where every cell already holds a piece
-/// (shuffled). Pieces sit flush against each other with square corners,
-/// so a solved board reads as one seamless photo rather than a grid of
-/// separated chips. Drag one piece onto another to swap them — a cell
-/// locks with a satisfying pop + glow once its piece is correct.
+/// The puzzle board: fills every pixel of its available area with the
+/// [dimensions] grid (rows/cols from a portrait reference photo). Pieces
+/// sit flush against each other with square corners, so a solved board
+/// reads as one seamless photo rather than a grid of separated chips.
+/// Drag one piece onto another to swap them — a cell locks with a
+/// satisfying pop + glow once its piece is correct.
 import 'dart:math' as math;
 
 import '../../../../services/audio_service.dart';
@@ -58,11 +58,13 @@ class PuzzleBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Cells are always square (aspectRatio ties height to width via
-        // rows/cols), so this is the exact on-screen size of one cell —
+        // The grid fills the entire available area: cells stretch to the
+        // full width/height (rectangular, not square), so there is no dead
+        // space around the board. These are the exact on-screen cell sizes
         // used to size the drag feedback so a dragged piece reads as the
         // same physical card moving, not a differently-sized copy.
-        final cellSize = constraints.maxWidth / dimensions.cols;
+        final cellWidth = constraints.maxWidth / dimensions.cols;
+        final cellHeight = constraints.maxHeight / dimensions.rows;
 
         return Container(
           decoration: BoxDecoration(
@@ -72,37 +74,36 @@ class PuzzleBoard extends StatelessWidget {
                 : null,
             boxShadow: AppShadows.card,
           ),
-          child: AspectRatio(
-            aspectRatio: dimensions.aspectRatio,
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: dimensions.cols,
-                crossAxisSpacing: 0,
-                mainAxisSpacing: 0,
-              ),
-              itemCount: dimensions.pieceCount,
-              itemBuilder: (context, cellIndex) {
-                final pieceIndex = arrangement[cellIndex];
-                final rotation = rotations[cellIndex];
-                
-                return _BoardCell(
-                  cellIndex: cellIndex,
-                  pieceIndex: pieceIndex,
-                  rotation: rotation,
-                  gridCols: dimensions.cols,
-                  gridRows: dimensions.rows,
-                  imageUrl: imageUrl,
-                  correct: pieceIndex == cellIndex + 1 && rotation == 0,
-                  onSwap: onSwap,
-                  onRotate: onRotate,
-                  solvedProgress: solvedProgress,
-                  snapFraction: snapFraction,
-                  borderFadeFraction: borderFadeFraction,
-                  cellSize: cellSize,
-                );
-              },
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: dimensions.cols,
+              crossAxisSpacing: 0,
+              mainAxisSpacing: 0,
+              childAspectRatio: cellWidth / cellHeight,
             ),
+            itemCount: dimensions.pieceCount,
+            itemBuilder: (context, cellIndex) {
+              final pieceIndex = arrangement[cellIndex];
+              final rotation = rotations[cellIndex];
+              
+              return _BoardCell(
+                cellIndex: cellIndex,
+                pieceIndex: pieceIndex,
+                rotation: rotation,
+                gridCols: dimensions.cols,
+                gridRows: dimensions.rows,
+                imageUrl: imageUrl,
+                correct: pieceIndex == cellIndex + 1 && rotation == 0,
+                onSwap: onSwap,
+                onRotate: onRotate,
+                solvedProgress: solvedProgress,
+                snapFraction: snapFraction,
+                borderFadeFraction: borderFadeFraction,
+                cellWidth: cellWidth,
+                cellHeight: cellHeight,
+              );
+            },
           ),
         );
       },
@@ -121,7 +122,8 @@ class _BoardCell extends StatefulWidget {
     required this.correct,
     required this.onSwap,
     required this.onRotate,
-    required this.cellSize,
+    required this.cellWidth,
+    required this.cellHeight,
     this.solvedProgress = 0.0,
     this.snapFraction = 0.18,
     this.borderFadeFraction = 0.5,
@@ -136,7 +138,8 @@ class _BoardCell extends StatefulWidget {
   final bool correct;
   final void Function(int fromCell, int toCell) onSwap;
   final void Function(int cell) onRotate;
-  final double cellSize;
+  final double cellWidth;
+  final double cellHeight;
   final double solvedProgress;
   final double snapFraction;
   final double borderFadeFraction;
@@ -270,8 +273,8 @@ class _BoardCellState extends State<_BoardCell>
           child: Draggable<int>(
             data: widget.cellIndex,
             feedback: SizedBox(
-              width: widget.cellSize,
-              height: widget.cellSize,
+              width: widget.cellWidth,
+              height: widget.cellHeight,
               child: Material(color: Colors.transparent, child: decorated),
             ),
             childWhenDragging: Opacity(opacity: 0.35, child: decorated),
