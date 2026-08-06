@@ -10,7 +10,6 @@ import '../../../../core/router/route_paths.dart';
 import '../../../../shared/utils/duration_format.dart';
 import '../../../../shared/widgets/bounce_in.dart';
 import '../../../../shared/widgets/coin_reward_chip.dart';
-import '../../../../shared/widgets/confetti_burst.dart';
 import '../../../../shared/widgets/fireworks_burst.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/app_image.dart';
@@ -69,6 +68,10 @@ class _VictoryPageState extends State<VictoryPage>
       duration: const Duration(milliseconds: 3200),
     );
 
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
+
     _imageReveal = CurvedAnimation(
       parent: _controller,
       curve: const Interval(0.0, 0.45, curve: Curves.easeOutBack),
@@ -93,6 +96,7 @@ class _VictoryPageState extends State<VictoryPage>
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) {
         _controller.forward();
+        _confettiController.play();
         setState(() => _showCelebration = true);
         AudioService().playVictory();
       }
@@ -102,6 +106,7 @@ class _VictoryPageState extends State<VictoryPage>
   @override
   void dispose() {
     _controller.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 

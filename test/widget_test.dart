@@ -47,8 +47,10 @@ void main() {
     await Hive.openBox<LevelModel>(AppConstants.levelsBoxName);
     await Hive.openBox<int>(AppConstants.walletBoxName);
     await Hive.openBox(AppConstants.dailyChallengeBoxName);
+    await Hive.openBox(AppConstants.dailyRewardBoxName);
     await Hive.openBox(AppConstants.monetizationBoxName);
     await Hive.openBox(AppConstants.settingsBoxName);
+    await Hive.openBox(AppConstants.achievementsBoxName);
   });
 
   tearDownAll(() {

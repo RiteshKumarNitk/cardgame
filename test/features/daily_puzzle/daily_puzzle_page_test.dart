@@ -58,13 +58,19 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Daily Challenge'), findsOneWidget);
+    // The top bar swaps its title for the live countdown while the
+    // challenge is in progress, so assert on the countdown chip instead.
+    expect(find.text('60s'), findsOneWidget);
     // Medium difficulty = 4 cols x 5 rows = 20 pieces; every cell always
     // renders a tile (locked or not — how many start locked depends on
     // the shuffle), and the board is a fixed non-scrolling grid so all 20
     // build.
     expect(find.byType(PuzzleImageTile), findsNWidgets(20));
     expect(find.byType(DragTarget<int>), findsWidgets);
+
+    // Dispose the cubit (cancelling its countdown Timer) before the test
+    // ends — otherwise flutter_test flags a leaked pending Timer.
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets(

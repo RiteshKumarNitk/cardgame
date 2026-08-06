@@ -101,8 +101,9 @@ class _PuzzleViewState extends State<_PuzzleView> {
   Widget build(BuildContext context) {
     // While a puzzle is loaded, the system back button never leaves the
     // screen: it toggles the pause menu instead. Loading/error/invalid
-    // states keep the default pop behavior.
-    final canPop = context.read<PuzzleCubit>().state is! PuzzleLoaded;
+    // states keep the default pop behavior. Watched — not read — so this
+    // PopScope rebuilds (and blocks/restores back) as the level loads.
+    final canPop = context.watch<PuzzleCubit>().state is! PuzzleLoaded;
 
     return PopScope(
       canPop: canPop,

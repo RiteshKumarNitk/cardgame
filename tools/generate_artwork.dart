@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, unnecessary_brace_in_string_interps
+
 // Run: dart run tools/generate_artwork.dart
 // Generates the bundled collection artwork — one themed portrait (3:4)
 // per chapter collection — into assets/images/collections/. Every image is

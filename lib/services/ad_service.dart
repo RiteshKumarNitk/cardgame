@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AdService {
@@ -7,7 +6,8 @@ class AdService {
   factory AdService() => _instance;
   AdService._();
 
-  final _rewardedAdUnitId = Platform.isAndroid
+  /// Test ad unit IDs — replace with real ones before release.
+  String get _rewardedAdUnitId => defaultTargetPlatform == TargetPlatform.android
       ? 'ca-app-pub-3940256099942544/5224354917' // Android Test Rewarded ID
       : 'ca-app-pub-3940256099942544/1712485313'; // iOS Test Rewarded ID
 
@@ -15,6 +15,8 @@ class AdService {
   bool _isLoading = false;
 
   void loadRewardedAd() {
+    // google_mobile_ads has no rewarded-ad support on web — no-op there.
+    if (kIsWeb) return;
     if (_isLoading || _rewardedAd != null) return;
     _isLoading = true;
 
@@ -37,7 +39,7 @@ class AdService {
   /// Shows the loaded rewarded ad. If not loaded, returns false immediately.
   /// The [onReward] callback is invoked if the user fully watches the ad.
   void showRewardedAd({required VoidCallback onReward, required VoidCallback onAdDismissed}) {
-    if (_rewardedAd == null) {
+    if (kIsWeb || _rewardedAd == null) {
       onAdDismissed();
       return;
     }

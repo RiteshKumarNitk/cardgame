@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/design_system/app_colors.dart';
 import '../../core/design_system/app_radius.dart';
-import '../../core/design_system/app_shadows.dart';
 import '../../core/design_system/app_spacing.dart';
 import '../../core/design_system/app_theme_extension.dart';
-import 'outlined_text.dart';
 import 'press_scale.dart';
 
 enum GameButtonVariant { primary, secondary, premium }
@@ -37,15 +35,6 @@ class GameButton extends StatelessWidget {
     GameButtonVariant.primary => ext.primaryButtonGradient,
     GameButtonVariant.secondary => ext.secondaryButtonGradient,
     GameButtonVariant.premium => ext.premiumButtonGradient,
-  };
-
-  /// The gradient's own bottom-most color — darkened to derive the bevel
-  /// band beneath the button, so the band always matches this button's
-  /// own fill instead of a hand-picked shade per variant.
-  Color _baseColor() => switch (variant) {
-    GameButtonVariant.primary => AppColors.primaryGradientEnd,
-    GameButtonVariant.secondary => AppColors.secondaryGradientEnd,
-    GameButtonVariant.premium => AppColors.premiumGradientEnd,
   };
 
   @override

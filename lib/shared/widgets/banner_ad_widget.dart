@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -13,20 +13,25 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
 
-  final adUnitId = Platform.isAndroid
+  /// Test ad unit IDs — replace with real ones before release.
+  String get _adUnitId => defaultTargetPlatform == TargetPlatform.android
       ? 'ca-app-pub-3940256099942544/6300978111' // Android Test Banner ID
       : 'ca-app-pub-3940256099942544/2934735716'; // iOS Test Banner ID
 
   @override
   void initState() {
     super.initState();
+    // google_mobile_ads has no banner support on web — skip entirely so
+    // the widget is a safe no-op there (defaultTargetPlatform would also
+    // otherwise throw for dart:io Platform).
+    if (kIsWeb) return;
     _loadAd();
   }
 
   void _loadAd() {
     final bannerAd = BannerAd(
       size: AdSize.banner,
-      adUnitId: adUnitId,
+      adUnitId: _adUnitId,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {

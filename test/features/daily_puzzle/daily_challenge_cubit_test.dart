@@ -8,6 +8,7 @@ import 'package:puzzle_cards/features/daily_puzzle/domain/repositories/daily_cha
 import 'package:puzzle_cards/features/daily_puzzle/domain/services/daily_challenge_service.dart';
 import 'package:puzzle_cards/features/daily_puzzle/presentation/bloc/daily_challenge_cubit.dart';
 import 'package:puzzle_cards/features/daily_puzzle/presentation/bloc/daily_challenge_state.dart';
+import 'package:puzzle_cards/features/puzzle/domain/tile_swap_engine.dart';
 
 class _FakeDailyChallengeRepository implements DailyChallengeRepository {
   String? lastCompletedDate;
@@ -29,12 +30,26 @@ class _FakeDailyChallengeRepository implements DailyChallengeRepository {
   }
 }
 
-/// Solves the board by walking its permutation cycles (see the matching
-/// helper in puzzle_cubit_test.dart for why this always converges).
+/// Solves the board: first walks every piece into its home cell (rotations
+/// travel with a piece, so this never unsolves anything), then fixes the
+/// leftover rotations in place. The daily board spawns with random
+/// rotations, so a swap-only solver would loop forever. Yields between
+/// checkpoints so the cubit's async solve chain ([DailyChallengeCubit]) can
+/// emit its terminal `justSolved` state.
 Future<void> _solve(DailyChallengeCubit cubit) async {
   while (true) {
     final state = cubit.state as DailyChallengeReady;
     if (state.isComplete) return;
+
+    final board = (
+      arrangement: state.arrangement,
+      rotations: state.rotations,
+    );
+    if (TileSwapEngine.isSolved(board)) {
+      // The solving swap already finished; let the cubit's emit land.
+      await Future<void>.delayed(Duration.zero);
+      continue;
+    }
 
     var wrongCell = -1;
     for (var i = 0; i < state.arrangement.length; i++) {
@@ -43,8 +58,18 @@ Future<void> _solve(DailyChallengeCubit cubit) async {
         break;
       }
     }
-    final targetCell = state.arrangement[wrongCell] - 1;
-    await cubit.swapPieces(wrongCell, targetCell);
+    if (wrongCell != -1) {
+      final targetCell = state.arrangement[wrongCell] - 1;
+      await cubit.swapPieces(wrongCell, targetCell);
+      continue;
+    }
+
+    for (var i = 0; i < state.rotations.length; i++) {
+      if (state.rotations[i] != 0) {
+        await cubit.rotatePiece(i);
+        break;
+      }
+    }
   }
 }
 
@@ -79,7 +104,12 @@ void main() {
     expect(state.justSolved, isTrue);
     expect(state.isComplete, isTrue);
     expect(state.challenge.streak, 1);
-    expect(state.coinsEarned, 110);
+    // Base 100 + 10 streak bonus + 2 coins per remaining second.
+    expect(
+      state.coinsEarned,
+      110 + state.timeRemainingSeconds * 2,
+      reason: 'includes the per-second speed bonus',
+    );
     expect(repository.streak, 1, reason: 'should be persisted, not just in memory');
   });
 
@@ -95,6 +125,12 @@ void main() {
       await cubit.swapPieces(0, pieceOneCell);
     }
     state = cubit.state as DailyChallengeReady;
+    // A cell only locks once its piece is home AND unrotated — fix the
+    // rotation of cell 0 (which rotates whichever piece sits there).
+    while (state.rotations[0] != 0) {
+      await cubit.rotatePiece(0);
+      state = cubit.state as DailyChallengeReady;
+    }
     final movesSoFar = state.moves;
 
     await cubit.swapPieces(0, 1);

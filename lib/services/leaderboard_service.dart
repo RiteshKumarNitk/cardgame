@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 class LeaderboardEntry {
@@ -23,17 +24,32 @@ class LeaderboardService {
   factory LeaderboardService() => _instance;
   LeaderboardService._();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  /// True only when a Firebase App has been initialized. Guards every
+  /// method so the service is a safe no-op on platforms where Firebase
+  /// was never bootstrapped (web, widget tests, failed init) instead of
+  /// throwing `[core/no-app]`.
+  static bool get _firebaseReady {
+    try {
+      return Firebase.apps.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  FirebaseAuth? get _auth => _firebaseReady ? FirebaseAuth.instance : null;
+  FirebaseFirestore? get _firestore =>
+      _firebaseReady ? FirebaseFirestore.instance : null;
 
   Future<void> submitTimeAttackScore(int timeRemaining) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+    final auth = _auth;
+    final firestore = _firestore;
+    final user = auth?.currentUser;
+    if (auth == null || firestore == null || user == null) return;
 
     try {
-      final docRef = _firestore.collection('leaderboard').doc(user.uid);
+      final docRef = firestore.collection('leaderboard').doc(user.uid);
       final doc = await docRef.get();
-      
+
       if (doc.exists) {
         final currentBest = doc.data()?['score'] ?? 0;
         // Keep the highest score (most time remaining)
@@ -56,8 +72,11 @@ class LeaderboardService {
   }
 
   Future<List<LeaderboardEntry>> getTopSolvers() async {
+    final firestore = _firestore;
+    if (firestore == null) return [];
+
     try {
-      final snapshot = await _firestore
+      final snapshot = await firestore
           .collection('leaderboard')
           .orderBy('score', descending: true)
           .limit(50)

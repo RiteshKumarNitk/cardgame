@@ -45,7 +45,7 @@ class LeaderboardPage extends StatelessWidget {
                       }
                       return ListView.separated(
                         itemCount: entries.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, index) {
                           final entry = entries[index];
                           final isFirst = index == 0;

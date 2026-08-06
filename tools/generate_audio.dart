@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 // Run: dart tools/generate_audio.dart
 // Generates minimal placeholder WAV files under assets/audio/sfx/ and
 // assets/audio/music/ so the AudioService can reference them without
@@ -22,6 +24,7 @@ void main() {
   _generate('coins', _coins(), dir: _sfxDir);
   _generate('hover', _hover(), dir: _sfxDir);
   _generate('level_start', _levelStart(), dir: _sfxDir);
+  _generate('tick', _tick(), dir: _sfxDir);
   _generate('bgm_loop', _bgmLoop(), dir: _musicDir);
 
   print('✅ Placeholder audio files generated in $_sfxDir and $_musicDir');
@@ -168,6 +171,17 @@ List<double> _levelStart() {
     final freq = 300 + 200 * (t / 0.3);
     final env = 1.0 - exp(-t * 10);
     return sin(2 * pi * freq * t) * env * 0.4;
+  });
+}
+
+/// Short high "tick" for countdown warnings — a crisp click a touch
+/// brighter than [startup], with a quick decay.
+List<double> _tick() {
+  final len = (_sampleRate * 0.03).round();
+  return List.generate(len, (i) {
+    final t = i / _sampleRate;
+    final env = exp(-t * 120);
+    return sin(2 * pi * 1200 * t) * env * 0.5;
   });
 }
 

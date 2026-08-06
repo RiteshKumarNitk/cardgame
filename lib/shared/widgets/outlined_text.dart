@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/design_system/app_colors.dart';
-
 /// Chunky "toy block" text: a solid-color fill with a thick outline behind
 /// it, matching the bold cartoon lettering used across the button/card
 /// restyle.

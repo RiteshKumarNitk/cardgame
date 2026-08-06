@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/design_system/app_colors.dart';
-
 import '../../../../shared/widgets/app_image.dart';
 
 /// Renders the (row, col) cell of a [gridCols] x [gridRows] crop of the

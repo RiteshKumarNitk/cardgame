@@ -76,9 +76,10 @@ class _HomePageState extends State<HomePage> {
         enableDrag: false,
         builder: (sheetContext) => _DailyRewardSheet(
           onClaim: () async {
+            final wallet = context.read<WalletCubit>();
             await service.claimReward();
-            if (!mounted) return;
-            context.read<WalletCubit>().addCoins(50);
+            if (!context.mounted) return;
+            wallet.addCoins(50);
             Navigator.of(sheetContext).pop();
           },
         ),

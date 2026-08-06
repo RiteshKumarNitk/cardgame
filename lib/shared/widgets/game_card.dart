@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/design_system/app_colors.dart';
 import '../../core/design_system/app_radius.dart';
-import '../../core/design_system/app_shadows.dart';
 import '../../core/design_system/app_spacing.dart';
 import '../../core/design_system/app_theme_extension.dart';
 
@@ -31,17 +30,6 @@ class GameCard extends StatelessWidget {
   final Gradient? gradient;
   final Color? color;
   final bool glass;
-
-  /// The card's own fill (or gradient's bottom-most color) — darkened to
-  /// derive the bevel band, so it always matches whatever color this card
-  /// was given rather than a hand-picked shade per call site.
-  Color _bevelBase() {
-    final gradient = this.gradient;
-    if (gradient is LinearGradient && gradient.colors.isNotEmpty) {
-      return gradient.colors.last;
-    }
-    return color ?? AppColors.card;
-  }
 
   @override
   Widget build(BuildContext context) {

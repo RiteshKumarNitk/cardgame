@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math' as math;
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../achievements/domain/services/achievement_events.dart';
@@ -8,9 +8,7 @@ import '../../../../services/audio_service.dart';
 import '../../../puzzle/domain/puzzle_board_size.dart';
 import '../../../puzzle/domain/puzzle_image.dart';
 import '../../../puzzle/domain/tile_swap_engine.dart';
-import '../../../puzzle/domain/tile_swap_engine.dart';
 import '../../../../services/leaderboard_service.dart';
-import '../../domain/entities/daily_challenge.dart';
 import '../../domain/services/daily_challenge_service.dart';
 import 'daily_challenge_state.dart';
 
@@ -68,7 +66,7 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
           arrangement: List.generate(pieceCount, (i) => i + 1),
           rotations: List.filled(pieceCount, 0),
           timeRemainingSeconds: 0,
-          justSolved: true,
+          justSolved: false, // Already completed *earlier* today, not just now.
         ));
       }
     } catch (e) {
@@ -138,7 +136,13 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
       fromCell,
       toCell,
     );
-    
+
+    // No-op swaps (same cell, or a locked cell) must not count a move.
+    if (identical(newState.arrangement, current.arrangement) &&
+        identical(newState.rotations, current.rotations)) {
+      return;
+    }
+
     emit(current.copyWith(
       arrangement: newState.arrangement,
       rotations: newState.rotations,
@@ -182,7 +186,6 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
       current.copyWith(
         arrangement: arrangement,
         rotations: rotations,
-        moves: current.moves + 1,
         justSolved: true,
         coinsEarned: coins,
         challenge: completed,
