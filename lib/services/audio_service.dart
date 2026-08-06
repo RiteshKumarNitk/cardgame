@@ -83,6 +83,11 @@ class AudioService {
     return _playSfx('tick.wav');
   }
 
+  Future<void> playError() async {
+    HapticFeedback.heavyImpact();
+    return _playSfx('error.wav');
+  }
+
   // ── BGM ──
 
   /// Start looping background music — safe to call repeatedly (only

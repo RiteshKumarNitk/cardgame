@@ -163,13 +163,43 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     }
   }
 
+  DateTime? _lastLockTime;
+
   void _checkSolveAndEmit(PuzzleLoaded current, BoardState newState, {required int movesDelta}) async {
+    int lockedBefore = 0;
+    for (int i = 0; i < current.arrangement.length; i++) {
+      if (TileSwapEngine.isCellLocked((arrangement: current.arrangement, rotations: current.rotations), i)) {
+        lockedBefore++;
+      }
+    }
+
+    int lockedAfter = 0;
+    for (int i = 0; i < newState.arrangement.length; i++) {
+      if (TileSwapEngine.isCellLocked(newState, i)) {
+        lockedAfter++;
+      }
+    }
+
+    int newCombo = current.currentCombo;
+    if (lockedAfter > lockedBefore) {
+      final now = DateTime.now();
+      if (_lastLockTime != null && now.difference(_lastLockTime!).inSeconds <= 3) {
+        newCombo = newCombo <= 1 ? 2 : newCombo + (lockedAfter - lockedBefore);
+      } else {
+        newCombo = 1; // Start chain
+      }
+      _lastLockTime = now;
+    } else if (movesDelta > 0) {
+      newCombo = 0; // Reset on non-scoring move
+    }
+
     final solved = TileSwapEngine.isSolved(newState);
     final updated = current.copyWith(
       arrangement: newState.arrangement,
       rotations: newState.rotations,
       moves: current.moves + movesDelta,
       isSolved: solved,
+      currentCombo: newCombo,
     );
     emit(updated);
 

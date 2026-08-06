@@ -27,6 +27,7 @@ final class PuzzleLoaded extends PuzzleState {
     this.elapsedSeconds = 0,
     this.isSolved = false,
     this.isPaused = false,
+    this.currentCombo = 0,
   });
 
   final Level level;
@@ -45,6 +46,10 @@ final class PuzzleLoaded extends PuzzleState {
   final int elapsedSeconds;
   final bool isSolved;
   final bool isPaused;
+
+  /// The current combo count (pieces locked within a small time window).
+  /// 0 means no active combo, 2 means a 2x combo, etc.
+  final int currentCombo;
 
   /// 1-3, derived from how close [moves] is to [minimalSwaps] — the
   /// single source of truth for star rating, read by both the
@@ -66,6 +71,7 @@ final class PuzzleLoaded extends PuzzleState {
     int? elapsedSeconds,
     bool? isSolved,
     bool? isPaused,
+    int? currentCombo,
   }) {
     return PuzzleLoaded(
       level: level,
@@ -76,6 +82,7 @@ final class PuzzleLoaded extends PuzzleState {
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       isSolved: isSolved ?? this.isSolved,
       isPaused: isPaused ?? this.isPaused,
+      currentCombo: currentCombo ?? this.currentCombo,
     );
   }
 
@@ -89,6 +96,7 @@ final class PuzzleLoaded extends PuzzleState {
     elapsedSeconds,
     isSolved,
     isPaused,
+    currentCombo,
   ];
 }
 

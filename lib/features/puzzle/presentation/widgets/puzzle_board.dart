@@ -150,9 +150,15 @@ class _BoardCell extends StatefulWidget {
 }
 
 class _BoardCellState extends State<_BoardCell>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _popController;
   late final Animation<double> _pop;
+
+  late final AnimationController _flipController;
+  late final Animation<double> _flipScale;
+
+  late final AnimationController _shakeController;
+  late final Animation<double> _shake;
 
   @override
   void initState() {
@@ -165,6 +171,27 @@ class _BoardCellState extends State<_BoardCell>
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.16), weight: 1),
       TweenSequenceItem(tween: Tween(begin: 1.16, end: 1.0), weight: 1),
     ]).animate(CurvedAnimation(parent: _popController, curve: Curves.easeOut));
+
+    _flipController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _flipScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.8), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.8, end: 1.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _flipController, curve: Curves.easeInOut));
+
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _shake = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.08), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.08, end: -0.08), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -0.08, end: 0.06), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.06, end: -0.06), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -0.06, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.linear));
   }
 
   @override
@@ -174,12 +201,23 @@ class _BoardCellState extends State<_BoardCell>
       _popController.forward(from: 0);
       AudioService().playPieceSnap();
     }
+    if (oldWidget.rotation != widget.rotation) {
+      _flipController.forward(from: 0);
+    }
   }
 
   @override
   void dispose() {
     _popController.dispose();
+    _flipController.dispose();
+    _shakeController.dispose();
     super.dispose();
+  }
+
+  void _triggerErrorShake() {
+    if (_shakeController.isAnimating) return;
+    AudioService().playError();
+    _shakeController.forward(from: 0);
   }
 
   @override
@@ -223,24 +261,42 @@ class _BoardCellState extends State<_BoardCell>
       opacity: tileOpacity.clamp(0.0, 1.0),
     );
 
-    // Apply rotation
-    final rotatedContent = AnimatedRotation(
-      turns: widget.rotation / 4.0,
-      duration: AppAnimations.medium,
-      curve: Curves.easeOut,
+    // Apply rotation and flip scale
+    final rotatedContent = AnimatedBuilder(
+      animation: _flipScale,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _flipScale.value,
+          child: AnimatedRotation(
+            turns: widget.rotation / 4.0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: child,
+          ),
+        );
+      },
       child: content,
     );
 
-    final decorated = Container(
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: borderColor,
-          width: borderWidth,
-        ),
-        boxShadow: widget.correct && !isAnimatingSolved
-            ? AppShadows.glow(AppColors.success, opacity: 0.3)
-            : null,
-      ),
+    final decorated = AnimatedBuilder(
+      animation: _shake,
+      builder: (context, child) {
+        return Transform.rotate(
+          angle: _shake.value,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: _shakeController.isAnimating ? AppColors.danger : borderColor,
+                width: _shakeController.isAnimating ? 3.0 : borderWidth,
+              ),
+              boxShadow: widget.correct && !isAnimatingSolved
+                  ? AppShadows.glow(AppColors.success, opacity: 0.3)
+                  : (_shakeController.isAnimating ? AppShadows.glow(AppColors.danger, opacity: 0.5) : null),
+            ),
+            child: child,
+          ),
+        );
+      },
       child: rotatedContent,
     );
 
@@ -252,7 +308,18 @@ class _BoardCellState extends State<_BoardCell>
     final popped = ScaleTransition(scale: _pop, child: animated);
 
     // When solved animation is playing, disable all interactions
-    if (isAnimatingSolved || widget.correct) return _withSemantics(popped);
+    if (isAnimatingSolved) return _withSemantics(popped);
+
+    // If correct, it's locked. Tapping or dragging causes error shake.
+    if (widget.correct) {
+      return _withSemantics(
+        GestureDetector(
+          onTap: _triggerErrorShake,
+          onPanDown: (_) => _triggerErrorShake,
+          child: popped,
+        ),
+      );
+    }
 
     return _withSemantics(
       DragTarget<int>(

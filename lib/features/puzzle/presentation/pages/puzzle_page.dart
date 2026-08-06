@@ -32,6 +32,7 @@ import '../../domain/puzzle_image.dart';
 import '../bloc/puzzle_cubit.dart';
 import '../bloc/puzzle_state.dart';
 import '../widgets/puzzle_board.dart';
+import '../../../../shared/widgets/coin_flight_animation.dart';
 
 /// Puzzle (gameplay) screen: a compact top bar (difficulty, coins,
 /// timer, moves, preview, pause) over a drag-and-drop board that fills
@@ -93,17 +94,11 @@ class _PuzzleView extends StatefulWidget {
 }
 
 class _PuzzleViewState extends State<_PuzzleView> {
-  /// Whether the pause menu is up. The menu is a full-screen overlay, so
-  /// this lives here rather than in [PuzzleCubit] — the cubit only
-  /// mirrors it as [PuzzleLoaded.isPaused] to stop the clock.
   bool _isPaused = false;
+  final GlobalKey _walletKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
-    // While a puzzle is loaded, the system back button never leaves the
-    // screen: it toggles the pause menu instead. Loading/error/invalid
-    // states keep the default pop behavior. Watched — not read — so this
-    // PopScope rebuilds (and blocks/restores back) as the level loads.
     final canPop = context.watch<PuzzleCubit>().state is! PuzzleLoaded;
 
     return PopScope(
@@ -128,6 +123,13 @@ class _PuzzleViewState extends State<_PuzzleView> {
                   listener: (context, state) {
                     final solved = state as PuzzleLoaded;
                     context.read<WalletCubit>().addCoins(solved.coinsAwarded);
+                    
+                    CoinFlightOverlay.show(
+                      context: context,
+                      endKey: _walletKey,
+                      count: 20,
+                    );
+
                     _celebrateThenNavigate(context, solved);
                   },
                   builder: (context, state) {
@@ -149,6 +151,7 @@ class _PuzzleViewState extends State<_PuzzleView> {
                       ),
                       PuzzleLoaded() => _LoadedPuzzle(
                         state: state,
+                        walletKey: _walletKey,
                         onPause: _togglePause,
                       ),
                     };
@@ -170,9 +173,6 @@ class _PuzzleViewState extends State<_PuzzleView> {
     );
   }
 
-  /// Opens the pause menu (or closes it when already up), keeping the
-  /// [PuzzleCubit]'s clock in sync. No-op while the solve celebration is
-  /// playing — the puzzle is already over at that point.
   void _togglePause() {
     final current = context.read<PuzzleCubit>().state;
     if (current is! PuzzleLoaded || current.isSolved) return;
@@ -181,13 +181,11 @@ class _PuzzleViewState extends State<_PuzzleView> {
     setState(() => _isPaused = next);
   }
 
-  /// Closes the menu and re-shuffles the level from scratch.
   void _restart() {
     setState(() => _isPaused = false);
     context.read<PuzzleCubit>().restart();
   }
 
-  /// Gives up: back to Home, losing current progress on this level.
   void _quit() {
     context.goNamed(RouteNames.home);
   }
@@ -199,10 +197,6 @@ class _PuzzleViewState extends State<_PuzzleView> {
     await Future.delayed(_celebrationDelay);
     if (!context.mounted) return;
 
-    // Always land on Victory first, even when this was a chapter's last
-    // level — Victory shows its own "Chapter Complete" banner in that
-    // case, and its Continue button routes onward to the full Chapter
-    // Complete celebration. See VictoryPage's _ActionButtons.
     context.goNamed(
       RouteNames.victory,
       extra: VictoryResult(
@@ -218,9 +212,10 @@ class _PuzzleViewState extends State<_PuzzleView> {
 }
 
 class _LoadedPuzzle extends StatefulWidget {
-  const _LoadedPuzzle({required this.state, required this.onPause});
+  const _LoadedPuzzle({required this.state, required this.walletKey, required this.onPause});
 
   final PuzzleLoaded state;
+  final GlobalKey walletKey;
   final VoidCallback onPause;
 
   @override
@@ -232,14 +227,7 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
   late final AnimationController _solvedController;
   bool _wasSolved = false;
 
-  /// Whether the one-time "how to play" tutorial is up. Read from
-  /// [OnboardingService] on load so it shows exactly once per install,
-  /// then never again (until storage is reset).
   bool _showTutorial = OnboardingService().shouldShowTutorial();
-
-  /// Session-only: once unlocked, stays unlocked for the rest of this
-  /// puzzle screen's lifetime, so reopening the preview sheet doesn't
-  /// charge coins a second time.
   bool _previewUnlocked = false;
 
   @override
@@ -283,6 +271,7 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
           child: _PuzzleTopBar(
             level: state,
             imageUrl: imageUrl,
+            walletKey: widget.walletKey,
             onBack: widget.onPause,
             onPreview: () => _showPreviewSheet(context, state.level.id, imageUrl),
             onPause: widget.onPause,
@@ -311,6 +300,51 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
                     .rotatePiece(cell),
               ),
 
+              // Combo Listener
+              BlocListener<PuzzleCubit, PuzzleState>(
+                listenWhen: (previous, current) {
+                  if (previous is PuzzleLoaded && current is PuzzleLoaded) {
+                    return current.currentCombo > previous.currentCombo && current.currentCombo > 1;
+                  }
+                  return false;
+                },
+                listener: (context, state) {
+                  final current = state as PuzzleLoaded;
+                  final bonus = current.currentCombo * 5;
+                  context.read<WalletCubit>().addCoins(bonus);
+                  AudioService().playCoinReward(); // Nice feedback for a combo
+                  
+                  CoinFlightOverlay.show(
+                    context: context,
+                    endKey: widget.walletKey,
+                    count: current.currentCombo * 2,
+                  );
+                },
+                child: const SizedBox.shrink(),
+              ),
+
+              // Combo popup overlay
+              Positioned(
+                top: 20,
+                right: 20,
+                child: IgnorePointer(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    transitionBuilder: (child, animation) {
+                      return ScaleTransition(
+                        scale: Tween(begin: 0.5, end: 1.0).animate(CurvedAnimation(
+                          parent: animation, curve: Curves.elasticOut,
+                        )),
+                        child: FadeTransition(opacity: animation, child: child),
+                      );
+                    },
+                    child: state.currentCombo > 1
+                        ? _ComboBadge(key: ValueKey(state.currentCombo), combo: state.currentCombo)
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+
               // Solved celebration overlay
               if (state.isSolved) ...[
                 // Premium glow behind the completed board
@@ -325,12 +359,12 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.premiumGradientStart
-                                  .withValues(alpha: 0.4),
+                                  .withOpacity(0.4),
                               blurRadius: 50,
                               spreadRadius: 15,
                             ),
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.25),
+                              color: AppColors.primary.withOpacity(0.25),
                               blurRadius: 30,
                               spreadRadius: 8,
                             ),
@@ -647,6 +681,11 @@ class _PuzzleTopBar extends StatelessWidget {
               AdService().showRewardedAd(
                 onReward: () {
                   context.read<WalletCubit>().addCoins(50);
+                  CoinFlightOverlay.show(
+                    context: context,
+                    endKey: walletKey,
+                    count: 25, // Big reward flight!
+                  );
                 },
                 onAdDismissed: () {
                   onPause(); // Resume game
@@ -754,6 +793,49 @@ class _PauseOverlay extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComboBadge extends StatelessWidget {
+  const _ComboBadge({super.key, required this.combo});
+
+  final int combo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: 0.1, // Slight tilt for dynamism
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+        decoration: BoxDecoration(
+          color: AppColors.accent,
+          borderRadius: AppRadius.pillRadius,
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accent.withOpacity(0.5),
+              blurRadius: 10,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.local_fire_department_rounded, color: AppColors.danger, size: 24),
+            const SizedBox(width: 4),
+            Text(
+              'COMBO x$combo!',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppColors.danger,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -4,57 +4,34 @@ import 'package:flutter/material.dart';
 import '../../core/design_system/app_colors.dart';
 import '../../core/design_system/app_theme_extension.dart';
 import '../../game/floating_pieces_game.dart';
-import 'floating_cloud.dart';
+import 'floating_suit.dart';
 
-/// The app's single background treatment: soft brand gradient, a few
-/// glowing blurred circles, optionally the Flame floating-pieces layer,
-/// and optionally drifting decorative clouds. Every top-level screen
-/// wraps its content in this instead of rolling its own
-/// `DecoratedBox`/`GameWidget`/cloud layout.
+/// The app's single background treatment: premium casino felt gradient,
+/// a few glowing blurred circles, optionally the Flame floating-pieces layer,
+/// and optionally drifting decorative card suits.
 class GameBackground extends StatelessWidget {
   const GameBackground({
     super.key,
     this.child,
     this.showFloatingPieces = true,
-    this.showClouds = false,
+    this.showClouds = false, // We'll map this to showing suits for now
   });
 
   final Widget? child;
   final bool showFloatingPieces;
 
-  /// Renders several slowly drifting semi-transparent clouds behind the
-  /// content for a premium casual-game atmosphere (Royal Match, Candy
-  /// Crush style). Disabled by default — opt-in where appropriate.
+  /// Renders several slowly drifting semi-transparent card suits behind the
+  /// content for a premium casino atmosphere.
   final bool showClouds;
 
-  /// Pre-defined cloud configurations with varied positions, sizes,
-  /// opacities, and drift speeds for a layered parallax-like sky effect.
-  static const List<_CloudConfig> _cloudConfigs = [
-    _CloudConfig(
-      key: 'cloud_1', width: 200, height: 70,
-      x: -40, y: 38, drift: 50,
-      seconds: 45, opacity: 0.08,
-    ),
-    _CloudConfig(
-      key: 'cloud_2', width: 140, height: 50,
-      x: 180, y: 95, drift: 40,
-      seconds: 35, opacity: 0.10,
-    ),
-    _CloudConfig(
-      key: 'cloud_3', width: 110, height: 40,
-      x: -20, y: 240, drift: 35,
-      seconds: 25, opacity: 0.07,
-    ),
-    _CloudConfig(
-      key: 'cloud_4', width: 170, height: 55,
-      x: 230, y: 370, drift: 45,
-      seconds: 40, opacity: 0.09,
-    ),
-    _CloudConfig(
-      key: 'cloud_5', width: 130, height: 45,
-      x: 95, y: 525, drift: 30,
-      seconds: 30, opacity: 0.06,
-    ),
+  /// Pre-defined suit configurations with varied positions, sizes,
+  /// opacities, and drift speeds for a layered parallax-like effect.
+  static const List<_SuitConfig> _suitConfigs = [
+    _SuitConfig(key: 'suit_1', suit: '♠', size: 180, x: -40, y: 38, drift: 50, seconds: 45, opacity: 0.04),
+    _SuitConfig(key: 'suit_2', suit: '♥', size: 140, x: 180, y: 95, drift: 40, seconds: 35, opacity: 0.05),
+    _SuitConfig(key: 'suit_3', suit: '♦', size: 110, x: -20, y: 240, drift: 35, seconds: 25, opacity: 0.04),
+    _SuitConfig(key: 'suit_4', suit: '♣', size: 170, x: 230, y: 370, drift: 45, seconds: 40, opacity: 0.03),
+    _SuitConfig(key: 'suit_5', suit: '♠', size: 130, x: 95, y: 525, drift: 30, seconds: 30, opacity: 0.04),
   ];
 
   @override
@@ -70,38 +47,37 @@ class GameBackground extends StatelessWidget {
         const Positioned(
           top: -70,
           left: -50,
-          child: _GlowCircle(size: 220, color: AppColors.primary),
+          child: _GlowCircle(size: 220, color: AppColors.success),
         ),
         const Positioned(
           bottom: -90,
           right: -70,
-          child: _GlowCircle(size: 260, color: AppColors.secondary),
+          child: _GlowCircle(size: 260, color: AppColors.primary),
         ),
         const Positioned(
           top: 180,
           right: -60,
-          child: _GlowCircle(size: 160, color: AppColors.accent),
+          child: _GlowCircle(size: 160, color: AppColors.secondary),
         ),
-        // Decorative drifting clouds (behind floating pieces, behind
-        // child content — atmospheric depth layer).
+        // Decorative drifting card suits.
         if (showClouds)
-          for (final cfg in _cloudConfigs)
-            FloatingCloud(
+          for (final cfg in _suitConfigs)
+            FloatingSuit(
               key: ValueKey(cfg.key),
-              width: cfg.width,
-              height: cfg.height,
+              suit: cfg.suit,
+              size: cfg.size,
               initialX: cfg.x,
               initialY: cfg.y,
               driftDistance: cfg.drift,
               driftDuration: Duration(seconds: cfg.seconds),
               opacity: cfg.opacity,
-              color: Colors.white,
+              color: (cfg.suit == '♥' || cfg.suit == '♦') ? AppColors.primary : AppColors.secondary,
             ),
         if (showFloatingPieces)
           Positioned.fill(
             child: GameWidget(
               game: FloatingPiecesGame(
-                pieceColors: [
+                pieceColors: const [
                   AppColors.primary,
                   AppColors.secondary,
                   AppColors.accent,
@@ -109,19 +85,17 @@ class GameBackground extends StatelessWidget {
               ),
             ),
           ),
-        ?child,
+        if (child != null) child!,
       ],
     );
   }
 }
 
-/// Compile-time cloud descriptor — avoids `dart:math` in the build method
-/// and makes the cloud layout stable, deterministic, and inspectable.
-class _CloudConfig {
-  const _CloudConfig({
+class _SuitConfig {
+  const _SuitConfig({
     required this.key,
-    required this.width,
-    required this.height,
+    required this.suit,
+    required this.size,
     required this.x,
     required this.y,
     required this.drift,
@@ -130,8 +104,8 @@ class _CloudConfig {
   });
 
   final String key;
-  final double width;
-  final double height;
+  final String suit;
+  final double size;
   final double x;
   final double y;
   final double drift;
@@ -159,8 +133,8 @@ class _GlowCircle extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: RadialGradient(
             colors: [
-              color.withValues(alpha: 0.28),
-              color.withValues(alpha: 0),
+              color.withOpacity(0.08),
+              color.withOpacity(0),
             ],
           ),
         ),
