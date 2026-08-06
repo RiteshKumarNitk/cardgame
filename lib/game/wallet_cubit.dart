@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../services/analytics_service.dart';
 import '../services/cloud_save_service.dart';
 import 'wallet_service.dart';
 
@@ -14,6 +15,10 @@ class WalletCubit extends Cubit<int> {
     if (amount <= 0) return;
     await _service.addCoins(amount);
     emit(_service.balance);
+    AnalyticsService().logEvent(
+      AnalyticsService.coinsEarned,
+      parameters: {'amount': amount, 'balance': _service.balance},
+    );
     CloudSaveService().backupWallet(_service.balance);
   }
 
@@ -25,6 +30,10 @@ class WalletCubit extends Cubit<int> {
     final success = await _service.spendCoins(amount);
     if (success) {
       emit(_service.balance);
+      AnalyticsService().logEvent(
+        AnalyticsService.coinsSpent,
+        parameters: {'amount': amount, 'balance': _service.balance},
+      );
       CloudSaveService().backupWallet(_service.balance);
     }
     return success;

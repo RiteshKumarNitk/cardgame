@@ -1,6 +1,7 @@
 import 'package:hive/hive.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../services/analytics_service.dart';
 
 class DailyRewardService {
   Box get _box => Hive.box(AppConstants.dailyRewardBoxName);
@@ -20,5 +21,6 @@ class DailyRewardService {
   /// Marks today's reward as claimed.
   Future<void> claimReward() async {
     await _box.put(AppConstants.dailyRewardLastClaimedKey, _todayKey());
+    AnalyticsService().logEvent(AnalyticsService.dailyRewardClaimed);
   }
 }

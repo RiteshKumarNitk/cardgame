@@ -13,6 +13,7 @@ import '../../features/levels/presentation/pages/levels_page.dart';
 import '../../features/levels/presentation/pages/section_complete_page.dart';
 import '../../features/puzzle/presentation/pages/puzzle_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/settings/presentation/pages/privacy_policy_page.dart';
 import '../../features/shop/presentation/pages/shop_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/victory/domain/entities/victory_result.dart';
@@ -79,6 +80,12 @@ final GoRouter appRouter = GoRouter(
       path: RoutePaths.settings,
       name: RouteNames.settings,
       pageBuilder: (context, state) => _fadePage(state, const SettingsPage()),
+    ),
+    GoRoute(
+      path: RoutePaths.privacyPolicy,
+      name: RouteNames.privacyPolicy,
+      pageBuilder: (context, state) =>
+          _fadePage(state, const PrivacyPolicyPage()),
     ),
     GoRoute(
       path: RoutePaths.dailyPuzzle,

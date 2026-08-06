@@ -59,6 +59,7 @@ class _VictoryPageState extends State<VictoryPage>
   late final Animation<double> _flashOpacity;
 
   bool _showCelebration = false;
+  bool? _reduceMotion;
 
   @override
   void initState() {
@@ -97,11 +98,24 @@ class _VictoryPageState extends State<VictoryPage>
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) {
         _controller.forward();
-        _confettiController.play();
+        final reduceMotion = _reduceMotion ?? false;
+        if (!reduceMotion) {
+          _confettiController.play();
+        }
         setState(() => _showCelebration = true);
         AudioService().playVictory();
       }
     });
+  }
+
+  /// Reads the reduced-motion preference here (not initState — MediaQuery
+  /// can't be depended on before initState completes). Resolves on the
+  /// first frame; celebration animation is skipped when the player has
+  /// reduced motion enabled.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion ??= MediaQuery.maybeOf(context)?.disableAnimations ?? false;
   }
 
   @override
@@ -131,9 +145,13 @@ class _VictoryPageState extends State<VictoryPage>
           child: Stack(
             children: [
               // Fireworks & Confetti (after brief delay)
-              if (result != null && _showCelebration)
+              if (result != null &&
+                  _showCelebration &&
+                  !(_reduceMotion ?? false))
                 const Positioned.fill(child: FireworksBurst()),
-              if (result != null && _showCelebration)
+              if (result != null &&
+                  _showCelebration &&
+                  !(_reduceMotion ?? false))
                 Align(
                   alignment: Alignment.topCenter,
                   child: ConfettiWidget(
@@ -149,7 +167,9 @@ class _VictoryPageState extends State<VictoryPage>
                     ],
                   ),
                 ),
-              if (result != null && _showCelebration)
+              if (result != null &&
+                  _showCelebration &&
+                  !(_reduceMotion ?? false))
                 const Positioned.fill(
                   child: IgnorePointer(child: SparkleParticles()),
                 ),

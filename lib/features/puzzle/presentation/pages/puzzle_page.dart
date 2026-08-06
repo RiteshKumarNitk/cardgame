@@ -8,6 +8,7 @@ import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/wallet_cubit.dart';
+import '../../../../game/onboarding_service.dart';
 import '../../../../services/ad_service.dart';
 import '../../../../shared/utils/context_read_or_null.dart';
 import '../../../../shared/widgets/confetti_burst.dart';
@@ -231,6 +232,11 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
   late final AnimationController _solvedController;
   bool _wasSolved = false;
 
+  /// Whether the one-time "how to play" tutorial is up. Read from
+  /// [OnboardingService] on load so it shows exactly once per install,
+  /// then never again (until storage is reset).
+  bool _showTutorial = OnboardingService().shouldShowTutorial();
+
   /// Session-only: once unlocked, stays unlocked for the rest of this
   /// puzzle screen's lifetime, so reopening the preview sheet doesn't
   /// charge coins a second time.
@@ -267,7 +273,7 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
     final imageUrl = puzzleImageUrlFor(state.level.id);
     final solvedProgress = _solvedController.value;
 
-    return Column(
+    final content = Column(
       children: [
         const SizedBox(height: AppSpacing.xs),
 
@@ -334,16 +340,33 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
                     ),
                   ),
                 ),
-                // Confetti bursting from the board
-                const Positioned.fill(
-                  child: IgnorePointer(child: ConfettiBurst()),
-                ),
+                // Confetti bursting from the board (skipped when the user
+                // has reduced motion enabled).
+                if (!MediaQuery.disableAnimationsOf(context))
+                  const Positioned.fill(
+                    child: IgnorePointer(child: ConfettiBurst()),
+                  ),
               ],
             ],
           ),
         ),
 
         const SizedBox(height: AppSpacing.xs),
+      ],
+    );
+
+    return Stack(
+      children: [
+        content,
+        if (_showTutorial)
+          Positioned.fill(
+            child: _TutorialOverlay(
+              onDismiss: () {
+                OnboardingService().markTutorialSeen();
+                setState(() => _showTutorial = false);
+              },
+            ),
+          ),
       ],
     );
   }
@@ -753,6 +776,133 @@ class _PuzzleMessage extends StatelessWidget {
           color: isError ? AppColors.danger : AppColors.textDark,
         ),
       ),
+    );
+  }
+}
+
+/// ────────────────────────────────────────────────────────────────────
+/// One-time How-to-Play Tutorial
+/// ────────────────────────────────────────────────────────────────────
+/// Full-screen scrim shown above the very first puzzle board, walking the
+/// player through the two gestures (drag-to-swap, tap-to-rotate) and the
+/// hint button. Dismissed by tapping "Got it!", which marks it seen.
+class _TutorialOverlay extends StatelessWidget {
+  const _TutorialOverlay({required this.onDismiss});
+
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return ColoredBox(
+      color: AppColors.background.withValues(alpha: 0.94),
+      child: Center(
+        child: BounceIn(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: GameCard(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.touch_app_rounded,
+                    size: 56,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'How to Play',
+                    style: textTheme.headlineMedium?.copyWith(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const _TutorialStep(
+                    icon: Icons.swap_horiz_rounded,
+                    title: 'Drag to swap',
+                    body: 'Drag a piece onto another piece to swap them around.',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const _TutorialStep(
+                    icon: Icons.rotate_right_rounded,
+                    title: 'Tap to rotate',
+                    body: 'Tap any piece to rotate it a quarter turn.',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const _TutorialStep(
+                    icon: Icons.lightbulb_rounded,
+                    title: 'Stuck? Use a hint',
+                    body: 'The hint button finds a piece a home for a few coins.',
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  GameButton(
+                    label: 'Got it!',
+                    icon: Icons.play_arrow_rounded,
+                    width: double.infinity,
+                    onTap: onDismiss,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TutorialStep extends StatelessWidget {
+  const _TutorialStep({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.12),
+            borderRadius: AppRadius.mdRadius,
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 24),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: textTheme.titleMedium?.copyWith(
+                  color: AppColors.textDark,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                body,
+                style: textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

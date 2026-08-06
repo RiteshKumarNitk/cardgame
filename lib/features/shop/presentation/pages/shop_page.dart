@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../services/audio_service.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/ads_cubit.dart';
 import '../../../../game/wallet_cubit.dart';
@@ -65,18 +66,27 @@ class ShopPage extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        for (final pack in coinPacks) ...[                            CoinPackCard(
-                            pack: pack,
-                            onPurchase: () {
-                              context.read<WalletCubit>().addCoins(
-                                pack.coins,
-                              );
-                              AudioService().playCoinReward();
-                              _showEarnedSnackBar(context, pack.coins);
-                            },
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                        ],
+                        for (final pack in coinPacks) ...[
+                            CoinPackCard(
+                              pack: pack,
+                              onPurchase: () {
+                                AnalyticsService().logEvent(
+                                  AnalyticsService.coinPackPurchased,
+                                  parameters: {
+                                    'pack_id': pack.id,
+                                    'coins': pack.coins,
+                                    'price': pack.priceLabel,
+                                  },
+                                );
+                                context.read<WalletCubit>().addCoins(
+                                  pack.coins,
+                                );
+                                AudioService().playCoinReward();
+                                _showEarnedSnackBar(context, pack.coins);
+                              },
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
                         const SizedBox(height: AppSpacing.md),
                         Text(
                           'Remove Ads',

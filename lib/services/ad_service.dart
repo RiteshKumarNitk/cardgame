@@ -1,15 +1,30 @@
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import 'analytics_service.dart';
+
 class AdService {
   static final AdService _instance = AdService._();
   factory AdService() => _instance;
   AdService._();
 
-  /// Test ad unit IDs — replace with real ones before release.
+  /// Real ad unit IDs are injected at build time with --dart-define:
+  ///   flutter build --dart-define=REWARDED_AD_UNIT_ID_ANDROID=...
+  ///   flutter build --dart-define=REWARDED_AD_UNIT_ID_IOS=...
+  /// Without them, the well-known Google test IDs are used, so the app
+  /// runs in development without any AdMob account.
+  static const String _rewardedAndroidUnitId = String.fromEnvironment(
+    'REWARDED_AD_UNIT_ID_ANDROID',
+    defaultValue: 'ca-app-pub-3940256099942544/5224354917',
+  );
+  static const String _rewardedIosUnitId = String.fromEnvironment(
+    'REWARDED_AD_UNIT_ID_IOS',
+    defaultValue: 'ca-app-pub-3940256099942544/1712485313',
+  );
+
   String get _rewardedAdUnitId => defaultTargetPlatform == TargetPlatform.android
-      ? 'ca-app-pub-3940256099942544/5224354917' // Android Test Rewarded ID
-      : 'ca-app-pub-3940256099942544/1712485313'; // iOS Test Rewarded ID
+      ? _rewardedAndroidUnitId
+      : _rewardedIosUnitId;
 
   RewardedAd? _rewardedAd;
   bool _isLoading = false;
@@ -27,10 +42,15 @@ class AdService {
         onAdLoaded: (ad) {
           _rewardedAd = ad;
           _isLoading = false;
+          AnalyticsService().logEvent(AnalyticsService.rewardedAdLoaded);
         },
         onAdFailedToLoad: (error) {
           debugPrint('RewardedAd failed to load: $error');
           _isLoading = false;
+          AnalyticsService().logEvent(
+            AnalyticsService.rewardedAdFailed,
+            parameters: {'code': error.code, 'reason': error.domain},
+          );
         },
       ),
     );
@@ -43,6 +63,8 @@ class AdService {
       onAdDismissed();
       return;
     }
+
+    AnalyticsService().logEvent(AnalyticsService.rewardedAdShown);
 
     _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {
@@ -61,6 +83,10 @@ class AdService {
 
     _rewardedAd!.show(
       onUserEarnedReward: (ad, reward) {
+        AnalyticsService().logEvent(
+          AnalyticsService.rewardedAdWatched,
+          parameters: {'reward_amount': reward.amount, 'reward_type': reward.type},
+        );
         onReward();
       },
     );

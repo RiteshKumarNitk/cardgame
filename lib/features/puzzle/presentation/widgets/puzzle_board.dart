@@ -251,37 +251,60 @@ class _BoardCellState extends State<_BoardCell>
     final popped = ScaleTransition(scale: _pop, child: animated);
 
     // When solved animation is playing, disable all interactions
-    if (isAnimatingSolved || widget.correct) return popped;
+    if (isAnimatingSolved || widget.correct) return _withSemantics(popped);
 
-    return DragTarget<int>(
-      onWillAcceptWithDetails: (details) => details.data != widget.cellIndex,
-      onAcceptWithDetails: (details) =>
-          widget.onSwap(details.data, widget.cellIndex),
-      builder: (context, candidateData, rejectedData) {
-        final hovering = candidateData.isNotEmpty;
-        final hoverRing = hovering
-            ? Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.primary, width: 2),
+    return _withSemantics(
+      DragTarget<int>(
+        onWillAcceptWithDetails: (details) => details.data != widget.cellIndex,
+        onAcceptWithDetails: (details) =>
+            widget.onSwap(details.data, widget.cellIndex),
+        builder: (context, candidateData, rejectedData) {
+          final hovering = candidateData.isNotEmpty;
+          final hoverRing = hovering
+              ? Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.primary, width: 2),
+                  ),
+                  child: popped,
+                )
+              : popped;
+
+          return GestureDetector(
+            onTap: () => widget.onRotate(widget.cellIndex),
+            child: Draggable<int>(
+              data: widget.cellIndex,
+              feedback: SizedBox(
+                width: widget.cellWidth,
+                height: widget.cellHeight,
+                child: Material(
+                  color: Colors.transparent,
+                  child: decorated,
                 ),
-                child: popped,
-              )
-            : popped;
-
-        return GestureDetector(
-          onTap: () => widget.onRotate(widget.cellIndex),
-          child: Draggable<int>(
-            data: widget.cellIndex,
-            feedback: SizedBox(
-              width: widget.cellWidth,
-              height: widget.cellHeight,
-              child: Material(color: Colors.transparent, child: decorated),
+              ),
+              childWhenDragging: Opacity(
+                opacity: 0.35,
+                child: decorated,
+              ),
+              child: hoverRing,
             ),
-            childWhenDragging: Opacity(opacity: 0.35, child: decorated),
-            child: hoverRing,
-          ),
-        );
-      },
+          );
+        },
+      ),
+    );
+  }
+
+  /// Announces the piece for screen readers. Pieces are interactive the
+  /// moment the board loads: drag to swap, tap to rotate — both is told.
+  Widget _withSemantics(Widget child) {
+    final totalPieces = widget.gridCols * widget.gridRows;
+    final isCorrect = widget.correct || widget.solvedProgress > 0;
+    return Semantics(
+      label: 'Piece ${widget.pieceIndex} of $totalPieces',
+      hint: isCorrect
+          ? 'Correctly placed'
+          : 'Drag this piece onto another piece to swap them, or tap to rotate it',
+      container: true,
+      child: child,
     );
   }
 }

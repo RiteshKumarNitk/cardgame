@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../services/analytics_service.dart';
 import '../../../achievements/domain/services/achievement_events.dart';
 import 'package:flutter/services.dart';
 import '../../../../services/audio_service.dart';
@@ -58,6 +59,7 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
             isFailed: false,
           ),
         );
+        AnalyticsService().logEvent(AnalyticsService.dailyChallengeStarted);
         _startTimer();
       } else {
         emit(DailyChallengeReady(
@@ -123,6 +125,7 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
         _timer?.cancel();
         HapticFeedback.heavyImpact();
         emit(current.copyWith(isFailed: true));
+        AnalyticsService().logEvent(AnalyticsService.dailyChallengeFailed);
       }
     });
   }
@@ -178,6 +181,15 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     // Base 100 + Streak Bonus + Speed Bonus (2 coins per remaining second)
     final speedBonus = current.timeRemainingSeconds * 2;
     final coins = coinsFor(completed.streak) + speedBonus;
+    
+    AnalyticsService().logEvent(
+      AnalyticsService.dailyChallengeComplete,
+      parameters: {
+        'streak': completed.streak,
+        'coins': coins,
+        'seconds_left': current.timeRemainingSeconds,
+      },
+    );
     
     // Submit to global leaderboard
     LeaderboardService().submitTimeAttackScore(current.timeRemainingSeconds);

@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/design_system/app_colors.dart';
+import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
+import '../../../../services/analytics_service.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
+import '../../../../game/ads_cubit.dart';
 import '../../../levels/data/datasources/levels_local_datasource.dart';
 import '../../../levels/data/repositories/levels_repository_impl.dart';
 import '../../../levels/domain/services/level_service.dart';
@@ -204,6 +209,39 @@ class _SettingsView extends StatelessWidget {
                             ],
                           ),
                         ),
+                        const SizedBox(height: AppSpacing.lg),
+                        Text(
+                          'Account & Legal',
+                          style: textTheme.titleSmall?.copyWith(
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        GameCard(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          child: Column(
+                            children: [
+                              _SettingsRow(
+                                icon: Icons.sync_rounded,
+                                title: 'Restore Purchases',
+                                subtitle: 'Re-apply paid entitlements',
+                                onTap: () =>
+                                    _restorePurchases(context),
+                              ),
+                              const Divider(
+                                height: AppSpacing.md,
+                                color: AppColors.border,
+                              ),
+                              _SettingsRow(
+                                icon: Icons.privacy_tip_rounded,
+                                title: 'Privacy Policy',
+                                onTap: () => context.goNamed(
+                                  RouteNames.privacyPolicy,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -214,6 +252,52 @@ class _SettingsView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Attempts Apple/Google's restore-purchases flow and mirrors any
+  /// restored "Remove Ads" entitlement into local state. Web/unsupported
+  /// platform and missing RevenueCat config degrade to a friendly message
+  /// instead of crashing.
+  Future<void> _restorePurchases(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (kIsWeb) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Restore purchases is not available on web')),
+      );
+      return;
+    }
+    try {
+      final adsCubit = context.read<AdsCubit>();
+      final restored = await Purchases.restorePurchases();
+      final hasAdsEntitlement = restored.entitlements.active
+          .values
+          .any((e) => e.identifier == 'remove_ads' && e.isActive);
+      if (hasAdsEntitlement) {
+        adsCubit.purchaseRemoveAds();
+      }
+      AnalyticsService().logEvent(AnalyticsService.purchasesRestored);
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            hasAdsEntitlement
+                ? 'Purchases restored · Remove Ads active'
+                : 'No purchasable entitlements found to restore',
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Restore purchases failed: $e');
+      await AnalyticsService().recordError(
+        e,
+        StackTrace.current,
+        reason: 'Restore purchases failed',
+      );
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not restore purchases — try again.')),
+      );
+    }
   }
 
   void _confirmReset(BuildContext context, LevelService levelService) {
@@ -328,6 +412,64 @@ class _SettingToggle extends StatelessWidget {
             activeThumbColor: AppColors.primary,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.mdRadius,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.primary, size: 24),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: textTheme.titleMedium?.copyWith(
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
       ),
     );
   }

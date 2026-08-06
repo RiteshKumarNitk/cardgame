@@ -12,6 +12,7 @@ import '../../game/ads_service.dart';
 import '../../game/wallet_cubit.dart';
 import '../../game/wallet_service.dart';
 import '../../services/audio_service.dart';
+import '../../services/analytics_service.dart';
 import '../constants/app_constants.dart';
 import '../router/app_router.dart';
 import '../theme/app_theme.dart';
@@ -101,6 +102,13 @@ class _AchievementRewardListener extends StatelessWidget {
         if (total <= 0) return;
         context.read<WalletCubit>().addCoins(total);
         AudioService().playCoinReward();
+        AnalyticsService().logEvent(
+          AnalyticsService.achievementRewarded,
+          parameters: {
+            'count': stateAsLoaded.justUnlocked.length,
+            'coins': total,
+          },
+        );
       },
       child: child,
     );

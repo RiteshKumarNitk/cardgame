@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../services/analytics_service.dart';
 import 'ads_service.dart';
 
 /// Whether ads are removed, live across the whole app — state is just
@@ -13,5 +14,6 @@ class AdsCubit extends Cubit<bool> {
     if (state) return;
     await _service.removeAds();
     emit(true);
+    AnalyticsService().logEvent(AnalyticsService.removeAdsPurchased);
   }
 }

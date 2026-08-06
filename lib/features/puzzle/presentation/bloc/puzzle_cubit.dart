@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../services/analytics_service.dart';
 import '../../../achievements/domain/services/achievement_events.dart';
 import '../../../levels/domain/entities/level.dart';
 import '../../../levels/domain/services/level_service.dart';
@@ -63,6 +64,14 @@ class PuzzleCubit extends Cubit<PuzzleState> {
           rotations: state.rotations,
           minimalSwaps: TileSwapEngine.minimalSwaps(state.arrangement),
         ),
+      );
+      AnalyticsService().logEvent(
+        AnalyticsService.levelStart,
+        parameters: {
+          'level_id': level.id,
+          'difficulty': level.difficulty.name,
+          'pieces': state.arrangement.length,
+        },
       );
       _startTimer();
     } catch (e) {
@@ -132,6 +141,7 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     if (current is! PuzzleLoaded || current.isSolved) return;
 
     final boardState = (arrangement: current.arrangement, rotations: current.rotations);
+    AnalyticsService().logEvent(AnalyticsService.hintUsed);
     
     // Find first cell that is not locked
     for (int i = 0; i < current.arrangement.length; i++) {
@@ -165,6 +175,15 @@ class PuzzleCubit extends Cubit<PuzzleState> {
 
     if (solved) {
       _timer?.cancel();
+      AnalyticsService().logEvent(
+        AnalyticsService.levelComplete,
+        parameters: {
+          'level_id': updated.level.id,
+          'stars': updated.stars,
+          'moves': updated.moves,
+          'time_seconds': updated.elapsedSeconds,
+        },
+      );
       _levels = await _levelService.completeLevel(
         _levels,
         updated.level.id,
