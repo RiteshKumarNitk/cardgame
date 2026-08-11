@@ -37,6 +37,22 @@ abstract final class AppColors {
 
   // Difficulty tiers (Level Selection).
   static const Color difficultyEasy = Color(0xFF81C784);
+
+  // Cosmetic catalog colors (board frames, piece styles, avatars).
+  static const Color frameGold = Color(0xFFD4AF37);
+  static const Color frameGoldGlow = Color(0xFFFFD700);
+  static const Color frameRoyal = Color(0xFF7B1FA2);
+  static const Color frameEmerald = Color(0xFF2E7D32);
+  static const Color frameMidnight = Color(0xFF1A237E);
+  static const Color frameRuby = Color(0xFFB71C1C);
+  static const Color pieceNeon = Color(0xFF00E5FF);
+  static const Color piecePastelBorder = Color(0xFFF06292);
+  static const Color piecePastel = Color(0xFFFCE4EC);
+  static const Color avatarBrown = Color(0xFF8D6E63);
+  static const Color avatarTeal = Color(0xFF00897B);
+  static const Color avatarPink = Color(0xFFEC407A);
+  static const Color avatarOrange = Color(0xFFFB8C00);
+  static const Color avatarLime = Color(0xFF9E9D24);
   static const Color difficultyMedium = Color(0xFF4FC3F7);
   static const Color difficultyHard = Color(0xFFFFB74D);
   static const Color difficultyExpert = Color(0xFFE57373);

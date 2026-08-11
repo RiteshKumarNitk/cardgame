@@ -64,12 +64,6 @@ class LevelsTopBar extends StatelessWidget {
                 iconColor: AppColors.accent,
               ),
             ),
-            const SizedBox(width: AppSpacing.sm + 2),
-            const StatChip(
-              icon: Icons.lightbulb_rounded,
-              value: '5',
-              iconColor: AppColors.success,
-            ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),

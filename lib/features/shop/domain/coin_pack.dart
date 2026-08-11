@@ -1,8 +1,9 @@
-/// A purchasable coin bundle. Prices are display-only labels — there's no
-/// real store/payment integration wired up (no App Store/Play Console
-/// product IDs exist for this project), so buying one just credits the
-/// wallet directly. Swap this out for real `in_app_purchase` products
-/// when the app is actually being published.
+/// A purchasable coin bundle. Purchases are handled by `PurchaseService`
+/// (RevenueCat): each pack maps to a store package whose identifier — or
+/// underlying product identifier — equals [CoinPack.id], e.g. a product
+/// `pack_small`. [priceLabel] is display-only; the real price comes from
+/// the store. When RevenueCat isn't configured (dev/web), the Shop page
+/// falls back to granting coins locally.
 class CoinPack {
   const CoinPack({
     required this.id,

@@ -141,8 +141,6 @@ class _CoinFlightWidgetState extends State<_CoinFlightWidget> with TickerProvide
             }
 
             final t = coin.controller.value;
-            // Easing
-            final curve = Curves.easeInOutCubic.transform(t);
 
             // Path: Start -> Explode (t: 0-0.3) -> End (t: 0.3-1.0)
             Offset currentPos;

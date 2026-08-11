@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/design_system/app_colors.dart';
@@ -10,6 +8,7 @@ import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../services/analytics_service.dart';
+import '../../../../services/purchase_service.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
@@ -36,11 +35,16 @@ class SettingsPage extends StatelessWidget {
     super.key,
     SettingsRepository? settingsRepository,
     LevelService? levelService,
+    PurchaseService? purchaseService,
   }) : _settingsRepository = settingsRepository,
-       _levelService = levelService;
+       _levelService = levelService,
+       _purchaseService = purchaseService;
 
   final SettingsRepository? _settingsRepository;
   final LevelService? _levelService;
+
+  /// Defaults to the real RevenueCat-backed service; tests inject fakes.
+  final PurchaseService? _purchaseService;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +53,7 @@ class SettingsPage extends StatelessWidget {
       levelService:
           _levelService ??
           LevelService(LevelsRepositoryImpl(HiveLevelsLocalDataSource())),
+      purchaseService: _purchaseService ?? RevenueCatPurchaseService(),
     );
     try {
       context.read<SettingsCubit>();
@@ -64,9 +69,13 @@ class SettingsPage extends StatelessWidget {
 }
 
 class _SettingsView extends StatelessWidget {
-  const _SettingsView({required this.levelService});
+  const _SettingsView({
+    required this.levelService,
+    required this.purchaseService,
+  });
 
   final LevelService levelService;
+  final PurchaseService purchaseService;
 
   @override
   Widget build(BuildContext context) {
@@ -254,49 +263,42 @@ class _SettingsView extends StatelessWidget {
     );
   }
 
-  /// Attempts Apple/Google's restore-purchases flow and mirrors any
-  /// restored "Remove Ads" entitlement into local state. Web/unsupported
-  /// platform and missing RevenueCat config degrade to a friendly message
+  /// Runs the platform restore-purchases flow through [PurchaseService]
+  /// and mirrors any restored "Remove Ads" entitlement into local state.
+  /// Unconfigured RevenueCat (dev/web) degrades to a friendly message
   /// instead of crashing.
   Future<void> _restorePurchases(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    if (kIsWeb) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Restore purchases is not available on web')),
-      );
-      return;
-    }
-    try {
-      final adsCubit = context.read<AdsCubit>();
-      final restored = await Purchases.restorePurchases();
-      final hasAdsEntitlement = restored.entitlements.active
-          .values
-          .any((e) => e.identifier == 'remove_ads' && e.isActive);
-      if (hasAdsEntitlement) {
-        adsCubit.purchaseRemoveAds();
-      }
-      AnalyticsService().logEvent(AnalyticsService.purchasesRestored);
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            hasAdsEntitlement
-                ? 'Purchases restored · Remove Ads active'
-                : 'No purchasable entitlements found to restore',
+    final result = await purchaseService.restorePurchases();
+    if (!context.mounted) return;
+
+    switch (result.outcome) {
+      case PurchaseOutcome.success:
+        if (result.restoredRemoveAds) {
+          context.read<AdsCubit>().purchaseRemoveAds();
+        }
+        AnalyticsService().logEvent(AnalyticsService.purchasesRestored);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              result.restoredRemoveAds
+                  ? 'Purchases restored · Remove Ads active'
+                  : 'No purchasable entitlements found to restore',
+            ),
           ),
-        ),
-      );
-    } catch (e) {
-      debugPrint('Restore purchases failed: $e');
-      await AnalyticsService().recordError(
-        e,
-        StackTrace.current,
-        reason: 'Restore purchases failed',
-      );
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Could not restore purchases — try again.')),
-      );
+        );
+      case PurchaseOutcome.cancelled:
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Restore was cancelled')),
+        );
+      case PurchaseOutcome.unavailable:
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Restore purchases is not available right now')),
+        );
+      case PurchaseOutcome.failed:
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Could not restore purchases — try again.')),
+        );
     }
   }
 

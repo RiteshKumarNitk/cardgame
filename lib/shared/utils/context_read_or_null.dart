@@ -12,4 +12,14 @@ extension BuildContextReadOrNull on BuildContext {
       return null;
     }
   }
+
+  /// Like `context.watch<T>()` but returns `null` when no provider of `T`
+  /// exists above this context — same fallback story as [readOrNull].
+  T? watchOrNull<T>() {
+    try {
+      return watch<T>();
+    } on ProviderNotFoundException {
+      return null;
+    }
+  }
 }

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../services/audio_service.dart';
-import '../../../../core/design_system/app_gradients.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_shadows.dart';
 import '../../../../core/design_system/app_spacing.dart';
@@ -13,7 +12,12 @@ import '../../../../core/design_system/color_utils.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/game_progress_manager.dart';
 import '../../../../game/wallet_cubit.dart';
+import '../../../../shared/utils/context_read_or_null.dart';
 import '../../../../shared/utils/number_format.dart';
+import '../../../cosmetics/domain/entities/cosmetic_items.dart';
+import '../../../cosmetics/domain/services/cosmetics_catalog.dart';
+import '../../../cosmetics/presentation/bloc/cosmetics_cubit.dart';
+import '../../../cosmetics/presentation/widgets/avatar_badge.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/banner_ad_widget.dart';
 import '../../../../shared/widgets/bounce_in.dart';
@@ -190,31 +194,9 @@ class _HomeTopBar extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            PressScale(
-              onTap: () {},
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppGradients.premiumButton,
-                  border: Border.all(color: AppColors.outline, width: 2.5),
-                  boxShadow: [
-                    const BoxShadow(
-                      color: AppColors.shadow,
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                    ...AppShadows.bevel(AppColors.premiumGradientEnd, depth: 3),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
-            ),
+            // The player's equipped avatar — tap it to open the avatar
+            // tab of the cosmetics shop.
+            _EquippedAvatar(),
             CircleIconButton(
               icon: Icons.settings_rounded,
               onTap: () => context.goNamed(RouteNames.settings),
@@ -237,14 +219,32 @@ class _HomeTopBar extends StatelessWidget {
             const Expanded(
               child: Center(child: AppLogo(size: 44, wordmark: true)),
             ),
-            const StatChip(
-              icon: Icons.lightbulb_rounded,
-              value: '5',
-              iconColor: AppColors.success,
-            ),
           ],
         ),
       ],
+    );
+  }
+}
+
+/// ────────────────────────────────────────────────────────────────────
+/// The equipped avatar badge. Reads the cosmetics loadout from the app
+/// root (falls back to the default avatar in standalone tests), and taps
+/// through to the avatar tab of the cosmetics shop.
+/// ────────────────────────────────────────────────────────────────────
+class _EquippedAvatar extends StatelessWidget {
+  const _EquippedAvatar();
+
+  @override
+  Widget build(BuildContext context) {
+    final cosmetics = context.watchOrNull<CosmeticsCubit>()?.state;
+    return AvatarBadge(
+      avatar: cosmetics == null
+          ? defaultAvatar
+          : CosmeticsCatalog.avatarById(cosmetics.equippedAvatar),
+      onTap: () => context.goNamed(
+        RouteNames.cosmeticsCategory,
+        pathParameters: {'category': 'avatar'},
+      ),
     );
   }
 }
@@ -430,42 +430,72 @@ class _AnimatedPiecesProgress extends StatelessWidget {
 class _QuickActionsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _QuickAction(
-          icon: Icons.card_giftcard_rounded,
-          label: 'Daily Challenge',
-          color: AppColors.accent,
-          onTap: () => context.goNamed(RouteNames.dailyPuzzle),
-        ),
-        _QuickAction(
-          icon: Icons.storefront_rounded,
-          label: 'Shop',
-          color: AppColors.secondary,
-          onTap: () => context.goNamed(RouteNames.shop),
-        ),
-        _QuickAction(
-          icon: Icons.photo_library_rounded,
-          label: 'Gallery',
-          color: AppColors.success,
-          onTap: () => context.goNamed(RouteNames.gallery),
-        ),
-        _QuickAction(
-          icon: Icons.emoji_events_rounded,
-          label: 'Achievements',
-          color: AppColors.premiumGradientEnd,
-          onTap: () => context.goNamed(RouteNames.achievements),
-        ),
-        _QuickAction(
-          icon: Icons.map_rounded,
-          label: 'Journey',
-          color: AppColors.primary,
-          onTap: () => context.goNamed(RouteNames.levels),
-        ),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          _QuickAction(
+            icon: Icons.card_giftcard_rounded,
+            label: 'Daily Challenge',
+            color: AppColors.accent,
+            onTap: _openDailyPuzzle,
+          ),
+          SizedBox(width: AppSpacing.sm),
+          _QuickAction(
+            icon: Icons.storefront_rounded,
+            label: 'Shop',
+            color: AppColors.secondary,
+            onTap: _openShop,
+          ),
+          SizedBox(width: AppSpacing.sm),
+          _QuickAction(
+            icon: Icons.photo_library_rounded,
+            label: 'Gallery',
+            color: AppColors.success,
+            onTap: _openGallery,
+          ),
+          SizedBox(width: AppSpacing.sm),
+          _QuickAction(
+            icon: Icons.emoji_events_rounded,
+            label: 'Achievements',
+            color: AppColors.premiumGradientEnd,
+            onTap: _openAchievements,
+          ),
+          SizedBox(width: AppSpacing.sm),
+          _QuickAction(
+            icon: Icons.map_rounded,
+            label: 'Journey',
+            color: AppColors.primary,
+            onTap: _openLevels,
+          ),
+          SizedBox(width: AppSpacing.sm),
+          // Photo Puzzles: the developer's real-photo section — a
+          // showcase of their own images, playable as puzzles.
+          _QuickAction(
+            icon: Icons.photo_camera_rounded,
+            label: 'Photos',
+            color: AppColors.warning,
+            onTap: _openPhotos,
+          ),
+        ],
+      ),
     );
   }
+
+  static void _openDailyPuzzle(BuildContext context) =>
+      context.goNamed(RouteNames.dailyPuzzle);
+  static void _openShop(BuildContext context) =>
+      context.goNamed(RouteNames.shop);
+  static void _openGallery(BuildContext context) =>
+      context.goNamed(RouteNames.gallery);
+  static void _openAchievements(BuildContext context) =>
+      context.goNamed(RouteNames.achievements);
+  static void _openLevels(BuildContext context) =>
+      context.goNamed(RouteNames.levels);
+  static void _openPhotos(BuildContext context) =>
+      context.goNamed(RouteNames.photoPuzzles);
 }
 
 class _QuickAction extends StatelessWidget {
@@ -479,12 +509,15 @@ class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  final VoidCallback onTap;
+
+  /// Receives the build context so const quick actions can navigate
+  /// without holding a BuildContext (see [_QuickActionsRow]).
+  final void Function(BuildContext context) onTap;
 
   @override
   Widget build(BuildContext context) {
     return PressScale(
-      onTap: onTap,
+      onTap: () => onTap(context),
       child: SizedBox(
         width: 60,
         child: Column(

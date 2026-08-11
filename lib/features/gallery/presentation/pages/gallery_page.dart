@@ -95,6 +95,21 @@ class _GalleryPageState extends State<GalleryPage> {
                           ),
                         ),
                       ),
+                    const SizedBox(width: AppSpacing.sm),
+                    // The Collections Showcase: one hero card per chapter
+                    // with its painted artwork and progress.
+                    CircleIconButton(
+                      icon: Icons.collections_bookmark_rounded,
+                      iconColor: AppColors.secondary,
+                      onTap: () => context.goNamed(RouteNames.collections),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    // Photo Puzzles: the developer's real-photo section.
+                    CircleIconButton(
+                      icon: Icons.photo_camera_rounded,
+                      iconColor: AppColors.warning,
+                      onTap: () => context.goNamed(RouteNames.photoPuzzles),
+                    ),
                   ],
                 ),
               ),

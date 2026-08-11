@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/achievements/presentation/pages/achievements_page.dart';
+import '../../features/collections/presentation/pages/collections_page.dart';
+import '../../features/cosmetics/presentation/pages/cosmetics_page.dart';
 import '../../features/daily_puzzle/presentation/pages/daily_puzzle_page.dart';
 import '../../features/daily_puzzle/presentation/pages/leaderboard_page.dart';
 import '../../features/gallery/presentation/pages/gallery_page.dart';
@@ -12,6 +14,8 @@ import '../../features/levels/presentation/pages/chapter_complete_page.dart';
 import '../../features/levels/presentation/pages/levels_page.dart';
 import '../../features/levels/presentation/pages/section_complete_page.dart';
 import '../../features/puzzle/presentation/pages/puzzle_page.dart';
+import '../../features/photos/presentation/pages/photo_puzzle_page.dart';
+import '../../features/photos/presentation/pages/photo_puzzles_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/privacy_policy_page.dart';
 import '../../features/shop/presentation/pages/shop_page.dart';
@@ -114,6 +118,46 @@ final GoRouter appRouter = GoRouter(
       path: RoutePaths.shop,
       name: RouteNames.shop,
       pageBuilder: (context, state) => _fadePage(state, const ShopPage()),
+    ),
+    GoRoute(
+      path: RoutePaths.cosmetics,
+      name: RouteNames.cosmetics,
+      pageBuilder: (context, state) => _fadePage(
+        state,
+        const CosmeticsPage(),
+      ),
+    ),
+    GoRoute(
+      path: RoutePaths.collections,
+      name: RouteNames.collections,
+      pageBuilder: (context, state) =>
+          _fadePage(state, const CollectionsPage()),
+    ),
+    GoRoute(
+      path: RoutePaths.photoPuzzles,
+      name: RouteNames.photoPuzzles,
+      pageBuilder: (context, state) =>
+          _fadePage(state, const PhotoPuzzlesPage()),
+    ),
+    GoRoute(
+      path: RoutePaths.photoPuzzle,
+      name: RouteNames.photoPuzzle,
+      pageBuilder: (context, state) => _fadePage(
+        state,
+        const PhotoPuzzlePage(),
+      ),
+    ),
+    GoRoute(
+      path: RoutePaths.cosmeticsCategory,
+      name: '${RouteNames.cosmetics}Category',
+      pageBuilder: (context, state) => _fadePage(
+        state,
+        CosmeticsPage(
+          initialCategory: CosmeticsCategory.fromRoute(
+            state.pathParameters['category'],
+          ),
+        ),
+      ),
     ),
   ],
 );

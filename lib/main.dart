@@ -11,6 +11,7 @@ import 'core/app/puzzle_cards_app.dart';
 import 'services/ad_service.dart';
 import 'services/analytics_service.dart';
 import 'services/hive_service.dart';
+import 'services/purchase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +52,11 @@ Future<void> main() async {
     } catch (e) {
       debugPrint("RevenueCat init failed: $e");
     }
+
+    // Mirror already-owned entitlements (reinstall, purchase on another
+    // device) into local state so the first ad placement respects them.
+    // No-op when RevenueCat was never configured.
+    await RevenueCatPurchaseService().syncEntitlements();
   }
 
   await AnalyticsService().logEvent(AnalyticsService.appLaunch);

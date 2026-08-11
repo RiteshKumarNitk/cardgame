@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_shadows.dart';
+import '../../../cosmetics/domain/entities/cosmetic_items.dart';
 import '../../domain/puzzle_board_size.dart';
 import 'puzzle_image_tile.dart';
 
@@ -28,6 +29,8 @@ class PuzzleBoard extends StatelessWidget {
     this.solvedProgress = 0.0,
     this.snapFraction = 0.18,
     this.borderFadeFraction = 0.5,
+    this.frame,
+    this.pieceStyle,
   });
 
   /// Resolved by the caller — from a chapter's board size
@@ -54,8 +57,16 @@ class PuzzleBoard extends StatelessWidget {
   /// Fraction of [solvedProgress] used for fading cell borders away.
   final double borderFadeFraction;
 
+  /// The equipped board frame, or `null` for the classic unstyled look.
+  final BoardFrame? frame;
+
+  /// The equipped piece style, or `null` for the classic seamless look.
+  final PieceStyle? pieceStyle;
+
   @override
   Widget build(BuildContext context) {
+    final gap = pieceStyle?.gap ?? 0;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         // The grid fills the entire available area: cells stretch to the
@@ -63,31 +74,53 @@ class PuzzleBoard extends StatelessWidget {
         // space around the board. These are the exact on-screen cell sizes
         // used to size the drag feedback so a dragged piece reads as the
         // same physical card moving, not a differently-sized copy.
-        final cellWidth = constraints.maxWidth / dimensions.cols;
-        final cellHeight = constraints.maxHeight / dimensions.rows;
+        //
+        // When a piece style leaves gaps between tiles, each cell shrinks
+        // by its share of the spacing so the board still fills the area
+        // exactly.
+        final cellWidth =
+            (constraints.maxWidth - gap * (dimensions.cols - 1)) /
+            dimensions.cols;
+        final cellHeight =
+            (constraints.maxHeight - gap * (dimensions.rows - 1)) /
+            dimensions.rows;
 
         return Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color:
+                frame?.backgroundColor ??
+                pieceStyle?.tileBackground ??
+                AppColors.card,
             border: solvedProgress < borderFadeFraction
-                ? Border.all(color: AppColors.border)
+                ? Border.all(
+                    color: frame?.borderColor ?? AppColors.border,
+                    width: frame?.borderWidth ?? 1,
+                  )
                 : null,
-            boxShadow: AppShadows.card,
+            boxShadow: [
+              ...AppShadows.card,
+              if (frame != null)
+                BoxShadow(
+                  color: frame!.glowColor.withValues(alpha: 0.35),
+                  blurRadius: 20,
+                  spreadRadius: 4,
+                ),
+            ],
           ),
           child: GridView.builder(
             padding: EdgeInsets.zero,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: dimensions.cols,
-              crossAxisSpacing: 0,
-              mainAxisSpacing: 0,
+              crossAxisSpacing: gap,
+              mainAxisSpacing: gap,
               childAspectRatio: cellWidth / cellHeight,
             ),
             itemCount: dimensions.pieceCount,
             itemBuilder: (context, cellIndex) {
               final pieceIndex = arrangement[cellIndex];
               final rotation = rotations[cellIndex];
-              
+
               return _BoardCell(
                 cellIndex: cellIndex,
                 pieceIndex: pieceIndex,
@@ -103,6 +136,7 @@ class PuzzleBoard extends StatelessWidget {
                 borderFadeFraction: borderFadeFraction,
                 cellWidth: cellWidth,
                 cellHeight: cellHeight,
+                pieceStyle: pieceStyle,
               );
             },
           ),
@@ -128,6 +162,7 @@ class _BoardCell extends StatefulWidget {
     this.solvedProgress = 0.0,
     this.snapFraction = 0.18,
     this.borderFadeFraction = 0.5,
+    this.pieceStyle,
   });
 
   final int cellIndex;
@@ -144,6 +179,7 @@ class _BoardCell extends StatefulWidget {
   final double solvedProgress;
   final double snapFraction;
   final double borderFadeFraction;
+  final PieceStyle? pieceStyle;
 
   @override
   State<_BoardCell> createState() => _BoardCellState();
@@ -226,6 +262,12 @@ class _BoardCellState extends State<_BoardCell>
     final col = (widget.pieceIndex - 1) % widget.gridCols;
     final solved = widget.solvedProgress;
     final isAnimatingSolved = solved > 0.0;
+    final style = widget.pieceStyle;
+
+    // Colors driven by the equipped piece style, falling back to the
+    // classic green/gray scheme when none is equipped.
+    final correctColor = style?.correctColor ?? AppColors.success;
+    final idleBorderColor = style?.borderColor ?? AppColors.border;
 
     // ── Phase 1: Snap pop (all pieces together) ──
     final snapLocal = (solved / widget.snapFraction).clamp(0.0, 1.0);
@@ -238,11 +280,11 @@ class _BoardCellState extends State<_BoardCell>
         ((solved - widget.snapFraction) / widget.borderFadeFraction).clamp(0.0, 1.0);
     final borderColor = isAnimatingSolved
         ? Color.lerp(
-            widget.correct ? AppColors.success : AppColors.border,
+            widget.correct ? correctColor : idleBorderColor,
             Colors.transparent,
             borderFadeLocal,
           )!
-        : (widget.correct ? AppColors.success : AppColors.border);
+        : (widget.correct ? correctColor : idleBorderColor);
     final borderWidth = isAnimatingSolved
         ? (widget.correct ? 2.0 : 0.5) * (1.0 - borderFadeLocal)
         : (widget.correct ? 2.0 : 0.5);
@@ -261,6 +303,11 @@ class _BoardCellState extends State<_BoardCell>
       opacity: tileOpacity.clamp(0.0, 1.0),
     );
 
+    // Rounded corners (from the piece style) are applied under the
+    // rotation so a rotated piece keeps its rounded shape.
+    final radius = BorderRadius.circular(style?.cornerRadius ?? 0);
+    final clippedContent = ClipRRect(borderRadius: radius, child: content);
+
     // Apply rotation and flip scale
     final rotatedContent = AnimatedBuilder(
       animation: _flipScale,
@@ -275,7 +322,7 @@ class _BoardCellState extends State<_BoardCell>
           ),
         );
       },
-      child: content,
+      child: clippedContent,
     );
 
     final decorated = AnimatedBuilder(
@@ -290,7 +337,7 @@ class _BoardCellState extends State<_BoardCell>
                 width: _shakeController.isAnimating ? 3.0 : borderWidth,
               ),
               boxShadow: widget.correct && !isAnimatingSolved
-                  ? AppShadows.glow(AppColors.success, opacity: 0.3)
+                  ? AppShadows.glow(correctColor, opacity: 0.3)
                   : (_shakeController.isAnimating ? AppShadows.glow(AppColors.danger, opacity: 0.5) : null),
             ),
             child: child,

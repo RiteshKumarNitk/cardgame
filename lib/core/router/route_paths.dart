@@ -17,6 +17,11 @@ abstract final class RoutePaths {
   static const String achievements = '/achievements';
   static const String shop = '/shop';
   static const String gallery = '/gallery';
+  static const String cosmetics = '/cosmetics';
+  static const String cosmeticsCategory = '/cosmetics/:category';
+  static const String collections = '/collections';
+  static const String photoPuzzles = '/photo-puzzles';
+  static const String photoPuzzle = '/photo-puzzle';
 
   static String puzzleWithId(String levelId) => '/puzzle/$levelId';
 }
@@ -36,4 +41,10 @@ abstract final class RouteNames {
   static const String achievements = 'achievements';
   static const String shop = 'shop';
   static const String gallery = 'gallery';
+  static const String cosmetics = 'cosmetics';
+  static const String cosmeticsCategory = 'cosmeticsCategory';
+  static const String collections = 'collections';
+  static const String photoPuzzles = 'photoPuzzles';
+  static const String photoPuzzle = 'photoPuzzle';
 }
+

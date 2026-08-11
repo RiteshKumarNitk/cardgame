@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../features/achievements/data/achievements_repository_impl.dart';
 import '../../features/achievements/presentation/bloc/achievements_cubit.dart';
 import '../../features/achievements/presentation/bloc/achievements_state.dart';
+import '../../features/cosmetics/data/cosmetics_repository_impl.dart';
+import '../../features/cosmetics/presentation/bloc/cosmetics_cubit.dart';
 import '../../features/settings/data/settings_repository_impl.dart';
 import '../../features/settings/domain/entities/app_settings.dart';
 import '../../features/settings/presentation/bloc/settings_cubit.dart';
@@ -32,15 +34,18 @@ class PuzzleCardsApp extends StatelessWidget {
     AdsCubit? adsCubit,
     SettingsCubit? settingsCubit,
     AchievementsCubit? achievementsCubit,
+    CosmeticsCubit? cosmeticsCubit,
   }) : _walletCubit = walletCubit,
        _adsCubit = adsCubit,
        _settingsCubit = settingsCubit,
-       _achievementsCubit = achievementsCubit;
+       _achievementsCubit = achievementsCubit,
+       _cosmeticsCubit = cosmeticsCubit;
 
   final WalletCubit? _walletCubit;
   final AdsCubit? _adsCubit;
   final SettingsCubit? _settingsCubit;
   final AchievementsCubit? _achievementsCubit;
+  final CosmeticsCubit? _cosmeticsCubit;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +65,11 @@ class PuzzleCardsApp extends StatelessWidget {
           create: (_) =>
               (_achievementsCubit ??
                   AchievementsCubit(HiveAchievementsRepository())..load()),
+        ),
+        BlocProvider<CosmeticsCubit>(
+          create: (_) =>
+              (_cosmeticsCubit ?? CosmeticsCubit(HiveCosmeticsRepository()))
+                ..load(),
         ),
       ],
       child: _AchievementRewardListener(

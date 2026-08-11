@@ -22,4 +22,13 @@ abstract final class AppConstants {
   static const String achievementsBoxName = 'achievements_box';
   static const String achievementsCountersKey = 'counters';
   static const String achievementsUnlockedKey = 'unlocked';
+  static const String photosBoxName = 'photos_box';
+  static const String photosBestStarsKey = 'bestStars';
+  static const String cosmeticsBoxName = 'cosmetics_box';
+  static const String cosmeticsOwnedFramesKey = 'ownedFrames';
+  static const String cosmeticsOwnedPieceStylesKey = 'ownedPieceStyles';
+  static const String cosmeticsOwnedAvatarsKey = 'ownedAvatars';
+  static const String cosmeticsEquippedFrameKey = 'equippedFrame';
+  static const String cosmeticsEquippedPieceStyleKey = 'equippedPieceStyle';
+  static const String cosmeticsEquippedAvatarKey = 'equippedAvatar';
 }

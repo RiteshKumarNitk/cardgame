@@ -3,16 +3,21 @@
 // requires confirmation before actually resetting level progress.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:puzzle_cards/core/theme/app_theme.dart';
+import 'package:puzzle_cards/game/ads_cubit.dart';
 import 'package:puzzle_cards/features/levels/domain/entities/level.dart';
 import 'package:puzzle_cards/features/levels/domain/repositories/levels_repository.dart';
 import 'package:puzzle_cards/features/levels/domain/services/level_service.dart';
 import 'package:puzzle_cards/features/settings/domain/entities/app_settings.dart';
 import 'package:puzzle_cards/features/settings/domain/repositories/settings_repository.dart';
 import 'package:puzzle_cards/features/settings/presentation/pages/settings_page.dart';
+
+import '../../helpers/fake_ads_service.dart';
+import '../../helpers/fake_purchase_service.dart';
 
 class _FakeSettingsRepository implements SettingsRepository {
   AppSettings stored = const AppSettings();
@@ -96,6 +101,77 @@ void main() {
     expect(tester.widget<Switch>(soundSwitch).value, isFalse);
     expect(settingsRepository.stored.soundEnabled, isFalse);
   });
+
+  testWidgets(
+    'restore purchases applies the restored Remove Ads entitlement',
+    (tester) async {
+      final adsCubit = AdsCubit(FakeAdsService());
+      final purchaseService = FakePurchaseService(restoredRemoveAds: true);
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [BlocProvider<AdsCubit>(create: (_) => adsCubit)],
+          child: MaterialApp(
+            theme: AppTheme.game,
+            home: SettingsPage(
+              settingsRepository: _FakeSettingsRepository(),
+              levelService: LevelService(_FakeLevelsRepository()),
+              purchaseService: purchaseService,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('Restore Purchases'));
+      await tester.pump();
+      await tester.tap(find.text('Restore Purchases'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(purchaseService.restoreCalled, isTrue);
+      expect(adsCubit.state, isTrue);
+      expect(find.text('Purchases restored · Remove Ads active'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'restore purchases with no entitlements does not change ads state',
+    (tester) async {
+      final adsCubit = AdsCubit(FakeAdsService());
+      final purchaseService = FakePurchaseService(restoredRemoveAds: false);
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [BlocProvider<AdsCubit>(create: (_) => adsCubit)],
+          child: MaterialApp(
+            theme: AppTheme.game,
+            home: SettingsPage(
+              settingsRepository: _FakeSettingsRepository(),
+              levelService: LevelService(_FakeLevelsRepository()),
+              purchaseService: purchaseService,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('Restore Purchases'));
+      await tester.pump();
+      await tester.tap(find.text('Restore Purchases'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(purchaseService.restoreCalled, isTrue);
+      expect(adsCubit.state, isFalse);
+      expect(
+        find.text('No purchasable entitlements found to restore'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
     'reset progress requires confirmation, then resets level progress',

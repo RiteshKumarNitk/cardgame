@@ -104,6 +104,7 @@ flutter:
     - assets/audio/sfx/
     - assets/audio/music/
     - assets/images/collections/
+    - assets/images/photos/
 
   fonts:
     - family: Baloo2

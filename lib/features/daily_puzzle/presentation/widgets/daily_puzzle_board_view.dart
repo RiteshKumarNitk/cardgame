@@ -4,7 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../game/wallet_cubit.dart';
+import '../../../../shared/utils/context_read_or_null.dart';
 import '../../../../shared/widgets/bounce_in.dart';
+import '../../../cosmetics/domain/services/cosmetics_catalog.dart';
+import '../../../cosmetics/presentation/bloc/cosmetics_cubit.dart';
 import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
 import '../../../puzzle/domain/puzzle_board_size.dart';
@@ -20,6 +23,14 @@ class DailyPuzzleBoardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cosmetics = context.watchOrNull<CosmeticsCubit>()?.state;
+    final frame = cosmetics == null
+        ? null
+        : CosmeticsCatalog.frameById(cosmetics.equippedFrame);
+    final pieceStyle = cosmetics == null
+        ? null
+        : CosmeticsCatalog.pieceStyleById(cosmetics.equippedPieceStyle);
+
     return Column(
       children: [
         PuzzlePreviewThumbnail(imageUrl: state.imageUrl),
@@ -32,6 +43,8 @@ class DailyPuzzleBoardView extends StatelessWidget {
                 imageUrl: state.imageUrl,
                 arrangement: state.arrangement,
                 rotations: state.rotations,
+                frame: frame,
+                pieceStyle: pieceStyle,
                 onSwap: (fromCell, toCell) => context
                     .read<DailyChallengeCubit>()
                     .swapPieces(fromCell, toCell),

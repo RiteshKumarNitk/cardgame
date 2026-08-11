@@ -121,4 +121,7 @@ class AnalyticsService {
 
   static const String achievementRewarded = 'achievement_rewarded';
   static const String authSignedIn = 'auth_signed_in';
+
+  static const String cosmeticPurchased = 'cosmetic_purchased';
+  static const String cosmeticEquipped = 'cosmetic_equipped';
 }

@@ -23,6 +23,8 @@ import '../../../../shared/widgets/bounce_in.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/difficulty_badge.dart';
 import '../../../achievements/presentation/bloc/achievements_cubit.dart';
+import '../../../cosmetics/domain/services/cosmetics_catalog.dart';
+import '../../../cosmetics/presentation/bloc/cosmetics_cubit.dart';
 import '../../../levels/data/datasources/levels_local_datasource.dart';
 import '../../../levels/data/repositories/levels_repository_impl.dart';
 import '../../../levels/domain/services/level_service.dart';
@@ -261,6 +263,16 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
     final imageUrl = puzzleImageUrlFor(state.level.id);
     final solvedProgress = _solvedController.value;
 
+    // Equipped cosmetics from the app root (null in standalone tests,
+    // which keeps the classic look). Rebuilds when the loadout changes.
+    final cosmetics = context.watchOrNull<CosmeticsCubit>()?.state;
+    final frame = cosmetics == null
+        ? null
+        : CosmeticsCatalog.frameById(cosmetics.equippedFrame);
+    final pieceStyle = cosmetics == null
+        ? null
+        : CosmeticsCatalog.pieceStyleById(cosmetics.equippedPieceStyle);
+
     final content = Column(
       children: [
         const SizedBox(height: AppSpacing.xs),
@@ -292,6 +304,8 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
                 solvedProgress: solvedProgress,
                 snapFraction: _snapFraction,
                 borderFadeFraction: _borderFadeFraction,
+                frame: frame,
+                pieceStyle: pieceStyle,
                 onSwap: (fromCell, toCell) => context
                     .read<PuzzleCubit>()
                     .swapPieces(fromCell, toCell),
