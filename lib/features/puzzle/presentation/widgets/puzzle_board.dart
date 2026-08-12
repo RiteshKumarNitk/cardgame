@@ -354,33 +354,48 @@ class _BoardCellState extends State<_BoardCell>
 
     final popped = ScaleTransition(scale: _pop, child: animated);
 
-    // When solved animation is playing, disable all interactions
-    if (isAnimatingSolved) return _withSemantics(popped);
-
-    // If correct, it's locked. Tapping or dragging causes error shake.
-    if (widget.correct) {
-      return _withSemantics(
-        GestureDetector(
-          onTap: _triggerErrorShake,
-          onPanDown: (_) => _triggerErrorShake,
-          child: popped,
-        ),
+    // Wrap the whole piece in the deal-in entrance so it cascades onto
+    // the board on every (re)shuffle. The feedback copy is built from
+    // [decorated] directly, so the lifted piece is never double-animated.
+    final Widget tree;
+    if (isAnimatingSolved) {
+      // When solved animation is playing, disable all interactions.
+      tree = popped;
+    } else if (widget.correct) {
+      // If correct, it's locked. Tapping or dragging causes error shake.
+      tree = GestureDetector(
+        onTap: _triggerErrorShake,
+        onPanDown: (_) => _triggerErrorShake,
+        child: popped,
       );
-    }
-
-    return _withSemantics(
-      DragTarget<int>(
+    } else {
+      tree = DragTarget<int>(
         onWillAcceptWithDetails: (details) => details.data != widget.cellIndex,
         onAcceptWithDetails: (details) =>
             widget.onSwap(details.data, widget.cellIndex),
         builder: (context, candidateData, rejectedData) {
           final hovering = candidateData.isNotEmpty;
+          // Drop-target ghost: a soft primary tint + glow ring where the
+          // dragged piece would land.
           final hoverRing = hovering
               ? Container(
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.primary, width: 2),
+                    borderRadius: BorderRadius.circular(style?.cornerRadius ?? 0),
+                    border: Border.all(color: AppColors.primary, width: 2.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.35),
+                        blurRadius: 14,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
-                  child: popped,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                    ),
+                    child: popped,
+                  ),
                 )
               : popped;
 
@@ -388,12 +403,31 @@ class _BoardCellState extends State<_BoardCell>
             onTap: () => widget.onRotate(widget.cellIndex),
             child: Draggable<int>(
               data: widget.cellIndex,
+              // The lifted piece: scaled up ~8% with a soft drop shadow so
+              // it reads as physically picked up, not a same-size copy.
               feedback: SizedBox(
                 width: widget.cellWidth,
                 height: widget.cellHeight,
                 child: Material(
                   color: Colors.transparent,
-                  child: decorated,
+                  child: Transform.scale(
+                    scale: 1.08,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(
+                          (style?.cornerRadius ?? 0) * 1.08,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x59000000),
+                            blurRadius: 18,
+                            offset: Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: decorated,
+                    ),
+                  ),
                 ),
               ),
               childWhenDragging: Opacity(
@@ -404,6 +438,13 @@ class _BoardCellState extends State<_BoardCell>
             ),
           );
         },
+      );
+    }
+
+    return _withSemantics(
+      _DealIn(
+        delay: Duration(milliseconds: widget.cellIndex * 30),
+        child: tree,
       ),
     );
   }
@@ -420,6 +461,66 @@ class _BoardCellState extends State<_BoardCell>
           : 'Drag this piece onto another piece to swap them, or tap to rotate it',
       container: true,
       child: child,
+    );
+  }
+}
+
+/// Plays once per shuffle: the cell scales + fades in with a stagger based
+/// on [delay] (derived from the cell's board position), so pieces appear to
+/// cascade onto the board instead of snapping in. The delay is an
+/// [Interval] on the controller — no timers — so widget tests never see a
+/// leaked pending timer. Replays when the parent remounts the board (the
+/// page keys the board by the shuffle generation).
+class _DealIn extends StatefulWidget {
+  const _DealIn({required this.delay, required this.child});
+
+  final Duration delay;
+  final Widget child;
+
+  @override
+  State<_DealIn> createState() => _DealInState();
+}
+
+class _DealInState extends State<_DealIn>
+    with SingleTickerProviderStateMixin {
+  static const Duration _duration = Duration(milliseconds: 420);
+
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    final total = _duration + widget.delay;
+    _controller =
+        AnimationController(vsync: this, duration: total)..forward();
+    final start = widget.delay.inMilliseconds / total.inMilliseconds;
+    _scale = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(start, 1.0, curve: Curves.easeOutBack),
+      ),
+    );
+    _opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(start, 1.0, curve: Curves.easeOut),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: ScaleTransition(scale: _scale, child: widget.child),
     );
   }
 }

@@ -22,6 +22,7 @@ abstract final class RoutePaths {
   static const String collections = '/collections';
   static const String photoPuzzles = '/photo-puzzles';
   static const String photoPuzzle = '/photo-puzzle';
+  static const String profile = '/profile';
 
   static String puzzleWithId(String levelId) => '/puzzle/$levelId';
 }
@@ -46,5 +47,6 @@ abstract final class RouteNames {
   static const String collections = 'collections';
   static const String photoPuzzles = 'photoPuzzles';
   static const String photoPuzzle = 'photoPuzzle';
+  static const String profile = 'profile';
 }
 

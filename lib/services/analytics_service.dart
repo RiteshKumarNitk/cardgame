@@ -115,6 +115,9 @@ class AnalyticsService {
   static const String rewardedAdShown = 'rewarded_ad_shown';
   static const String rewardedAdWatched = 'rewarded_ad_watched';
 
+  static const String interstitialShown = 'interstitial_shown';
+  static const String puzzleShared = 'puzzle_shared';
+
   static const String removeAdsPurchased = 'remove_ads_purchased';
   static const String coinPackPurchased = 'coin_pack_purchased';
   static const String purchasesRestored = 'purchases_restored';
@@ -124,4 +127,6 @@ class AnalyticsService {
 
   static const String cosmeticPurchased = 'cosmetic_purchased';
   static const String cosmeticEquipped = 'cosmetic_equipped';
+
+  static const String profileUpdated = 'profile_updated';
 }

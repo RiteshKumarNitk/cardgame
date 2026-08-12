@@ -73,7 +73,7 @@ class LeaderboardPage extends StatelessWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Player ${entry.uid.substring(0, 5)}',
+                                        entry.displayName,
                                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                               color: isFirst ? Colors.white : AppColors.textDark,
                                             ),

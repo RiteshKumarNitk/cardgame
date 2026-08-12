@@ -295,6 +295,17 @@ class _LoadedPhotoPuzzle extends StatelessWidget {
                   value: '${state.moves}',
                   iconColor: AppColors.primary,
                 ),
+                // Star target: how many moves away from a perfect solve.
+                if (!state.isSolved &&
+                    state.minimalSwaps + 1 - state.moves > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: AppSpacing.xs),
+                    child: StatChip(
+                      icon: Icons.star_rounded,
+                      value: '3★ in ${state.minimalSwaps + 1 - state.moves}',
+                      iconColor: AppColors.accent,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -306,6 +317,9 @@ class _LoadedPhotoPuzzle extends StatelessWidget {
           child: Stack(
             children: [
               PuzzleBoard(
+                // Remounts on every (re)shuffle so the deal-in entrance
+                // animation replays.
+                key: ValueKey(state.shuffleGeneration),
                 dimensions: boardDimensionsFor(LevelDifficulty.medium),
                 imageUrl: state.photo.image,
                 arrangement: state.arrangement,

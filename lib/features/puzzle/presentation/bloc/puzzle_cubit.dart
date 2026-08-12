@@ -38,6 +38,19 @@ class PuzzleCubit extends Cubit<PuzzleState> {
   /// exact same board (the base seed is the level id).
   int _restartCount = 0;
 
+  /// Increments on every (re)shuffle — the board key the UI uses to
+  /// replay the deal-in entrance animation.
+  int _shuffleGeneration = 0;
+
+  /// Consecutive moves that locked no piece. Reaching [_stallThreshold]
+  /// makes the UI offer a free pity shuffle.
+  int _stalledStreak = 0;
+  static const int _stallThreshold = 6;
+
+  /// True after [_stallThreshold] consecutive no-progress moves — the UI
+  /// offers a free shuffle to unstick the player.
+  bool get _stuckShuffleReady => _stalledStreak >= _stallThreshold;
+
   Future<void> loadLevel(int levelId) async {
     emit(const PuzzleLoading());
     try {
@@ -57,12 +70,15 @@ class PuzzleCubit extends Cubit<PuzzleState> {
         seed: level.id + _restartCount,
         withRotation: withRotation,
       );
+      _shuffleGeneration += 1;
+      _stalledStreak = 0;
       emit(
         PuzzleLoaded(
           level: level,
           arrangement: state.arrangement,
           rotations: state.rotations,
           minimalSwaps: TileSwapEngine.minimalSwaps(state.arrangement),
+          shuffleGeneration: _shuffleGeneration,
         ),
       );
       AnalyticsService().logEvent(
@@ -84,6 +100,16 @@ class PuzzleCubit extends Cubit<PuzzleState> {
   Future<void> restart() async {
     final current = state;
     if (current is! PuzzleLoaded) return;
+    _restartCount += 1;
+    await loadLevel(current.level.id);
+  }
+
+  /// Free "pity shuffle": re-shuffles the current level after the player
+  /// has been stuck (no progress for [_stallThreshold] moves). The timer
+  /// restarts with the fresh board.
+  Future<void> shuffleBoard() async {
+    final current = state;
+    if (current is! PuzzleLoaded || current.isSolved) return;
     _restartCount += 1;
     await loadLevel(current.level.id);
   }
@@ -194,12 +220,15 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     }
 
     final solved = TileSwapEngine.isSolved(newState);
+    final madeProgress = lockedAfter > lockedBefore;
+    _stalledStreak = madeProgress ? 0 : _stalledStreak + 1;
     final updated = current.copyWith(
       arrangement: newState.arrangement,
       rotations: newState.rotations,
       moves: current.moves + movesDelta,
       isSolved: solved,
       currentCombo: newCombo,
+      stuckShuffleReady: !solved && _stuckShuffleReady,
     );
     emit(updated);
 

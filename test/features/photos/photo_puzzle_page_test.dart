@@ -97,6 +97,8 @@ void main() {
     expect(find.text('Beach'), findsOneWidget);
     expect(find.text('0'), findsWidgets); // timer and moves chips
     expect(find.byType(PuzzleImageTile), findsNWidgets(20));
+    // Live star-target countdown (moves 0, minimalSwaps > 0).
+    expect(find.textContaining('3★ in'), findsOneWidget);
 
     // Unmount then close the cubit so its 1s timer doesn't leak.
     await tester.pumpWidget(const SizedBox.shrink());

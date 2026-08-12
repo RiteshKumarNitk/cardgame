@@ -24,6 +24,8 @@ abstract final class AppConstants {
   static const String achievementsUnlockedKey = 'unlocked';
   static const String photosBoxName = 'photos_box';
   static const String photosBestStarsKey = 'bestStars';
+  static const String profileBoxName = 'profile_box';
+  static const String profileNameKey = 'name';
   static const String cosmeticsBoxName = 'cosmetics_box';
   static const String cosmeticsOwnedFramesKey = 'ownedFrames';
   static const String cosmeticsOwnedPieceStylesKey = 'ownedPieceStyles';

@@ -3,16 +3,30 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
+import '../features/profile/domain/profile_service.dart';
+
 class LeaderboardEntry {
   final String uid;
+  final String? name;
   final int score;
   final DateTime timestamp;
 
-  LeaderboardEntry({required this.uid, required this.score, required this.timestamp});
+  LeaderboardEntry({
+    required this.uid,
+    this.name,
+    required this.score,
+    required this.timestamp,
+  });
+
+  /// What the leaderboard row shows — the player's profile name when set,
+  /// otherwise a short uid-derived placeholder.
+  String get displayName =>
+      (name?.isNotEmpty ?? false) ? name! : 'Player ${uid.substring(0, 5)}';
 
   factory LeaderboardEntry.fromMap(Map<String, dynamic> data) {
     return LeaderboardEntry(
       uid: data['uid'] ?? 'Anonymous',
+      name: data['name'] as String?,
       score: data['score'] ?? 0,
       timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -50,6 +64,9 @@ class LeaderboardService {
       final docRef = firestore.collection('leaderboard').doc(user.uid);
       final doc = await docRef.get();
 
+      // The player's display name rides along so the leaderboard can show
+      // a real name instead of a raw uid.
+      final profileName = _currentProfileName();
       if (doc.exists) {
         final currentBest = doc.data()?['score'] ?? 0;
         // Keep the highest score (most time remaining)
@@ -57,6 +74,7 @@ class LeaderboardService {
           await docRef.update({
             'score': timeRemaining,
             'timestamp': FieldValue.serverTimestamp(),
+            if (profileName.isNotEmpty) 'name': profileName,
           });
         }
       } else {
@@ -64,10 +82,21 @@ class LeaderboardService {
           'uid': user.uid,
           'score': timeRemaining,
           'timestamp': FieldValue.serverTimestamp(),
+          if (profileName.isNotEmpty) 'name': profileName,
         });
       }
     } catch (e) {
       debugPrint("Leaderboard Submit Error: $e");
+    }
+  }
+
+  /// Reads the player's profile name from local storage. Safe no-op when
+  /// Hive isn't initialized (e.g. tests without Firebase).
+  static String _currentProfileName() {
+    try {
+      return HiveProfileService().name;
+    } catch (_) {
+      return '';
     }
   }
 

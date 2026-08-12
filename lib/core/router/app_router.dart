@@ -16,6 +16,7 @@ import '../../features/levels/presentation/pages/section_complete_page.dart';
 import '../../features/puzzle/presentation/pages/puzzle_page.dart';
 import '../../features/photos/presentation/pages/photo_puzzle_page.dart';
 import '../../features/photos/presentation/pages/photo_puzzles_page.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/settings/presentation/pages/privacy_policy_page.dart';
 import '../../features/shop/presentation/pages/shop_page.dart';
@@ -146,6 +147,11 @@ final GoRouter appRouter = GoRouter(
         state,
         const PhotoPuzzlePage(),
       ),
+    ),
+    GoRoute(
+      path: RoutePaths.profile,
+      name: RouteNames.profile,
+      pageBuilder: (context, state) => _fadePage(state, const ProfilePage()),
     ),
     GoRoute(
       path: RoutePaths.cosmeticsCategory,

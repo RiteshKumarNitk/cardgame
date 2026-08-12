@@ -241,10 +241,9 @@ class _EquippedAvatar extends StatelessWidget {
       avatar: cosmetics == null
           ? defaultAvatar
           : CosmeticsCatalog.avatarById(cosmetics.equippedAvatar),
-      onTap: () => context.goNamed(
-        RouteNames.cosmeticsCategory,
-        pathParameters: {'category': 'avatar'},
-      ),
+      // Tapping the avatar opens the Profile (name + stats); avatar
+      // customization is one tap further, from there.
+      onTap: () => context.goNamed(RouteNames.profile),
     );
   }
 }

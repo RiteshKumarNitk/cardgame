@@ -53,6 +53,7 @@ void main() {
     await Hive.openBox(AppConstants.achievementsBoxName);
     await Hive.openBox(AppConstants.cosmeticsBoxName);
     await Hive.openBox(AppConstants.photosBoxName);
+    await Hive.openBox(AppConstants.profileBoxName);
   });
 
   tearDownAll(() {

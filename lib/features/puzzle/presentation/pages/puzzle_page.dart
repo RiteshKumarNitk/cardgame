@@ -53,16 +53,29 @@ class PuzzlePage extends StatelessWidget {
     super.key,
     required this.levelId,
     LevelService? levelService,
+    this.cubit,
   }) : _levelService = levelService;
 
   final String levelId;
   final LevelService? _levelService;
 
+  /// A pre-built cubit (tests). When provided, the page does not create
+  /// or dispose it — the caller owns its lifecycle.
+  final PuzzleCubit? cubit;
+
   @override
   Widget build(BuildContext context) {
     final parsedId = int.tryParse(levelId);
+    final injected = cubit;
 
-    return BlocProvider(
+    if (injected != null) {
+      // .value does not close the cubit — the caller owns its lifecycle.
+      return BlocProvider<PuzzleCubit>.value(
+        value: injected,
+        child: _PuzzleView(levelIdIsValid: parsedId != null),
+      );
+    }
+    return BlocProvider<PuzzleCubit>(
       create: (context) {
         final cubit = PuzzleCubit(
           _levelService ??
@@ -297,6 +310,9 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
           child: Stack(
             children: [
               PuzzleBoard(
+                // Remounts on every (re)shuffle so the deal-in entrance
+                // animation replays instead of only playing once.
+                key: ValueKey(state.shuffleGeneration),
                 dimensions: boardDimensionsForLevel(state.level.id),
                 imageUrl: imageUrl,
                 arrangement: state.arrangement,
@@ -358,6 +374,25 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
                   ),
                 ),
               ),
+
+              // Stuck pity-shuffle prompt: appears after several
+              // no-progress moves and re-shuffles the board for free.
+              if (state.stuckShuffleReady && !state.isSolved)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 24,
+                  child: Center(
+                    child: GameButton(
+                      label: 'Stuck? Free Shuffle',
+                      icon: Icons.shuffle_rounded,
+                      height: 48,
+                      width: 230,
+                      onTap: () =>
+                          context.read<PuzzleCubit>().shuffleBoard(),
+                    ),
+                  ),
+                ),
 
               // Solved celebration overlay
               if (state.isSolved) ...[
@@ -630,6 +665,16 @@ class _PuzzleTopBar extends StatelessWidget {
               iconColor: AppColors.primary,
             ),
           ),
+          // Star target: how many moves away from a perfect (3-star) solve.
+          if (!level.isSolved && level.minimalSwaps + 1 - level.moves > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.sm),
+              child: StatChip(
+                icon: Icons.star_rounded,
+                value: '3★ in ${level.minimalSwaps + 1 - level.moves}',
+                iconColor: AppColors.accent,
+              ),
+            ),
           // Hint Button
           BlocBuilder<WalletCubit, int>(
             builder: (context, coins) => Padding(

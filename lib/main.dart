@@ -31,6 +31,7 @@ Future<void> main() async {
     // Initialize Ads
     await MobileAds.instance.initialize();
     AdService().loadRewardedAd();
+    AdService().loadInterstitial();
 
     // Initialize RevenueCat. Production keys are injected at build time
     // with --dart-define (see AppConstants.revenueCatAndroidKey etc.);

@@ -15,6 +15,7 @@ import 'package:puzzle_cards/features/levels/domain/repositories/levels_reposito
 import 'package:puzzle_cards/features/levels/domain/services/chapter_catalog.dart';
 import 'package:puzzle_cards/features/levels/domain/services/demo_levels_generator.dart';
 import 'package:puzzle_cards/features/levels/domain/services/level_service.dart';
+import 'package:puzzle_cards/features/puzzle/domain/tile_swap_engine.dart';
 import 'package:puzzle_cards/features/puzzle/presentation/bloc/puzzle_cubit.dart';
 import 'package:puzzle_cards/features/puzzle/presentation/bloc/puzzle_state.dart';
 
@@ -33,6 +34,33 @@ class _FakeLevelsRepository implements LevelsRepository {
   Future<void> saveLevels(List<Level> levels) async {
     stored = List.of(levels);
   }
+}
+
+/// Performs one swap that locks no new cell (a "stall"), or fails the
+/// test if no such swap exists. Used to drive the stuck-shuffle mechanic.
+Future<void> _stallOnce(PuzzleCubit cubit) async {
+  final state = cubit.state as PuzzleLoaded;
+  final n = state.arrangement.length;
+  BoardState board = (arrangement: state.arrangement, rotations: state.rotations);
+  final lockedBefore = List.generate(n, (k) => k)
+      .where((k) => TileSwapEngine.isCellLocked(board, k))
+      .length;
+
+  for (var i = 0; i < n; i++) {
+    if (TileSwapEngine.isCellLocked(board, i)) continue;
+    for (var j = i + 1; j < n; j++) {
+      if (TileSwapEngine.isCellLocked(board, j)) continue;
+      final swapped = TileSwapEngine.swap(board, i, j);
+      final lockedAfter = List.generate(n, (k) => k)
+          .where((k) => TileSwapEngine.isCellLocked(swapped, k))
+          .length;
+      if (lockedAfter == lockedBefore) {
+        await cubit.swapPieces(i, j);
+        return;
+      }
+    }
+  }
+  fail('no stalling swap found on this board');
 }
 
 /// Solves the board by walking its permutation cycles — repeatedly finds
@@ -198,5 +226,65 @@ void main() {
       isNot(equals(before)),
       reason: 'a restart re-shuffles instead of restoring the old board',
     );
+  });
+
+  test('every shuffle bumps shuffleGeneration (drives the deal-in replay)', () async {
+    await cubit.loadLevel(1);
+    expect((cubit.state as PuzzleLoaded).shuffleGeneration, 1);
+
+    await cubit.restart();
+    expect((cubit.state as PuzzleLoaded).shuffleGeneration, 2);
+
+    await cubit.shuffleBoard();
+    expect((cubit.state as PuzzleLoaded).shuffleGeneration, 3);
+  });
+
+  test('six no-progress moves offer the pity shuffle, which reshuffles free', () async {
+    await cubit.loadLevel(1);
+
+    for (var i = 0; i < 6; i++) {
+      expect(
+        (cubit.state as PuzzleLoaded).stuckShuffleReady,
+        isFalse,
+        reason: 'not stuck until the threshold is crossed (move ${i + 1})',
+      );
+      await _stallOnce(cubit);
+    }
+
+    final stuck = cubit.state as PuzzleLoaded;
+    expect(stuck.stuckShuffleReady, isTrue);
+    expect(stuck.moves, 6);
+
+    await cubit.shuffleBoard();
+
+    final after = cubit.state as PuzzleLoaded;
+    expect(after.stuckShuffleReady, isFalse);
+    expect(after.moves, 0, reason: 'the free shuffle starts a fresh attempt');
+    expect(after.shuffleGeneration, 2);
+  });
+
+  test('a locking (progress) move resets the stuck streak', () async {
+    await cubit.loadLevel(1);
+
+    // Stall twice, then make a progress move (swap piece 1 into its home).
+    await _stallOnce(cubit);
+    await _stallOnce(cubit);
+    var state = cubit.state as PuzzleLoaded;
+    final pieceOneCell = state.arrangement.indexOf(1);
+    if (pieceOneCell != 0) {
+      await cubit.swapPieces(0, pieceOneCell);
+    }
+    state = cubit.state as PuzzleLoaded;
+    expect(state.arrangement[0], 1, reason: 'cell 0 locked by the swap');
+
+    // Five more stalls must NOT trip the threshold (streak was reset).
+    for (var i = 0; i < 5; i++) {
+      await _stallOnce(cubit);
+      expect(
+        (cubit.state as PuzzleLoaded).stuckShuffleReady,
+        isFalse,
+        reason: 'streak restarts after a locking move',
+      );
+    }
   });
 }

@@ -1,12 +1,22 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../services/audio_service.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
+import '../../../../game/ads_cubit.dart';
+import '../../../../services/ad_service.dart';
+import '../../../../services/analytics_service.dart';
+import '../../../../shared/utils/context_read_or_null.dart';
 import '../../../../shared/utils/duration_format.dart';
 import '../../../../shared/widgets/bounce_in.dart';
 import '../../../../shared/widgets/circle_icon_button.dart';
@@ -57,6 +67,10 @@ class _VictoryPageState extends State<VictoryPage>
   late final Animation<double> _imageGlow;
   late final Animation<double> _contentSlide;
   late final Animation<double> _flashOpacity;
+
+  /// Captures the result card (image + header + stars + stats + coins)
+  /// so the player can share it as an image.
+  final GlobalKey _shareKey = GlobalKey();
 
   bool _showCelebration = false;
   bool? _reduceMotion;
@@ -127,6 +141,38 @@ class _VictoryPageState extends State<VictoryPage>
 
   Duration get _celebrationDelay => const Duration(milliseconds: 1600);
 
+  /// Renders the visible result card to a PNG and opens the system share
+  /// sheet. Failures (no share target, unsupported platform) degrade to a
+  /// snackbar — sharing must never interrupt the victory moment.
+  Future<void> _shareResult(BuildContext context) async {
+    final boundary =
+        _shareKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null) return;
+    try {
+      final image = await boundary.toImage(pixelRatio: 2);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) return;
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/puzzle_cards_result.png');
+      await file.writeAsBytes(bytes.buffer.asUint8List());
+      final title = widget.result?.level.title ?? 'a puzzle';
+      await SharePlus.instance.share(
+        ShareParams(
+          text: 'I solved a $title puzzle on Puzzle Cards! 🧩',
+          files: [XFile(file.path)],
+        ),
+      );
+      AnalyticsService().logEvent(AnalyticsService.puzzleShared);
+    } catch (e) {
+      debugPrint('Share failed: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't share — try again later")),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final result = widget.result;
@@ -196,6 +242,7 @@ class _VictoryPageState extends State<VictoryPage>
                             imageGlow: _imageGlow.value,
                             contentSlide: _contentSlide.value,
                             celebrationDelay: _celebrationDelay,
+                            shareKey: _shareKey,
                           );
                         },
                       ),
@@ -215,6 +262,22 @@ class _VictoryPageState extends State<VictoryPage>
                   ),
                 ),
               ),
+
+              // Top-right share — captures the result card as an image.
+              if (result != null)
+                SafeArea(
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: CircleIconButton(
+                        icon: Icons.share_rounded,
+                        iconColor: AppColors.secondary,
+                        onTap: () => _shareResult(context),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -230,6 +293,7 @@ class _VictoryContent extends StatelessWidget {
     required this.imageGlow,
     required this.contentSlide,
     required this.celebrationDelay,
+    required this.shareKey,
   });
 
   final VictoryResult result;
@@ -237,6 +301,9 @@ class _VictoryContent extends StatelessWidget {
   final double imageGlow;
   final double contentSlide;
   final Duration celebrationDelay;
+
+  /// Captures the shareable result card (everything above the buttons).
+  final GlobalKey shareKey;
 
   @override
   Widget build(BuildContext context) {
@@ -257,14 +324,22 @@ class _VictoryContent extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 480),
         child: Column(
           children: [
-            const SizedBox(height: AppSpacing.xl),
+            // The shareable result card: everything the player sees and
+            // shares — image, header, stars, stats, coin reward — wrapped
+            // in a RepaintBoundary so _VictoryPageState can rasterize it.
+            RepaintBoundary(
+              key: shareKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: AppSpacing.xl),
 
-            // ── Completed Image with Reveal ──
-            _AnimatedPuzzleImage(
-              imageUrl: imageUrl,
-              reveal: imageReveal,
-              glow: imageGlow,
-            ),
+                  // ── Completed Image with Reveal ──
+                  _AnimatedPuzzleImage(
+                    imageUrl: imageUrl,
+                    reveal: imageReveal,
+                    glow: imageGlow,
+                  ),
 
             const SizedBox(height: AppSpacing.lg),
 
@@ -356,17 +431,20 @@ class _VictoryContent extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.lg),
 
-            // ── Coin Reward Chip ──
-            Opacity(
-              opacity: contentSlide,
-              child: Transform.translate(
-                offset: Offset(0, 80 * (1 - contentSlide)),
-                child: BounceIn(
-                  delay: celebrationDelay,
-                  child: CoinRewardChip(coins: result.coinsEarned),
-                ),
+                  // ── Coin Reward Chip ──
+                  Opacity(
+                    opacity: contentSlide,
+                    child: Transform.translate(
+                      offset: Offset(0, 80 * (1 - contentSlide)),
+                      child: BounceIn(
+                        delay: celebrationDelay,
+                        child: CoinRewardChip(coins: result.coinsEarned),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -647,6 +725,19 @@ class _ActionButtons extends StatelessWidget {
   final int? nextLevelId;
   final Duration celebrationDelay;
 
+  /// Runs [navigate] after any interstitial — or immediately when ads are
+  /// removed or no ad is available, so progress never blocks on ads.
+  void _continueWithAd(BuildContext context, VoidCallback navigate) {
+    final adsRemoved = context.readOrNull<AdsCubit>()?.state ?? false;
+    if (adsRemoved) {
+      navigate();
+      return;
+    }
+    AdService().showInterstitial(onClosed: () {
+      if (context.mounted) navigate();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final chapter = ChapterCatalog.chapterForLevel(result.level.id);
@@ -689,14 +780,16 @@ class _ActionButtons extends StatelessWidget {
                         .where((level) => chapter.containsLevel(level.id))
                         .fold(0, (sum, level) => sum + level.stars);
                     if (!context.mounted) return;
-                    context.goNamed(
-                      RouteNames.chapterComplete,
-                      extra: ChapterCompleteResult(
-                        chapter: chapter,
-                        totalStars: totalStars,
-                        nextChapter: nextChapter,
-                      ),
-                    );
+                    _continueWithAd(context, () {
+                      context.goNamed(
+                        RouteNames.chapterComplete,
+                        extra: ChapterCompleteResult(
+                          chapter: chapter,
+                          totalStars: totalStars,
+                          nextChapter: nextChapter,
+                        ),
+                      );
+                    });
                   } else if (isSectionComplete) {
                     // Sum stars across every level in the section (not
                     // just this one) for an accurate section total.
@@ -708,20 +801,24 @@ class _ActionButtons extends StatelessWidget {
                         .where((level) => section.containsLevel(level.id))
                         .fold(0, (sum, level) => sum + level.stars);
                     if (!context.mounted) return;
-                    context.goNamed(
-                      RouteNames.sectionComplete,
-                      extra: SectionCompleteResult(
-                        chapter: chapter,
-                        section: section,
-                        totalStars: totalStars,
-                        nextLevelId: nextLevelId,
-                      ),
-                    );
+                    _continueWithAd(context, () {
+                      context.goNamed(
+                        RouteNames.sectionComplete,
+                        extra: SectionCompleteResult(
+                          chapter: chapter,
+                          section: section,
+                          totalStars: totalStars,
+                          nextLevelId: nextLevelId,
+                        ),
+                      );
+                    });
                   } else {
-                    context.goNamed(
-                      RouteNames.puzzle,
-                      pathParameters: {'levelId': '$nextLevelId'},
-                    );
+                    _continueWithAd(context, () {
+                      context.goNamed(
+                        RouteNames.puzzle,
+                        pathParameters: {'levelId': '$nextLevelId'},
+                      );
+                    });
                   }
                 },
               ),
@@ -754,10 +851,12 @@ class _ActionButtons extends StatelessWidget {
                   icon: Icons.replay_rounded,
                   height: 54,
                   variant: GameButtonVariant.secondary,
-                  onTap: () => context.goNamed(
-                    RouteNames.puzzle,
-                    pathParameters: {'levelId': '${result.level.id}'},
-                  ),
+                  onTap: () => _continueWithAd(context, () {
+                    context.goNamed(
+                      RouteNames.puzzle,
+                      pathParameters: {'levelId': '${result.level.id}'},
+                    );
+                  }),
                 ),
               ),
             ),

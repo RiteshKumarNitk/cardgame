@@ -27,6 +27,7 @@ final class PhotoPuzzleReady extends PhotoPuzzleState {
     required this.arrangement,
     required this.rotations,
     required this.minimalSwaps,
+    this.shuffleGeneration = 0,
     this.moves = 0,
     this.elapsedSeconds = 0,
     this.isSolved = false,
@@ -41,6 +42,10 @@ final class PhotoPuzzleReady extends PhotoPuzzleState {
   final List<int> arrangement;
   final List<int> rotations;
   final int minimalSwaps;
+
+  /// Increments on every (re)shuffle — the board key so the deal-in
+  /// entrance animation replays on restart.
+  final int shuffleGeneration;
   final int moves;
   final int elapsedSeconds;
   final bool isSolved;
@@ -77,6 +82,7 @@ final class PhotoPuzzleReady extends PhotoPuzzleState {
       arrangement: arrangement ?? this.arrangement,
       rotations: rotations ?? this.rotations,
       minimalSwaps: minimalSwaps,
+      shuffleGeneration: shuffleGeneration,
       moves: moves ?? this.moves,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       isSolved: isSolved ?? this.isSolved,
@@ -101,6 +107,7 @@ class PhotoPuzzleCubit extends Cubit<PhotoPuzzleState> {
 
   Timer? _timer;
   int _restartCount = 0;
+  int _shuffleGeneration = 0;
   Map<String, int> _bestStars = {};
   PhotoPuzzle? _photo;
 
@@ -115,12 +122,14 @@ class PhotoPuzzleCubit extends Cubit<PhotoPuzzleState> {
         seed: photo.id.hashCode + _restartCount,
         withRotation: true,
       );
+      _shuffleGeneration += 1;
       emit(
         PhotoPuzzleReady(
           photo: photo,
           arrangement: board.arrangement,
           rotations: board.rotations,
           minimalSwaps: TileSwapEngine.minimalSwaps(board.arrangement),
+          shuffleGeneration: _shuffleGeneration,
           bestStars: _bestStars[photo.id] ?? 0,
         ),
       );

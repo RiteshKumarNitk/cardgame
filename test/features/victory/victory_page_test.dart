@@ -103,6 +103,8 @@ void main() {
     expect(find.text('12'), findsOneWidget);
     expect(find.text('+60'), findsAtLeastNWidgets(1));
     expect(find.text('Next Level'), findsOneWidget);
+    // The share button captures the result card as an image.
+    expect(find.byIcon(Icons.share_rounded), findsOneWidget);
   });
 
   testWidgets('shows a completion message instead of Next Level when there is no next level', (
@@ -136,6 +138,52 @@ void main() {
     await _flushTimers(tester);
 
     expect(find.text('No level result to show.'), findsOneWidget);
+  });
+
+  testWidgets('Next Level navigates even when no ad is available', (
+    tester,
+  ) async {
+    const result = VictoryResult(
+      level: _level,
+      stars: 3,
+      moves: 12,
+      timeSeconds: 75,
+      coinsEarned: 60,
+      nextLevelId: 2,
+    );
+    final router = GoRouter(
+      initialLocation: RoutePaths.victory,
+      routes: [
+        GoRoute(
+          path: RoutePaths.victory,
+          name: RouteNames.victory,
+          pageBuilder: (context, state) =>
+              const MaterialPage<dynamic>(child: VictoryPage(result: result)),
+        ),
+        GoRoute(
+          path: RoutePaths.puzzle,
+          name: RouteNames.puzzle,
+          pageBuilder: (context, state) => const MaterialPage<dynamic>(
+            child: Scaffold(body: Center(child: Text('Level 2 Page'))),
+          ),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp.router(theme: AppTheme.game, routerConfig: router),
+    );
+    await _flushTimers(tester);
+
+    // No ads loaded (and no AdsCubit above) — the interstitial gate must
+    // close immediately and navigate.
+    await tester.ensureVisible(find.text('Next Level'));
+    await tester.tap(find.text('Next Level'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(VictoryPage), findsNothing);
+    expect(find.text('Level 2 Page'), findsOneWidget);
   });
 
   testWidgets('back arrow returns Home instead of dead-ending', (tester) async {

@@ -23,11 +23,13 @@ final class PuzzleLoaded extends PuzzleState {
     required this.arrangement,
     required this.rotations,
     required this.minimalSwaps,
+    this.shuffleGeneration = 0,
     this.moves = 0,
     this.elapsedSeconds = 0,
     this.isSolved = false,
     this.isPaused = false,
     this.currentCombo = 0,
+    this.stuckShuffleReady = false,
   });
 
   final Level level;
@@ -42,10 +44,18 @@ final class PuzzleLoaded extends PuzzleState {
   /// The fewest swaps this shuffle could be solved in — the baseline for
   /// [stars].
   final int minimalSwaps;
+
+  /// Increments on every (re)shuffle of this level — used as the board
+  /// key so the deal-in entrance animation replays on restart/shuffle.
+  final int shuffleGeneration;
   final int moves;
   final int elapsedSeconds;
   final bool isSolved;
   final bool isPaused;
+
+  /// True after several moves in a row made no progress (no piece locked)
+  /// — the UI offers a free pity shuffle.
+  final bool stuckShuffleReady;
 
   /// The current combo count (pieces locked within a small time window).
   /// 0 means no active combo, 2 means a 2x combo, etc.
@@ -72,17 +82,20 @@ final class PuzzleLoaded extends PuzzleState {
     bool? isSolved,
     bool? isPaused,
     int? currentCombo,
+    bool? stuckShuffleReady,
   }) {
     return PuzzleLoaded(
       level: level,
       arrangement: arrangement ?? this.arrangement,
       rotations: rotations ?? this.rotations,
       minimalSwaps: minimalSwaps,
+      shuffleGeneration: shuffleGeneration,
       moves: moves ?? this.moves,
       elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
       isSolved: isSolved ?? this.isSolved,
       isPaused: isPaused ?? this.isPaused,
       currentCombo: currentCombo ?? this.currentCombo,
+      stuckShuffleReady: stuckShuffleReady ?? this.stuckShuffleReady,
     );
   }
 
@@ -92,11 +105,13 @@ final class PuzzleLoaded extends PuzzleState {
     arrangement,
     rotations,
     minimalSwaps,
+    shuffleGeneration,
     moves,
     elapsedSeconds,
     isSolved,
     isPaused,
     currentCombo,
+    stuckShuffleReady,
   ];
 }
 

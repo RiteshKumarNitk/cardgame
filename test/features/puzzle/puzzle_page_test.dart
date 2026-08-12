@@ -22,6 +22,9 @@ import 'package:puzzle_cards/features/levels/domain/repositories/levels_reposito
 import 'package:puzzle_cards/features/levels/domain/services/chapter_catalog.dart';
 import 'package:puzzle_cards/features/levels/domain/services/demo_levels_generator.dart';
 import 'package:puzzle_cards/features/levels/domain/services/level_service.dart';
+import 'package:puzzle_cards/features/puzzle/domain/tile_swap_engine.dart';
+import 'package:puzzle_cards/features/puzzle/presentation/bloc/puzzle_cubit.dart';
+import 'package:puzzle_cards/features/puzzle/presentation/bloc/puzzle_state.dart';
 import 'package:puzzle_cards/features/puzzle/presentation/pages/puzzle_page.dart';
 import 'package:puzzle_cards/features/puzzle/presentation/widgets/puzzle_image_tile.dart';
 
@@ -45,6 +48,36 @@ void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
+
+  /// Performs one swap that locks no new cell (a "stall"), or fails the
+  /// test if no such swap exists. Drives the stuck-shuffle mechanic.
+  Future<void> _stallOnce(PuzzleCubit cubit) async {
+    final state = cubit.state as PuzzleLoaded;
+    final n = state.arrangement.length;
+    BoardState board = (
+      arrangement: state.arrangement,
+      rotations: state.rotations,
+    );
+    final lockedBefore = List.generate(n, (k) => k)
+        .where((k) => TileSwapEngine.isCellLocked(board, k))
+        .length;
+
+    for (var i = 0; i < n; i++) {
+      if (TileSwapEngine.isCellLocked(board, i)) continue;
+      for (var j = i + 1; j < n; j++) {
+        if (TileSwapEngine.isCellLocked(board, j)) continue;
+        final swapped = TileSwapEngine.swap(board, i, j);
+        final lockedAfter = List.generate(n, (k) => k)
+            .where((k) => TileSwapEngine.isCellLocked(swapped, k))
+            .length;
+        if (lockedAfter == lockedBefore) {
+          await cubit.swapPieces(i, j);
+          return;
+        }
+      }
+    }
+    fail('no stalling swap found on this board');
+  }
 
   testWidgets('shows difficulty and a fully-populated portrait board', (
     tester,
@@ -89,6 +122,65 @@ void main() {
     // Unmount to dispose the cubit (cancelling it) before the test ends —
     // otherwise flutter_test flags it as a leaked pending Timer.
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('shows a live star-target countdown in the top bar', (
+    tester,
+  ) async {
+    final levelService = LevelService(_FakeLevelsRepository());
+
+    await tester.pumpWidget(
+      BlocProvider<WalletCubit>(
+        create: (_) => WalletCubit(FakeWalletService()),
+        child: MaterialApp(
+          theme: AppTheme.game,
+          home: PuzzlePage(levelId: '1', levelService: levelService),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    // Moves are 0 and minimalSwaps > 0, so the 3-star countdown shows.
+    expect(find.textContaining('3★ in'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('offers a free shuffle when stuck and reshuffles on tap', (
+    tester,
+  ) async {
+    final cubit = PuzzleCubit(LevelService(_FakeLevelsRepository()));
+    await cubit.loadLevel(1);
+    for (var i = 0; i < 6; i++) {
+      await _stallOnce(cubit);
+    }
+    expect((cubit.state as PuzzleLoaded).stuckShuffleReady, isTrue);
+
+    await tester.pumpWidget(
+      BlocProvider<WalletCubit>(
+        create: (_) => WalletCubit(FakeWalletService()),
+        child: MaterialApp(
+          theme: AppTheme.game,
+          home: PuzzlePage(levelId: '1', cubit: cubit),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Stuck? Free Shuffle'), findsOneWidget);
+
+    await tester.tap(find.text('Stuck? Free Shuffle'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Stuck? Free Shuffle'), findsNothing);
+    final state = cubit.state as PuzzleLoaded;
+    expect(state.moves, 0, reason: 'the free shuffle starts a fresh attempt');
+    expect(state.shuffleGeneration, 2);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await cubit.close();
   });
 
   testWidgets('shows an error message for an unknown level id', (
