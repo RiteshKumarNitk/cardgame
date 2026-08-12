@@ -101,8 +101,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Audio placeholders (replace with real files before release)
+  # Audio (replace placeholders with real files before release — see
+  # assets/audio/README.md). The manifest drives path resolution.
   assets:
+    - assets/audio/manifest.json
     - assets/audio/sfx/
     - assets/audio/music/
     - assets/images/collections/

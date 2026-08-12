@@ -20,9 +20,34 @@ class SettingsCubit extends Cubit<AppSettings> {
     (settings) => settings.copyWith(musicEnabled: !settings.musicEnabled),
   );
 
-  Future<void> _update(AppSettings Function(AppSettings) transform) async {
+  /// [persist] is false while a slider is being dragged and true when the
+  /// drag ends, so we don't hammer Hive with every thumb movement.
+  Future<void> setMasterVolume(double volume, {bool persist = true}) =>
+      _update(
+        (settings) => settings.copyWith(masterVolume: volume),
+        persist: persist,
+      );
+
+  Future<void> setSfxVolume(double volume, {bool persist = true}) =>
+      _update(
+        (settings) => settings.copyWith(sfxVolume: volume),
+        persist: persist,
+      );
+
+  Future<void> setMusicVolume(double volume, {bool persist = true}) =>
+      _update(
+        (settings) => settings.copyWith(musicVolume: volume),
+        persist: persist,
+      );
+
+  Future<void> _update(
+    AppSettings Function(AppSettings) transform, {
+    bool persist = true,
+  }) async {
     final updated = transform(state);
     emit(updated);
-    await _repository.save(updated);
+    if (persist) {
+      await _repository.save(updated);
+    }
   }
 }

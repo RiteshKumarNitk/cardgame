@@ -74,6 +74,10 @@ void main() {
     expect(find.text('Sound Effects'), findsOneWidget);
     expect(find.text('Music'), findsOneWidget);
     expect(find.byType(Switch), findsNWidgets(2));
+    expect(find.byType(Slider), findsNWidgets(3));
+    expect(find.text('Master Volume'), findsOneWidget);
+    expect(find.text('Sound Effects Volume'), findsOneWidget);
+    expect(find.text('Music Volume'), findsOneWidget);
     expect(find.text('v1.0.0'), findsOneWidget);
   });
 
@@ -174,6 +178,33 @@ void main() {
   );
 
   testWidgets(
+    'dragging the master volume slider persists on release',
+    (tester) async {
+      final settingsRepository = _FakeSettingsRepository();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.game,
+          home: SettingsPage(
+            settingsRepository: settingsRepository,
+            levelService: LevelService(_FakeLevelsRepository()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.ensureVisible(find.byType(Slider).first);
+      await tester.pump();
+      await tester.drag(find.byType(Slider).first, const Offset(-120, 0));
+      await tester.pump();
+
+      expect(settingsRepository.stored.masterVolume, lessThan(1.0));
+      expect(settingsRepository.stored.masterVolume, greaterThan(0.0));
+    },
+  );
+
+  testWidgets(
     'reset progress requires confirmation, then resets level progress',
     (tester) async {
       final levelsRepository = _FakeLevelsRepository();
@@ -190,6 +221,8 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      await tester.ensureVisible(find.text('Reset'));
+      await tester.pump();
       await tester.tap(find.text('Reset'));
       await tester.pump();
 

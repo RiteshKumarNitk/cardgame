@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/app_colors.dart';
-import '../../../../services/audio_service.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_shadows.dart';
 import '../../../../core/design_system/app_spacing.dart';
@@ -61,8 +60,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadProgress();
-    AudioService().startBgm();
-    
+
     // Check daily reward after a short delay so page transitions finish
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkDailyReward();
@@ -81,7 +79,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    AudioService().stopBgm();
     super.dispose();
   }
 

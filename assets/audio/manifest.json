@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "comment": "Drop professional sound files in without touching code: (1) replace a file in-place to swap a sound, (2) add audio/music/<scene>.wav to auto-pick it for that screen, or (3) point a key at any asset path here. See assets/audio/README.md.",
+  "sfx": {
+    "tap": "audio/sfx/tap.wav",
+    "piece_snap": "audio/sfx/piece_snap.wav",
+    "victory": "audio/sfx/victory.wav",
+    "chapter_complete": "audio/sfx/chapter_complete.wav",
+    "coins": "audio/sfx/coins.wav",
+    "hover": "audio/sfx/hover.wav",
+    "level_start": "audio/sfx/level_start.wav",
+    "tick": "audio/sfx/tick.wav",
+    "error": "audio/sfx/error.wav"
+  },
+  "music": {
+    "default": "audio/music/bgm_loop.wav",
+    "home": "audio/music/bgm_loop.wav",
+    "levels": "audio/music/bgm_loop.wav",
+    "puzzle": "audio/music/bgm_loop.wav",
+    "photo_puzzle": "audio/music/bgm_loop.wav",
+    "shop": "audio/music/bgm_loop.wav",
+    "gallery": "audio/music/bgm_loop.wav",
+    "victory": "audio/music/bgm_loop.wav"
+  },
+  "duck": {
+    "enabled": true,
+    "level": 0.25,
+    "recoveryMs": 400
+  }
+}

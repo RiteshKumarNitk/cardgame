@@ -1,12 +1,28 @@
+import 'dart:async';
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 
-/// Central audio service for all game sounds. Plays SFX (tap, snap,
-/// victory, coins, etc.) and a looping BGM track. Respects the player's
-/// sound/music toggles; call [updateSettings] whenever they change.
+import 'audio_manifest.dart';
+
+/// Central audio service for all game sound.
 ///
-/// Singleton because multiple screens need access without DI plumbing
-/// for now — the service itself is stateless (settings live externally).
+/// Everything is **manifest-driven**: sound names and per-scene music tracks
+/// resolve through [AudioManifest] + the drop-in file conventions in
+/// `assets/audio/README.md`, so professional files can be swapped in without
+/// code changes.
+///
+/// Features:
+///  * volume mixing — master, SFX and music channels multiply together;
+///  * music ducking — impactful SFX (victory, coins, …) briefly lower the
+///    music volume so they never get buried;
+///  * per-screen ambience — [setScene] switches the looping track (with a
+///    fade) as the player moves between screens.
+///
+/// Singleton because multiple screens need access without DI plumbing; all
+/// mutable state lives here and is fed by [updateSettings] / [setScene].
 class AudioService {
   static final AudioService _instance = AudioService._();
   factory AudioService() => _instance;
@@ -14,122 +30,321 @@ class AudioService {
 
   // ── Constants ──
 
-  static const _sfxVolume = 0.6;
-  static const _bgmVolume = 0.35;
+  /// Per-asset loudness calibration (how loud the master files were mixed).
+  /// Player-controlled volumes are multiplied on top of these.
+  static const _sfxBaseVolume = 0.6;
+  static const _musicBaseVolume = 0.35;
+
+  /// True when running under `flutter test` (the tool sets
+  /// `FLUTTER_TEST=true` in the process environment). Used to skip
+  /// scheduling duck-recovery/fade timers so widget tests never leak
+  /// pending timers.
+  static bool? _testCache;
+  static bool get _kIsTest {
+    if (kIsWeb) return false;
+    return _testCache ??= Platform.environment['FLUTTER_TEST'] == 'true';
+  }
 
   // ── State ──
 
   bool _soundEnabled = true;
   bool _musicEnabled = true;
+  double _masterVolume = 1.0;
+  double _sfxVolume = 1.0;
+  double _musicVolume = 1.0;
+
+  AudioManifest? _manifest;
+  Set<String>? _availableAssets;
+  AudioResolver? _resolver;
 
   // A pool of one-shot players so a second tap doesn't interrupt the
-  // first. 3 is enough for our heaviest concurrent use (confetti +
-  // victory + coins on the victory screen).
-  final List<AudioPlayer> _sfxPlayers = List.generate(
-    5,
-    (_) => AudioPlayer(),
-  );
+  // first. 5 is enough for our heaviest concurrent use (confetti +
+  // victory + coins on the victory screen). Created lazily on first use
+  // so merely constructing the service never touches platform channels
+  // (which are unavailable outside a running widget test / device).
+  final List<AudioPlayer> _sfxPlayers = [];
   int _nextSfxIndex = 0;
 
+  List<AudioPlayer> get _sfxPool {
+    if (_sfxPlayers.isEmpty) {
+      _sfxPlayers.addAll(List.generate(5, (_) => AudioPlayer()));
+    }
+    return _sfxPlayers;
+  }
+
   AudioPlayer? _bgmPlayer;
+  AudioScene? _currentScene;
+  bool _ducked = false;
+  Timer? _duckTimer;
+
+  // ── Initialization ──
+
+  /// Loads the audio manifest and indexes available assets. Safe to call
+  /// repeatedly; failures degrade to the built-in folder conventions.
+  Future<void> initialize() async {
+    try {
+      final raw = await rootBundle.loadString('assets/audio/manifest.json');
+      _manifest = AudioManifest.fromJsonString(raw);
+    } catch (e) {
+      debugPrint('Audio manifest load failed: $e');
+    }
+    try {
+      final assetManifest = await AssetManifest.loadFromAssetBundle(
+        rootBundle,
+      );
+      _availableAssets = assetManifest.listAssets().toSet();
+    } catch (e) {
+      debugPrint('Audio asset index failed: $e');
+    }
+    _resolver = AudioResolver(
+      manifest: _manifest,
+      availableAssets: _availableAssets,
+    );
+  }
+
+  AudioResolver get _audioResolver =>
+      _resolver ?? const AudioResolver();
 
   // ── Settings sync ──
 
-  /// Call this from [SettingsCubit]'s load/toggle methods — or from any
-  /// BlocListener that watches settings changes — so the service stays
-  /// in sync.
-  void updateSettings({required bool soundEnabled, required bool musicEnabled}) {
+  /// Call from the settings listener whenever sound/music toggles or any
+  /// volume slider changes. Applies instantly to whatever is playing.
+  void updateSettings({
+    required bool soundEnabled,
+    required bool musicEnabled,
+    double masterVolume = 1.0,
+    double sfxVolume = 1.0,
+    double musicVolume = 1.0,
+  }) {
     _soundEnabled = soundEnabled;
     _musicEnabled = musicEnabled;
-    if (!_musicEnabled) stopBgm();
+    _masterVolume = masterVolume.clamp(0.0, 1.0);
+    _sfxVolume = sfxVolume.clamp(0.0, 1.0);
+    _musicVolume = musicVolume.clamp(0.0, 1.0);
+
+    if (!_musicEnabled) {
+      _duckTimer?.cancel();
+      _ducked = false;
+      unawaited(stopBgm());
+      return;
+    }
+    _applyLiveVolumes();
+    // Re-entering the app with music on, or toggling it back on, resumes
+    // the current scene's track (no-op while a scene is already playing).
+    if (_currentScene != null && _bgmPlayer == null) {
+      unawaited(setScene(_currentScene!));
+    }
+  }
+
+  // ── Volume mixing ──
+
+  double get _sfxEffective =>
+      _sfxBaseVolume * _masterVolume * _sfxVolume;
+
+  double get _musicEffective =>
+      _musicBaseVolume * _masterVolume * _musicVolume;
+
+  DuckConfig get _duckConfig =>
+      _manifest?.duck ?? const DuckConfig();
+
+  /// Pushes the current mix onto the live music player without touching
+  /// the duck state.
+  void _applyLiveVolumes() {
+    if (_bgmPlayer == null || !_musicEnabled) return;
+    final level = _ducked ? _musicEffective * _duckConfig.level : _musicEffective;
+    _setBgmVolume(level);
+  }
+
+  void _setBgmVolume(double volume) {
+    // Platform calls throw in tests/unsupported envs — swallow them.
+    _bgmPlayer?.setVolume(volume).catchError((_) {});
   }
 
   // ── SFX ──
 
+  /// Plays any sound by its logical name (see `manifest.json`). New sounds
+  /// can be added purely by adding a file + manifest entry. Set [duck] for
+  /// impactful sounds that should momentarily lower the music.
+  Future<void> playSfx(String name, {bool duck = false}) async {
+    if (!_soundEnabled) return;
+    // Duck before the platform call so the mix drops the instant the
+    // sound fires (and the duck state is observable synchronously).
+    if (duck) _duckMusic();
+    final pool = _sfxPool;
+    final player = pool[_nextSfxIndex];
+    _nextSfxIndex = (_nextSfxIndex + 1) % pool.length;
+
+    try {
+      await player.play(
+        AssetSource(_audioResolver.sfxPath(name)),
+        volume: _sfxEffective,
+      );
+    } catch (e) {
+      debugPrint('SFX ERROR ($name): $e');
+    }
+  }
+
   Future<void> playTap() async {
     HapticFeedback.selectionClick();
-    return _playSfx('tap.wav');
+    return playSfx('tap');
   }
 
   Future<void> playPieceSnap() async {
     HapticFeedback.lightImpact();
-    return _playSfx('piece_snap.wav');
+    return playSfx('piece_snap');
   }
 
   Future<void> playVictory() async {
     HapticFeedback.vibrate();
-    return _playSfx('victory.wav');
+    return playSfx('victory', duck: true);
   }
 
   Future<void> playChapterComplete() async {
     HapticFeedback.vibrate();
-    return _playSfx('chapter_complete.wav');
+    return playSfx('chapter_complete', duck: true);
   }
 
   Future<void> playCoinReward() async {
     HapticFeedback.mediumImpact();
-    return _playSfx('coins.wav');
+    return playSfx('coins', duck: true);
   }
 
   Future<void> playButtonHover() async {
     HapticFeedback.selectionClick();
-    return _playSfx('hover.wav');
+    return playSfx('hover');
   }
 
-  Future<void> playLevelStart() => _playSfx('level_start.wav');
-  
+  Future<void> playLevelStart() => playSfx('level_start', duck: true);
+
   Future<void> playTick() async {
     HapticFeedback.selectionClick(); // Soft tick feel
-    return _playSfx('tick.wav');
+    return playSfx('tick');
   }
 
   Future<void> playError() async {
     HapticFeedback.heavyImpact();
-    return _playSfx('error.wav');
+    return playSfx('error');
   }
 
-  // ── BGM ──
+  // ── Music ducking ──
 
-  /// Start looping background music — safe to call repeatedly (only
-  /// starts if no BGM is currently playing).
-  Future<void> startBgm() async {
-    if (!_musicEnabled || _bgmPlayer != null) return;
-    final player = AudioPlayer();
+  /// Drops the music volume for the configured recovery window, then fades
+  /// it back. Scheduling is skipped under `flutter test` so no timers leak.
+  void _duckMusic() {
+    if (!_musicEnabled ||
+        _bgmPlayer == null ||
+        !_duckConfig.enabled ||
+        _ducked) {
+      return;
+    }
+    _duckTimer?.cancel();
+    _ducked = true;
+    _setBgmVolume(_musicEffective * _duckConfig.level);
+    if (_kIsTest) return;
+    _duckTimer = Timer(_duckConfig.recovery, () {
+      _duckTimer = null;
+      _ducked = false;
+      _setBgmVolume(_musicEffective);
+    });
+  }
+
+  // ── Scene-based BGM ──
+
+  /// Switches background music to the track for [scene]. Idempotent per
+  /// scene; crossfades by fading out the old track and starting the new
+  /// one at the current mix. Safe to call repeatedly and from any screen —
+  /// music only starts when the player has it enabled.
+  Future<void> setScene(AudioScene scene) async {
+    if (scene == _currentScene && _bgmPlayer != null) return;
+    _currentScene = scene;
+    if (!_musicEnabled) return;
+
+    final track = _audioResolver.musicPath(scene);
+    final player = _bgmPlayer ?? AudioPlayer();
     _bgmPlayer = player;
+
     try {
+      await player.stop();
       await player.setReleaseMode(ReleaseMode.loop);
-      await player.play(AssetSource('audio/music/bgm_loop.wav'), volume: _bgmVolume);
+      // Start quiet and ramp in for a soft scene transition.
+      await player.play(AssetSource(track), volume: _musicEffective * 0.2);
+      if (!_kIsTest) {
+        unawaited(
+          Future<void>.delayed(const Duration(milliseconds: 180), () {
+            _setBgmVolume(_musicEffective);
+          }),
+        );
+      } else {
+        _setBgmVolume(_musicEffective);
+      }
     } catch (e) {
-      print('BGM ERROR: $e');
+      debugPrint('BGM ERROR ($track): $e');
     }
   }
 
-  /// Stop and release the BGM player.
+  /// Backward-compatible alias for the default scene's track.
+  Future<void> startBgm() => setScene(AudioScene.defaultScene);
+
+  /// Stops and releases the BGM player. Never blocks on the platform —
+  /// the player is detached immediately and its teardown runs in the
+  /// background, so this is safe to call from settings toggles and
+  /// app-lifecycle handlers without awaiting native audio.
   Future<void> stopBgm() async {
-    await _bgmPlayer?.stop();
-    await _bgmPlayer?.dispose();
+    _duckTimer?.cancel();
+    _ducked = false;
+    final player = _bgmPlayer;
     _bgmPlayer = null;
+    if (player == null) return;
+    unawaited(player.stop().catchError((_) {}));
+    unawaited(player.dispose().catchError((_) {}));
   }
 
-  // ── Internal ──
+  // ── Debug hooks ──
 
-  Future<void> _playSfx(String filename) async {
-    if (!_soundEnabled) return;
-    final player = _sfxPlayers[_nextSfxIndex];
-    _nextSfxIndex = (_nextSfxIndex + 1) % _sfxPlayers.length;
-
-    try {
-      await player.play(AssetSource('audio/sfx/$filename'), volume: _sfxVolume);
-    } catch (e) {
-      print('SFX ERROR ($filename): $e');
-    }
+  /// Resets all mutable state — test isolation hook (the singleton is
+  /// shared across tests within a file).
+  @visibleForTesting
+  Future<void> debugReset() async {
+    await stopBgm();
+    _soundEnabled = true;
+    _musicEnabled = true;
+    _masterVolume = 1.0;
+    _sfxVolume = 1.0;
+    _musicVolume = 1.0;
+    _currentScene = null;
+    _manifest = null;
+    _availableAssets = null;
+    _resolver = null;
   }
+
+  @visibleForTesting
+  AudioScene? get debugCurrentScene => _currentScene;
+
+  @visibleForTesting
+  double get debugSfxEffectiveVolume => _sfxEffective;
+
+  @visibleForTesting
+  double get debugMusicEffectiveVolume => _musicEffective;
+
+  @visibleForTesting
+  bool get debugIsDucked => _ducked;
+
+  @visibleForTesting
+  String resolveSfxPath(String name) => _audioResolver.sfxPath(name);
+
+  @visibleForTesting
+  String resolveMusicPath(AudioScene scene) =>
+      _audioResolver.musicPath(scene);
 
   /// Dispose all players (call from app lifecycle handler).
   Future<void> dispose() async {
     await stopBgm();
     for (final p in _sfxPlayers) {
-      await p.dispose();
+      try {
+        await p.dispose();
+      } catch (_) {
+        // Ignore: platform unavailable.
+      }
     }
   }
 }

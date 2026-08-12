@@ -15,6 +15,7 @@ import '../../game/wallet_cubit.dart';
 import '../../game/wallet_service.dart';
 import '../../services/audio_service.dart';
 import '../../services/analytics_service.dart';
+import '../../shared/widgets/scene_audio_router.dart';
 import '../constants/app_constants.dart';
 import '../router/app_router.dart';
 import '../theme/app_theme.dart';
@@ -74,12 +75,14 @@ class PuzzleCardsApp extends StatelessWidget {
       ],
       child: _AchievementRewardListener(
         child: _AudioSyncWidget(
-          child: MaterialApp.router(
-            title: AppConstants.appName,
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.game,
-            themeMode: ThemeMode.light,
-            routerConfig: appRouter,
+          child: SceneAudioRouter(
+            child: MaterialApp.router(
+              title: AppConstants.appName,
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.game,
+              themeMode: ThemeMode.light,
+              routerConfig: appRouter,
+            ),
           ),
         ),
       ),
@@ -136,11 +139,17 @@ class _AudioSyncWidget extends StatelessWidget {
     return BlocListener<SettingsCubit, AppSettings>(
       listenWhen: (prev, next) =>
           prev.soundEnabled != next.soundEnabled ||
-          prev.musicEnabled != next.musicEnabled,
+          prev.musicEnabled != next.musicEnabled ||
+          prev.masterVolume != next.masterVolume ||
+          prev.sfxVolume != next.sfxVolume ||
+          prev.musicVolume != next.musicVolume,
       listener: (context, settings) {
         AudioService().updateSettings(
           soundEnabled: settings.soundEnabled,
           musicEnabled: settings.musicEnabled,
+          masterVolume: settings.masterVolume,
+          sfxVolume: settings.sfxVolume,
+          musicVolume: settings.musicVolume,
         );
       },
       child: child,

@@ -1,65 +1,26 @@
-import 'dart:io';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 
-import 'package:flutter/foundation.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'services/cloud_save_service.dart';
 import 'core/app/puzzle_cards_app.dart';
-import 'services/ad_service.dart';
-import 'services/analytics_service.dart';
+import 'services/app_bootstrap.dart';
+import 'services/audio_service.dart';
 import 'services/hive_service.dart';
-import 'services/purchase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   await HiveService.init();
 
-  if (!kIsWeb) {
-    try {
-      // Note: The user needs to run `flutterfire configure` to fully support iOS/Web
-      await Firebase.initializeApp();
-      AnalyticsService().enableCrashReporting();
-      await CloudSaveService().signInAnonymously();
-    } catch (e) {
-      debugPrint("Firebase init failed: $e");
-    }
+  // Load the audio manifest + asset index before the first screen so the
+  // ambient-music scenes resolve to their tracks immediately.
+  await AudioService().initialize();
 
-    // Initialize Ads
-    await MobileAds.instance.initialize();
-    AdService().loadRewardedAd();
-    AdService().loadInterstitial();
+  // Everything network-y (Firebase login, entitlement sync, ad init) runs
+  // deferred while the splash is on screen — the loader shows real stage
+  // progress instead of a fake fixed delay. Never blocks first frame.
+  unawaited(AppBootstrap().run());
 
-    // Initialize RevenueCat. Production keys are injected at build time
-    // with --dart-define (see AppConstants.revenueCatAndroidKey etc.);
-    // without them, purchases fall back to an invalid sandbox key and
-    // every purchase API degrades to a no-op instead of crashing.
-    try {
-      await Purchases.setLogLevel(LogLevel.debug);
-      if (Platform.isAndroid) {
-        final key = const String.fromEnvironment('REVENUECAT_ANDROID_KEY');
-        if (key.isNotEmpty) {
-          await Purchases.configure(PurchasesConfiguration(key));
-        }
-      } else if (Platform.isIOS) {
-        final key = const String.fromEnvironment('REVENUECAT_IOS_KEY');
-        if (key.isNotEmpty) {
-          await Purchases.configure(PurchasesConfiguration(key));
-        }
-      }
-    } catch (e) {
-      debugPrint("RevenueCat init failed: $e");
-    }
-
-    // Mirror already-owned entitlements (reinstall, purchase on another
-    // device) into local state so the first ad placement respects them.
-    // No-op when RevenueCat was never configured.
-    await RevenueCatPurchaseService().syncEntitlements();
-  }
-
-  await AnalyticsService().logEvent(AnalyticsService.appLaunch);
   runApp(const PuzzleCardsApp());
 }

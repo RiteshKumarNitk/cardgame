@@ -6,16 +6,24 @@ import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
+import '../../../../services/app_bootstrap.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/outlined_text.dart';
 import '../../../../shared/widgets/pulsing_glow.dart';
+import '../../../../shared/widgets/puzzle_piece_loader.dart';
 import '../../../../shared/widgets/sparkle_particles.dart';
 
 /// Splash screen: soft brand gradient + glowing blobs + drifting clouds +
 /// softly floating puzzle pieces (Flame) + a light sparkle layer, behind a
-/// fading/scaling, gently-glowing logo. Automatically advances to Home
-/// after a short delay.
+/// fading/scaling, gently-glowing logo.
+///
+/// The loader is the game's own identity: six puzzle tiles assemble and
+/// scatter in a loop while the real startup work ([AppBootstrap]) runs
+/// behind it — status text and progress advance per stage (login → sync →
+/// ads). Navigation fires once the bootstrap is ready, with a minimum
+/// display time and a hard timeout so a slow network can never trap the
+/// player on this screen.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -45,8 +53,22 @@ class _SplashPageState extends State<SplashPage>
   }
 
   Future<void> _scheduleNavigation() async {
+    final bootstrap = AppBootstrap();
+
+    // Minimum display time so the brand moment lands before any jump.
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
+
+    // Wait for real readiness when a boot is actually running; never wait
+    // longer than the cap (tests never start a bootstrap, so this path is
+    // skipped entirely there).
+    if (bootstrap.started) {
+      await bootstrap
+          .whenReady()
+          .timeout(const Duration(seconds: 3), onTimeout: () {});
+      if (!mounted) return;
+    }
+
     context.goNamed(RouteNames.home);
   }
 
@@ -103,29 +125,89 @@ class _SplashPageState extends State<SplashPage>
               right: 0,
               child: FadeTransition(
                 opacity: _fadeAnimation,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        color: AppColors.primary,
+                child: ValueListenableBuilder<BootstrapStage>(
+                  valueListenable: AppBootstrap().stage,
+                  builder: (context, stage, _) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const PuzzlePieceLoader(),
+                      const SizedBox(height: AppSpacing.md),
+                      AnimatedSwitcher(
+                        duration: AppAnimations.medium,
+                        child: Text(
+                          _statusMessage(stage),
+                          key: ValueKey(stage),
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Loading...',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
+                      const SizedBox(height: AppSpacing.sm),
+                      _StageProgress(stage: stage),
+                    ],
+                  ),
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  String _statusMessage(BootstrapStage stage) => switch (stage) {
+    BootstrapStage.preparing => 'Shuffling the deck…',
+    BootstrapStage.loggingIn => 'Signing you in…',
+    BootstrapStage.syncing => 'Syncing your progress…',
+    BootstrapStage.loadingAds => 'Preparing rewards…',
+    BootstrapStage.ready => 'Ready!',
+  };
+}
+
+/// Thin brand progress bar that eases between bootstrap stages.
+class _StageProgress extends StatelessWidget {
+  const _StageProgress({required this.stage});
+
+  final BootstrapStage stage;
+
+  static const Map<BootstrapStage, double> _fractions = {
+    BootstrapStage.preparing: 0.08,
+    BootstrapStage.loggingIn: 0.35,
+    BootstrapStage.syncing: 0.62,
+    BootstrapStage.loadingAds: 0.85,
+    BootstrapStage.ready: 1.0,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final target = _fractions[stage] ?? 0.0;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: target),
+      duration: AppAnimations.medium,
+      curve: AppAnimations.pageCurve,
+      builder: (context, value, _) => Container(
+        width: 180,
+        height: 5,
+        decoration: BoxDecoration(
+          color: AppColors.border.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(99),
+        ),
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: value.clamp(0.0, 1.0),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(99),
+              gradient: const LinearGradient(
+                colors: [
+                  AppColors.primaryGradientStart,
+                  AppColors.accent,
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

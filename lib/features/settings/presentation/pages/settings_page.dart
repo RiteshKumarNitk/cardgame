@@ -143,6 +143,44 @@ class _SettingsView extends StatelessWidget {
                                 onChanged: (_) =>
                                     context.read<SettingsCubit>().toggleMusic(),
                               ),
+                              const SizedBox(height: AppSpacing.sm),
+                              _VolumeSlider(
+                                icon: Icons.volume_up_rounded,
+                                label: 'Master Volume',
+                                value: settings.masterVolume,
+                                onChanged: (v) => context
+                                    .read<SettingsCubit>()
+                                    .setMasterVolume(v, persist: false),
+                                onChangeEnd: (v) => context
+                                    .read<SettingsCubit>()
+                                    .setMasterVolume(v),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              _VolumeSlider(
+                                icon: Icons.graphic_eq_rounded,
+                                label: 'Sound Effects Volume',
+                                value: settings.sfxVolume,
+                                enabled: settings.soundEnabled,
+                                onChanged: (v) => context
+                                    .read<SettingsCubit>()
+                                    .setSfxVolume(v, persist: false),
+                                onChangeEnd: (v) => context
+                                    .read<SettingsCubit>()
+                                    .setSfxVolume(v),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              _VolumeSlider(
+                                icon: Icons.music_note_rounded,
+                                label: 'Music Volume',
+                                value: settings.musicVolume,
+                                enabled: settings.musicEnabled,
+                                onChanged: (v) => context
+                                    .read<SettingsCubit>()
+                                    .setMusicVolume(v, persist: false),
+                                onChangeEnd: (v) => context
+                                    .read<SettingsCubit>()
+                                    .setMusicVolume(v),
+                              ),
                             ],
                           ),
                         ),
@@ -355,6 +393,75 @@ class _SettingsView extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _VolumeSlider extends StatelessWidget {
+  const _VolumeSlider({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    required this.onChangeEnd,
+    this.enabled = true,
+  });
+
+  final IconData icon;
+  final String label;
+  final double value;
+  final bool enabled;
+  final ValueChanged<double> onChanged;
+  final ValueChanged<double> onChangeEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return GameCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: AppColors.primary, size: 24),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  label,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ),
+              Text(
+                '${(value * 100).round()}%',
+                style: textTheme.bodySmall?.copyWith(
+                  color: enabled
+                      ? AppColors.textSecondary
+                      : AppColors.textSecondary.withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: AppColors.primary,
+              thumbColor: AppColors.primary,
+              inactiveTrackColor: AppColors.border,
+            ),
+            child: Slider(
+              value: value.clamp(0.0, 1.0),
+              onChanged: enabled ? onChanged : null,
+              onChangeEnd: enabled ? onChangeEnd : null,
+            ),
+          ),
+        ],
       ),
     );
   }

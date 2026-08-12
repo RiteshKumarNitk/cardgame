@@ -18,6 +18,9 @@ abstract final class AppConstants {
   static const String adsRemovedKey = 'adsRemoved';
   static const String soundEnabledKey = 'soundEnabled';
   static const String musicEnabledKey = 'musicEnabled';
+  static const String masterVolumeKey = 'masterVolume';
+  static const String sfxVolumeKey = 'sfxVolume';
+  static const String musicVolumeKey = 'musicVolume';
   static const String onboardingSeenKey = 'onboardingSeen';
   static const String achievementsBoxName = 'achievements_box';
   static const String achievementsCountersKey = 'counters';
