@@ -1,4 +1,5 @@
 import '../../levels/domain/entities/level.dart';
+import '../../levels/domain/entities/level_config.dart';
 import '../../levels/domain/services/chapter_catalog.dart';
 
 /// A puzzle board's shape: [cols] columns by [rows] rows of square
@@ -17,11 +18,15 @@ class BoardDimensions {
   double get aspectRatio => cols / rows;
 }
 
+/// Board dimensions from a [LevelConfig]. This is the preferred way to
+/// get board dimensions for chaptered levels — the config carries the
+/// exact grid size.
+BoardDimensions boardDimensionsFromConfig(LevelConfig config) =>
+    BoardDimensions(cols: config.cols, rows: config.rows);
+
 /// Board dimensions for each difficulty tier. Higher difficulty means
-/// more pieces to place. Used by Daily Challenge, which has no
-/// chapter/level concept of its own (always Medium difficulty). Chaptered
-/// levels use [boardDimensionsForLevel] instead, since chapters set board
-/// size directly rather than via this fixed per-tier table.
+/// more pieces to place. Used by Daily Challenge and Photo Puzzles,
+/// which have no chapter/level concept of their own.
 BoardDimensions boardDimensionsFor(LevelDifficulty difficulty) =>
     switch (difficulty) {
       LevelDifficulty.easy => const BoardDimensions(cols: 3, rows: 4),
@@ -34,6 +39,8 @@ BoardDimensions boardDimensionsFor(LevelDifficulty difficulty) =>
 /// Board dimensions for a chaptered level, derived from the [boardCols]
 /// of the chapter that owns it (see [ChapterCatalog]). Always portrait —
 /// see [BoardDimensions].
+///
+/// Prefer [boardDimensionsFromConfig] for new code.
 BoardDimensions boardDimensionsForLevel(int levelId) {
   final cols = ChapterCatalog.chapterForLevel(levelId).boardCols;
   return BoardDimensions(cols: cols, rows: cols + 1);

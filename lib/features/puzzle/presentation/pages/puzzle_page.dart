@@ -27,6 +27,7 @@ import '../../../cosmetics/domain/services/cosmetics_catalog.dart';
 import '../../../cosmetics/presentation/bloc/cosmetics_cubit.dart';
 import '../../../levels/data/datasources/levels_local_datasource.dart';
 import '../../../levels/data/repositories/levels_repository_impl.dart';
+import '../../../levels/domain/entities/level_config.dart';
 import '../../../levels/domain/services/level_service.dart';
 import '../../../victory/domain/entities/victory_result.dart';
 import '../../domain/puzzle_board_size.dart';
@@ -298,7 +299,7 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
             imageUrl: imageUrl,
             walletKey: widget.walletKey,
             onBack: widget.onPause,
-            onPreview: () => _showPreviewSheet(context, state.level.id, imageUrl),
+            onPreview: () => _showPreviewSheet(context, state.config, imageUrl),
             onPause: widget.onPause,
           ),
         ),
@@ -313,21 +314,19 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
                 // Remounts on every (re)shuffle so the deal-in entrance
                 // animation replays instead of only playing once.
                 key: ValueKey(state.shuffleGeneration),
-                dimensions: boardDimensionsForLevel(state.level.id),
+                dimensions: boardDimensionsFromConfig(state.config),
                 imageUrl: imageUrl,
                 arrangement: state.arrangement,
-                rotations: state.rotations,
                 solvedProgress: solvedProgress,
                 snapFraction: _snapFraction,
                 borderFadeFraction: _borderFadeFraction,
                 frame: frame,
                 pieceStyle: pieceStyle,
+                adjacency: state.adjacency,
+                grouping: state.grouping,
                 onSwap: (fromCell, toCell) => context
                     .read<PuzzleCubit>()
                     .swapPieces(fromCell, toCell),
-                onRotate: (cell) => context
-                    .read<PuzzleCubit>()
-                    .rotatePiece(cell),
               ),
 
               // Combo Listener
@@ -460,7 +459,7 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
   /// instead of a small inline thumbnail.
   Future<void> _showPreviewSheet(
     BuildContext context,
-    int levelId,
+    LevelConfig config,
     String imageUrl,
   ) {
     return showModalBottomSheet<void>(
@@ -469,7 +468,7 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
       isScrollControlled: true,
       builder: (sheetContext) => _PreviewSheetContent(
         imageUrl: imageUrl,
-        dimensions: boardDimensionsForLevel(levelId),
+        dimensions: boardDimensionsFromConfig(config),
         unlocked: _previewUnlocked,
         onUnlocked: () => setState(() => _previewUnlocked = true),
       ),
@@ -927,8 +926,8 @@ class _PuzzleMessage extends StatelessWidget {
 /// One-time How-to-Play Tutorial
 /// ────────────────────────────────────────────────────────────────────
 /// Full-screen scrim shown above the very first puzzle board, walking the
-/// player through the two gestures (drag-to-swap, tap-to-rotate) and the
-/// hint button. Dismissed by tapping "Got it!", which marks it seen.
+/// player through the drag-to-swap gesture and the hint button. Dismissed
+/// by tapping "Got it!", which marks it seen.
 class _TutorialOverlay extends StatelessWidget {
   const _TutorialOverlay({required this.onDismiss});
 
@@ -967,12 +966,6 @@ class _TutorialOverlay extends StatelessWidget {
                     icon: Icons.swap_horiz_rounded,
                     title: 'Drag to swap',
                     body: 'Drag a piece onto another piece to swap them around.',
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  const _TutorialStep(
-                    icon: Icons.rotate_right_rounded,
-                    title: 'Tap to rotate',
-                    body: 'Tap any piece to rotate it a quarter turn.',
                   ),
                   const SizedBox(height: AppSpacing.md),
                   const _TutorialStep(

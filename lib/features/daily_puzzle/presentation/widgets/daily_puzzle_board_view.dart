@@ -42,15 +42,11 @@ class DailyPuzzleBoardView extends StatelessWidget {
                 dimensions: boardDimensionsFor(state.challenge.difficulty),
                 imageUrl: state.imageUrl,
                 arrangement: state.arrangement,
-                rotations: state.rotations,
                 frame: frame,
                 pieceStyle: pieceStyle,
                 onSwap: (fromCell, toCell) => context
                     .read<DailyChallengeCubit>()
                     .swapPieces(fromCell, toCell),
-                onRotate: (cell) => context
-                    .read<DailyChallengeCubit>()
-                    .rotatePiece(cell),
               ),
               if (state.isFailed)
                 Positioned.fill(

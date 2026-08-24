@@ -25,7 +25,6 @@ final class PhotoPuzzleReady extends PhotoPuzzleState {
   const PhotoPuzzleReady({
     required this.photo,
     required this.arrangement,
-    required this.rotations,
     required this.minimalSwaps,
     this.shuffleGeneration = 0,
     this.moves = 0,
@@ -40,7 +39,6 @@ final class PhotoPuzzleReady extends PhotoPuzzleState {
 
   final PhotoPuzzle photo;
   final List<int> arrangement;
-  final List<int> rotations;
   final int minimalSwaps;
 
   /// Increments on every (re)shuffle — the board key so the deal-in
@@ -67,7 +65,6 @@ final class PhotoPuzzleReady extends PhotoPuzzleState {
 
   PhotoPuzzleReady copyWith({
     List<int>? arrangement,
-    List<int>? rotations,
     int? moves,
     int? elapsedSeconds,
     bool? isSolved,
@@ -80,7 +77,6 @@ final class PhotoPuzzleReady extends PhotoPuzzleState {
     return PhotoPuzzleReady(
       photo: photo,
       arrangement: arrangement ?? this.arrangement,
-      rotations: rotations ?? this.rotations,
       minimalSwaps: minimalSwaps,
       shuffleGeneration: shuffleGeneration,
       moves: moves ?? this.moves,
@@ -96,7 +92,7 @@ final class PhotoPuzzleReady extends PhotoPuzzleState {
 }
 
 /// Drives a single photo puzzle: the same swap-tiles mechanic as a
-/// regular level (fixed Medium 4x5 board, rotation enabled), scored on
+/// regular level (fixed Medium 4x5 board), scored on
 /// moves vs. the shuffle's minimal swaps. Coins pay out exactly once per
 /// photo — on the first completion — so the section is fun without being
 /// farmable.
@@ -120,14 +116,12 @@ class PhotoPuzzleCubit extends Cubit<PhotoPuzzleState> {
       final board = TileSwapEngine.shuffledArrangement(
         pieceCount: dimensions.pieceCount,
         seed: photo.id.hashCode + _restartCount,
-        withRotation: true,
       );
       _shuffleGeneration += 1;
       emit(
         PhotoPuzzleReady(
           photo: photo,
           arrangement: board.arrangement,
-          rotations: board.rotations,
           minimalSwaps: TileSwapEngine.minimalSwaps(board.arrangement),
           shuffleGeneration: _shuffleGeneration,
           bestStars: _bestStars[photo.id] ?? 0,
@@ -163,39 +157,23 @@ class PhotoPuzzleCubit extends Cubit<PhotoPuzzleState> {
     if (current is! PhotoPuzzleReady || current.isSolved) return;
 
     final newState = TileSwapEngine.swap(
-      (arrangement: current.arrangement, rotations: current.rotations),
+      (arrangement: current.arrangement),
       fromCell,
       toCell,
     );
-    if (identical(newState.arrangement, current.arrangement) &&
-        identical(newState.rotations, current.rotations)) {
+    if (identical(newState.arrangement, current.arrangement)) {
       return;
     }
-    _move(current, newState.arrangement, newState.rotations);
-  }
-
-  Future<void> rotatePiece(int cell) async {
-    final current = state;
-    if (current is! PhotoPuzzleReady || current.isSolved) return;
-    if (TileSwapEngine.isCellLocked(
-      (arrangement: current.arrangement, rotations: current.rotations),
-      cell,
-    )) {
-      return;
-    }
-    final rotations = List<int>.of(current.rotations);
-    rotations[cell] = (rotations[cell] + 1) % 4;
-    _move(current, current.arrangement, rotations);
+    _move(current, newState.arrangement);
   }
 
   void _move(
     PhotoPuzzleReady current,
     List<int> arrangement,
-    List<int> rotations,
   ) {
     final moves = current.moves + 1;
     final solved = TileSwapEngine.isSolved(
-      (arrangement: arrangement, rotations: rotations),
+      (arrangement: arrangement),
     );
 
     // The solved transition is a single complete emit (stars, coins,
@@ -206,7 +184,6 @@ class PhotoPuzzleCubit extends Cubit<PhotoPuzzleState> {
       emit(
         current.copyWith(
           arrangement: arrangement,
-          rotations: rotations,
           moves: moves,
         ),
       );
@@ -228,7 +205,6 @@ class PhotoPuzzleCubit extends Cubit<PhotoPuzzleState> {
     emit(
       current.copyWith(
         arrangement: arrangement,
-        rotations: rotations,
         moves: moves,
         isSolved: true,
         stars: stars,

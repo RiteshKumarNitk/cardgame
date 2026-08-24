@@ -18,7 +18,6 @@ final class DailyChallengeReady extends DailyChallengeState {
     required this.challenge,
     required this.imageUrl,
     required this.arrangement,
-    required this.rotations,
     required this.timeRemainingSeconds,
     this.isFailed = false,
     this.moves = 0,
@@ -32,13 +31,10 @@ final class DailyChallengeReady extends DailyChallengeState {
   /// `arrangement[cell]` is the 1-based piece index currently sitting in
   /// that (0-based) cell — see `TileSwapEngine`.
   final List<int> arrangement;
-  
-  /// `rotations[cell]` tracks the rotation (0, 1, 2, 3) for the piece in that cell.
-  final List<int> rotations;
-  
+
   final int timeRemainingSeconds;
   final bool isFailed;
-  
+
   final int moves;
 
   /// True only once solved *this* session — distinguishes "just finished,
@@ -51,7 +47,6 @@ final class DailyChallengeReady extends DailyChallengeState {
 
   DailyChallengeReady copyWith({
     List<int>? arrangement,
-    List<int>? rotations,
     int? timeRemainingSeconds,
     bool? isFailed,
     int? moves,
@@ -63,7 +58,6 @@ final class DailyChallengeReady extends DailyChallengeState {
       challenge: challenge ?? this.challenge,
       imageUrl: imageUrl,
       arrangement: arrangement ?? this.arrangement,
-      rotations: rotations ?? this.rotations,
       timeRemainingSeconds: timeRemainingSeconds ?? this.timeRemainingSeconds,
       isFailed: isFailed ?? this.isFailed,
       moves: moves ?? this.moves,
@@ -77,7 +71,6 @@ final class DailyChallengeReady extends DailyChallengeState {
     challenge,
     imageUrl,
     arrangement,
-    rotations,
     timeRemainingSeconds,
     isFailed,
     moves,

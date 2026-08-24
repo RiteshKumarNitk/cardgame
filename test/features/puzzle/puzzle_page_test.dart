@@ -56,19 +56,19 @@ void main() {
     final n = state.arrangement.length;
     BoardState board = (
       arrangement: state.arrangement,
-      rotations: state.rotations,
     );
+    bool isCorrect(List<int> arr, int cell) => arr[cell] == cell + 1;
     final lockedBefore = List.generate(n, (k) => k)
-        .where((k) => TileSwapEngine.isCellLocked(board, k))
+        .where((k) => isCorrect(board.arrangement, k))
         .length;
 
     for (var i = 0; i < n; i++) {
-      if (TileSwapEngine.isCellLocked(board, i)) continue;
+      if (isCorrect(board.arrangement, i)) continue;
       for (var j = i + 1; j < n; j++) {
-        if (TileSwapEngine.isCellLocked(board, j)) continue;
+        if (isCorrect(board.arrangement, j)) continue;
         final swapped = TileSwapEngine.swap(board, i, j);
         final lockedAfter = List.generate(n, (k) => k)
-            .where((k) => TileSwapEngine.isCellLocked(swapped, k))
+            .where((k) => isCorrect(swapped.arrangement, k))
             .length;
         if (lockedAfter == lockedBefore) {
           await cubit.swapPieces(i, j);

@@ -323,7 +323,6 @@ class _LoadedPhotoPuzzle extends StatelessWidget {
                 dimensions: boardDimensionsFor(LevelDifficulty.medium),
                 imageUrl: state.photo.image,
                 arrangement: state.arrangement,
-                rotations: state.rotations,
                 solvedProgress: solvedProgress,
                 snapFraction: _snapFraction,
                 borderFadeFraction: _borderFadeFraction,
@@ -332,9 +331,6 @@ class _LoadedPhotoPuzzle extends StatelessWidget {
                 onSwap: (fromCell, toCell) => context
                     .read<PhotoPuzzleCubit>()
                     .swapPieces(fromCell, toCell),
-                onRotate: (cell) => context
-                    .read<PhotoPuzzleCubit>()
-                    .rotatePiece(cell),
               ),
               if (state.isSolved) ...[
                 // Premium glow behind the completed board.

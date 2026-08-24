@@ -37,24 +37,22 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     try {
       final now = DateTime.now();
       final challenge = await _service.loadToday(now);
-      
+
       final size = boardDimensionsFor(challenge.difficulty);
       final pieceCount = size.pieceCount;
       final seed = challenge.dateKey.hashCode;
-      
+
       final board = TileSwapEngine.shuffledArrangement(
         pieceCount: pieceCount,
         seed: seed,
-        withRotation: true,
       );
-      
+
       if (!challenge.alreadyCompletedToday) {
         emit(
           DailyChallengeReady(
             challenge: challenge,
             imageUrl: puzzleImageUrlForDaily(challenge.dateKey),
             arrangement: board.arrangement,
-            rotations: board.rotations,
             timeRemainingSeconds: 60, // 60 seconds Time Attack!
             isFailed: false,
           ),
@@ -66,7 +64,6 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
           challenge: challenge,
           imageUrl: puzzleImageUrlForDaily(challenge.dateKey),
           arrangement: List.generate(pieceCount, (i) => i + 1),
-          rotations: List.filled(pieceCount, 0),
           timeRemainingSeconds: 0,
           justSolved: false, // Already completed *earlier* today, not just now.
         ));
@@ -90,7 +87,6 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     final board = TileSwapEngine.shuffledArrangement(
       pieceCount: pieceCount,
       seed: current.challenge.dateKey.hashCode + DateTime.now().millisecondsSinceEpoch,
-      withRotation: true,
     );
 
     // Emit fresh state and restart timer
@@ -98,7 +94,6 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
       current.copyWith(
         isFailed: false,
         arrangement: board.arrangement,
-        rotations: board.rotations,
         timeRemainingSeconds: 60,
         moves: 0,
       ),
@@ -115,7 +110,7 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
         _timer?.cancel();
         return;
       }
-      
+
       if (current.timeRemainingSeconds > 0) {
         if (current.timeRemainingSeconds <= 10) {
           AudioService().playTick();
@@ -135,53 +130,35 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     if (current is! DailyChallengeReady || current.isComplete || current.isFailed) return;
 
     final newState = TileSwapEngine.swap(
-      (arrangement: current.arrangement, rotations: current.rotations),
+      (arrangement: current.arrangement),
       fromCell,
       toCell,
     );
 
     // No-op swaps (same cell, or a locked cell) must not count a move.
-    if (identical(newState.arrangement, current.arrangement) &&
-        identical(newState.rotations, current.rotations)) {
+    if (identical(newState.arrangement, current.arrangement)) {
       return;
     }
 
     emit(current.copyWith(
       arrangement: newState.arrangement,
-      rotations: newState.rotations,
       moves: current.moves + 1,
     ));
 
     if (TileSwapEngine.isSolved(newState)) {
-      _onSolved(current, newState.arrangement, newState.rotations);
+      _onSolved(current, newState.arrangement);
     }
   }
 
-  Future<void> rotatePiece(int cell) async {
-    final current = state;
-    if (current is! DailyChallengeReady || current.isComplete || current.isFailed) return;
-
-    // Daily challenges are time attacks; maybe rotation doesn't add a move, 
-    // or maybe it does. Let's add a move for simplicity.
-    final newRotations = List<int>.of(current.rotations);
-    newRotations[cell] = (newRotations[cell] + 1) % 4;
-
-    emit(current.copyWith(rotations: newRotations, moves: current.moves + 1));
-
-    if (TileSwapEngine.isSolved((arrangement: current.arrangement, rotations: newRotations))) {
-      _onSolved(current, current.arrangement, newRotations);
-    }
-  }
-
-  Future<void> _onSolved(DailyChallengeReady current, List<int> arrangement, List<int> rotations) async {
+  Future<void> _onSolved(DailyChallengeReady current, List<int> arrangement) async {
     _timer?.cancel();
     final completed = await _service.completeToday(DateTime.now());
     await _achievementEvents?.onDailyChallengeCompleted(completed.streak);
-    
+
     // Base 100 + Streak Bonus + Speed Bonus (2 coins per remaining second)
     final speedBonus = current.timeRemainingSeconds * 2;
     final coins = coinsFor(completed.streak) + speedBonus;
-    
+
     AnalyticsService().logEvent(
       AnalyticsService.dailyChallengeComplete,
       parameters: {
@@ -190,14 +167,13 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
         'seconds_left': current.timeRemainingSeconds,
       },
     );
-    
+
     // Submit to global leaderboard
     LeaderboardService().submitTimeAttackScore(current.timeRemainingSeconds);
-    
+
     emit(
       current.copyWith(
         arrangement: arrangement,
-        rotations: rotations,
         justSolved: true,
         coinsEarned: coins,
         challenge: completed,

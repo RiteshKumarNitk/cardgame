@@ -1,13 +1,11 @@
-// Verifies the Photo Puzzle engine: loading a photo shuffles a 4x5 board
-// with rotation, moves/rotations increment the counter, solving scores
-// stars (moves vs. minimal swaps) and pays coins exactly once per photo,
-// and best stars persist.
+// Verifies the Photo Puzzle engine: loading a photo shuffles a 4x5 board,
+// moves increment the counter, solving scores stars (moves vs. minimal
+// swaps) and pays coins exactly once per photo, and best stars persist.
 
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:puzzle_cards/features/photos/domain/photo_puzzle.dart';
 import 'package:puzzle_cards/features/photos/presentation/bloc/photo_puzzle_cubit.dart';
-import 'package:puzzle_cards/features/puzzle/domain/tile_swap_engine.dart';
 
 import '../../helpers/fake_photo_progress_service.dart';
 
@@ -32,24 +30,19 @@ void main() {
   }
 
   /// Drives the board to a solved state with legal moves (the same greedy
-  /// strategy as a human: put each piece in its home, rotating as needed).
+  /// strategy as a human: put each piece in its home).
   Future<void> solve(PhotoPuzzleCubit cubit) async {
     while (true) {
       final state = cubit.state as PhotoPuzzleReady;
       if (state.isSolved) return;
-      final board = (arrangement: state.arrangement, rotations: state.rotations);
+      final board = (arrangement: state.arrangement);
       var acted = false;
       for (var i = 0; i < board.arrangement.length; i++) {
-        if (TileSwapEngine.isCellLocked(board, i)) continue;
+        if (board.arrangement[i] == i + 1) continue;
         if (board.arrangement[i] != i + 1) {
           final j = board.arrangement.indexOf(i + 1);
           expect(j, isNot(i));
           await cubit.swapPieces(i, j);
-          acted = true;
-          break;
-        }
-        if (board.rotations[i] != 0) {
-          await cubit.rotatePiece(i);
           acted = true;
           break;
         }
@@ -58,13 +51,12 @@ void main() {
     }
   }
 
-  test('load shuffles a 4x5 board with rotation enabled', () async {
+  test('load shuffles a 4x5 board', () async {
     final cubit = await loadCubit();
     final state = cubit.state as PhotoPuzzleReady;
 
     expect(state.photo, _photo);
     expect(state.arrangement, hasLength(20));
-    expect(state.rotations, hasLength(20));
     expect(state.minimalSwaps, greaterThan(0));
     expect(state.moves, 0);
     expect(state.elapsedSeconds, 0);
@@ -72,7 +64,7 @@ void main() {
     expect(state.bestStars, 0);
   });
 
-  test('swap and rotate increment moves', () async {
+  test('swap increments moves', () async {
     final cubit = await loadCubit();
     var state = cubit.state as PhotoPuzzleReady;
 
@@ -85,16 +77,6 @@ void main() {
 
     state = cubit.state as PhotoPuzzleReady;
     expect(state.moves, 1);
-
-    // Rotate a cell whose piece is at home but rotated, or any unlocked
-    // cell otherwise.
-    final board = (arrangement: state.arrangement, rotations: state.rotations);
-    final cell = List.generate(board.arrangement.length, (k) => k).firstWhere(
-      (k) => !TileSwapEngine.isCellLocked(board, k),
-    );
-    await cubit.rotatePiece(cell);
-    state = cubit.state as PhotoPuzzleReady;
-    expect(state.moves, 2);
   });
 
   test('solve awards stars and coins on the first completion only', () async {

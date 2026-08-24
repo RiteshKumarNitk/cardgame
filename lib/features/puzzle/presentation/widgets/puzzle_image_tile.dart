@@ -1,72 +1,143 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
-import '../../../../shared/widgets/app_image.dart';
+/// Pre-computed cover-scale layout for the puzzle image, resolved once
+/// at the board level and shared by every tile. This avoids each tile
+/// independently computing the same layout and ensures a single
+/// coordinated coordinate space.
+class ImageLayout {
+  const ImageLayout({
+    required this.imgW,
+    required this.imgH,
+    required this.scale,
+    required this.scaledW,
+    required this.scaledH,
+    required this.offsetX,
+    required this.offsetY,
+  });
 
-/// Renders the (row, col) cell of a [gridCols] x [gridRows] crop of the
-/// image at [imageUrl] — without needing any image-decoding/cropping
-/// package.
+  /// Intrinsic image dimensions (pixels).
+  final double imgW;
+  final double imgH;
+
+  /// Scale factor applied to the image (cover-fit).
+  final double scale;
+
+  /// Scaled image dimensions used for rendering.
+  final double scaledW;
+  final double scaledH;
+
+  /// Top-left offset of the scaled image within the board coordinate space.
+  final double offsetX;
+  final double offsetY;
+}
+
+/// Renders the (row, col) cell of the puzzle grid by painting the image
+/// at the exact board-cover position and clipping to the cell bounds.
 ///
-/// Every tile renders the *same* board-sized canvas — the full image scaled
-/// once with `BoxFit.cover` to the grid's dimensions — and clips its own
-/// cell-sized window out of that canvas. Because the canvas size and the
-/// cover-fit are identical for every tile, adjacent cells are exact
+/// The image layout is computed once at the board level ([ImageLayout])
+/// and passed to every tile, so all tiles render from a single
+/// coordinated coordinate space — no per-tile [BoxFit.cover], no
+/// [OverflowBox], no [Transform.translate]. Adjacent cells are exact
 /// neighbors of one scaled image: no white gaps, no stretching, no seams.
-/// The fit is computed by Flutter from the image's intrinsic size (not an
-/// assumed ratio), so artwork of any aspect ratio — portrait or landscape —
-/// covers the board correctly.
-///
-/// All tiles for the same [imageUrl] share Flutter's image cache, so the
-/// network fetch/decode happens once total, not once per tile.
 class PuzzleImageTile extends StatelessWidget {
   const PuzzleImageTile({
     super.key,
-    required this.imageUrl,
+    required this.image,
+    required this.layout,
     required this.gridCols,
     required this.gridRows,
     required this.row,
     required this.col,
+    this.gap = 0,
     this.opacity = 1,
   });
 
-  final String imageUrl;
+  /// The decoded image to render.
+  final ui.Image image;
+
+  /// Pre-computed cover-scale layout (shared across all tiles).
+  final ImageLayout layout;
+
   final int gridCols;
   final int gridRows;
   final int row;
   final int col;
+
+  /// Gap between tiles (from piece style). Used to compute the correct
+  /// offset so the image aligns seamlessly across gapped tiles.
+  final double gap;
+
   final double opacity;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cellWidth = constraints.maxWidth;
-        final cellHeight = constraints.maxHeight;
+    // Cell size (logical pixels) — the same dimensions used by the board's
+    // GridView delegate.
+    final cellW = layout.scaledW / gridCols;
+    final cellH = layout.scaledH / gridRows;
 
-        // The one shared canvas: the full image cover-fitted to the grid,
-        // scaled with the same values in every tile.
-        final gridWidth = cellWidth * gridCols;
-        final gridHeight = cellHeight * gridRows;
+    // Offset of this cell within the board coordinate space, including gaps.
+    final cellOffsetX = col * (cellW + gap);
+    final cellOffsetY = row * (cellH + gap);
 
-        return ClipRect(
-          child: OverflowBox(
-            maxWidth: gridWidth,
-            maxHeight: gridHeight,
-            alignment: Alignment.topLeft,
-            child: Transform.translate(
-              offset: Offset(-col * cellWidth, -row * cellHeight),
-              child: Opacity(
-                opacity: opacity,
-                child: AppImage(
-                  imagePath: imageUrl,
-                  width: gridWidth,
-                  height: gridHeight,
-                  fit: BoxFit.cover,
-                ),
-              ),
+    // Position of the image's top-left corner relative to this cell.
+    final imageX = layout.offsetX - cellOffsetX;
+    final imageY = layout.offsetY - cellOffsetY;
+
+    return Opacity(
+      opacity: opacity,
+      child: ClipRect(
+        child: SizedBox(
+          width: cellW,
+          height: cellH,
+          child: CustomPaint(
+            painter: _ImageTilePainter(
+              image: image,
+              imageX: imageX,
+              imageY: imageY,
+              imageWidth: layout.scaledW,
+              imageHeight: layout.scaledH,
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
+}
+
+/// Paints the decoded image at the computed position within a single cell.
+class _ImageTilePainter extends CustomPainter {
+  _ImageTilePainter({
+    required this.image,
+    required this.imageX,
+    required this.imageY,
+    required this.imageWidth,
+    required this.imageHeight,
+  });
+
+  final ui.Image image;
+  final double imageX;
+  final double imageY;
+  final double imageWidth;
+  final double imageHeight;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final src = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
+    final dst = Rect.fromLTWH(imageX, imageY, imageWidth, imageHeight);
+    canvas.drawImageRect(image, src, dst, Paint());
+  }
+
+  @override
+  bool shouldRepaint(covariant _ImageTilePainter oldDelegate) =>
+      oldDelegate.image != image ||
+      oldDelegate.imageX != imageX ||
+      oldDelegate.imageY != imageY;
 }

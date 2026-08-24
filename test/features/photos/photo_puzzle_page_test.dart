@@ -16,7 +16,6 @@ import 'package:puzzle_cards/features/photos/domain/photo_puzzle.dart';
 import 'package:puzzle_cards/features/photos/presentation/bloc/photo_puzzle_cubit.dart';
 import 'package:puzzle_cards/features/photos/presentation/pages/photo_puzzle_page.dart';
 import 'package:puzzle_cards/features/photos/presentation/pages/photo_puzzles_page.dart';
-import 'package:puzzle_cards/features/puzzle/domain/tile_swap_engine.dart';
 import 'package:puzzle_cards/features/puzzle/presentation/widgets/puzzle_image_tile.dart';
 import 'package:puzzle_cards/game/wallet_cubit.dart';
 
@@ -30,26 +29,18 @@ const _photo = PhotoPuzzle(
 );
 
 /// Drives the cubit to a solved state with legal moves (greedy: put each
-/// piece home, rotating as needed).
+/// piece home).
 Future<void> solveCubit(PhotoPuzzleCubit cubit) async {
   while (true) {
     final state = cubit.state as PhotoPuzzleReady;
     if (state.isSolved) return;
-    final board = (
-      arrangement: state.arrangement,
-      rotations: state.rotations,
-    );
+    final board = (arrangement: state.arrangement);
     var acted = false;
     for (var i = 0; i < board.arrangement.length; i++) {
-      if (TileSwapEngine.isCellLocked(board, i)) continue;
+      if (board.arrangement[i] == i + 1) continue;
       if (board.arrangement[i] != i + 1) {
         final j = board.arrangement.indexOf(i + 1);
         await cubit.swapPieces(i, j);
-        acted = true;
-        break;
-      }
-      if (board.rotations[i] != 0) {
-        await cubit.rotatePiece(i);
         acted = true;
         break;
       }

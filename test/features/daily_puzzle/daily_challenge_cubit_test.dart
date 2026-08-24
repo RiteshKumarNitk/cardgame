@@ -30,21 +30,15 @@ class _FakeDailyChallengeRepository implements DailyChallengeRepository {
   }
 }
 
-/// Solves the board: first walks every piece into its home cell (rotations
-/// travel with a piece, so this never unsolves anything), then fixes the
-/// leftover rotations in place. The daily board spawns with random
-/// rotations, so a swap-only solver would loop forever. Yields between
-/// checkpoints so the cubit's async solve chain ([DailyChallengeCubit]) can
-/// emit its terminal `justSolved` state.
+/// Solves the board by swapping every misplaced piece into its home cell.
+/// Yields between checkpoints so the cubit's async solve chain
+/// ([DailyChallengeCubit]) can emit its terminal `justSolved` state.
 Future<void> _solve(DailyChallengeCubit cubit) async {
   while (true) {
     final state = cubit.state as DailyChallengeReady;
     if (state.isComplete) return;
 
-    final board = (
-      arrangement: state.arrangement,
-      rotations: state.rotations,
-    );
+    final board = (arrangement: state.arrangement);
     if (TileSwapEngine.isSolved(board)) {
       // The solving swap already finished; let the cubit's emit land.
       await Future<void>.delayed(Duration.zero);
@@ -62,13 +56,6 @@ Future<void> _solve(DailyChallengeCubit cubit) async {
       final targetCell = state.arrangement[wrongCell] - 1;
       await cubit.swapPieces(wrongCell, targetCell);
       continue;
-    }
-
-    for (var i = 0; i < state.rotations.length; i++) {
-      if (state.rotations[i] != 0) {
-        await cubit.rotatePiece(i);
-        break;
-      }
     }
   }
 }
@@ -125,12 +112,6 @@ void main() {
       await cubit.swapPieces(0, pieceOneCell);
     }
     state = cubit.state as DailyChallengeReady;
-    // A cell only locks once its piece is home AND unrotated — fix the
-    // rotation of cell 0 (which rotates whichever piece sits there).
-    while (state.rotations[0] != 0) {
-      await cubit.rotatePiece(0);
-      state = cubit.state as DailyChallengeReady;
-    }
     final movesSoFar = state.moves;
 
     await cubit.swapPieces(0, 1);

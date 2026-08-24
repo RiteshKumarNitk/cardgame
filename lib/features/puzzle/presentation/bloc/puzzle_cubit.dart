@@ -5,16 +5,30 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../services/analytics_service.dart';
 import '../../../achievements/domain/services/achievement_events.dart';
 import '../../../levels/domain/entities/level.dart';
+import '../../../levels/domain/entities/level_config.dart';
+import '../../../levels/domain/services/chapter_catalog.dart';
 import '../../../levels/domain/services/level_service.dart';
+import '../../domain/puzzle_adjacency.dart';
 import '../../domain/puzzle_board_size.dart';
+import '../../domain/puzzle_group.dart';
 import '../../domain/tile_swap_engine.dart';
 import 'puzzle_state.dart';
 
 /// Loads the [Level] a Puzzle screen was opened for and drives the
 /// tile-swap mechanic on top of it: every piece starts already placed on
-/// the board, shuffled — drag one piece onto another to swap them. A cell
-/// locks once its piece is correct; the puzzle is solved once every cell
-/// is locked.
+/// the board, shuffled — drag one piece onto another to swap them.
+///
+/// Correct adjacencies create connections between cells, visually joining
+/// them by removing shared borders. Connected cells form movable groups
+/// that can be dragged as a single unit. Groups are NEVER locked — they
+/// remain fully movable until the puzzle is ultimately solved.
+///
+/// The puzzle engine consumes a [LevelConfig] — a pure data class that
+/// carries all puzzle parameters. The engine never knows about chapters,
+/// sections, or progression. The data flow is:
+/// ```
+/// ChapterCatalog → LevelConfig → Puzzle Engine → Puzzle State → UI
+/// ```
 ///
 /// On completion, persists the result through [LevelService.completeLevel]
 /// — the same unlock-next-level/best-score logic built in Phase 5, now
@@ -42,8 +56,8 @@ class PuzzleCubit extends Cubit<PuzzleState> {
   /// replay the deal-in entrance animation.
   int _shuffleGeneration = 0;
 
-  /// Consecutive moves that locked no piece. Reaching [_stallThreshold]
-  /// makes the UI offer a free pity shuffle.
+  /// Consecutive moves that formed no new adjacency. Reaching
+  /// [_stallThreshold] makes the UI offer a free pity shuffle.
   int _stalledStreak = 0;
   static const int _stallThreshold = 6;
 
@@ -61,23 +75,41 @@ class PuzzleCubit extends Cubit<PuzzleState> {
         return;
       }
       final level = _levels[index];
-      final withRotation = level.difficulty == LevelDifficulty.hard ||
-          level.difficulty == LevelDifficulty.expert ||
-          level.difficulty == LevelDifficulty.master;
 
-      final state = TileSwapEngine.shuffledArrangement(
-        pieceCount: boardDimensionsForLevel(level.id).pieceCount,
-        seed: level.id + _restartCount,
-        withRotation: withRotation,
+      // Build the LevelConfig — the single source of truth for all
+      // puzzle parameters. The engine never touches Chapter or Section.
+      final config = ChapterCatalog.levelConfigFor(level.id);
+      final dims = boardDimensionsFromConfig(config);
+      final seed = config.seed + _restartCount;
+
+      // Shuffle the arrangement.
+      final boardState = TileSwapEngine.shuffledArrangement(
+        pieceCount: dims.pieceCount,
+        seed: seed,
       );
+
+      // Compute initial adjacency and groups.
+      final adjacency = computeAdjacency(
+        arrangement: boardState.arrangement,
+        cols: dims.cols,
+        rows: dims.rows,
+      );
+      final grouping = PuzzleGrouping.fromAdjacency(
+        adjacency: adjacency,
+        cols: dims.cols,
+        rows: dims.rows,
+      );
+
       _shuffleGeneration += 1;
       _stalledStreak = 0;
       emit(
         PuzzleLoaded(
           level: level,
-          arrangement: state.arrangement,
-          rotations: state.rotations,
-          minimalSwaps: TileSwapEngine.minimalSwaps(state.arrangement),
+          config: config,
+          arrangement: boardState.arrangement,
+          minimalSwaps: TileSwapEngine.minimalSwaps(boardState.arrangement),
+          adjacency: adjacency,
+          grouping: grouping,
           shuffleGeneration: _shuffleGeneration,
         ),
       );
@@ -85,8 +117,10 @@ class PuzzleCubit extends Cubit<PuzzleState> {
         AnalyticsService.levelStart,
         parameters: {
           'level_id': level.id,
-          'difficulty': level.difficulty.name,
-          'pieces': state.arrangement.length,
+          'difficulty': config.difficulty.name,
+          'pieces': boardState.arrangement.length,
+          'connections': adjacency.totalConnections,
+          'progress_role': config.progressRole.name,
         },
       );
       _startTimer();
@@ -129,102 +163,191 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     emit(current.copyWith(isPaused: paused));
   }
 
-  /// Swaps the pieces in [fromCell] and [toCell]. A no-op if either cell
-  /// is already locked (solved) or the puzzle is already complete.
+  /// Swaps or moves the piece(s) involving [fromCell] and [toCell].
+  ///
+  /// When groups are present, dragging any cell in a group moves the
+  /// entire group by the displacement from [fromCell] to [toCell].
+  /// Any cell can be moved — there are no locked cells.
   Future<void> swapPieces(int fromCell, int toCell) async {
     final current = state;
     if (current is! PuzzleLoaded || current.isSolved) return;
 
-    final newState = TileSwapEngine.swap(
-      (arrangement: current.arrangement, rotations: current.rotations),
-      fromCell,
-      toCell,
-    );
-    if (identical(newState.arrangement, current.arrangement) && identical(newState.rotations, current.rotations)) return;
-    
-    // Check equality properly, since identical on records or generated lists might be false even if nothing changed. 
-    // But swap already returns the same state if nothing changes due to locks.
-    
+    final newState = current.hasGroups
+        ? _swapWithGroups(current, fromCell, toCell)
+        : TileSwapEngine.swap(
+            (arrangement: current.arrangement),
+            fromCell,
+            toCell,
+          );
+    if (identical(newState.arrangement, current.arrangement)) return;
+
     _checkSolveAndEmit(current, newState, movesDelta: 1);
   }
 
-  /// Rotates the piece in [cellIndex] by 90 degrees clockwise.
-  Future<void> rotatePiece(int cellIndex) async {
-    final current = state;
-    if (current is! PuzzleLoaded || current.isSolved) return;
-    if (TileSwapEngine.isCellLocked((arrangement: current.arrangement, rotations: current.rotations), cellIndex)) return;
+  /// Group-aware swap: finds the group at fromCell, computes the
+  /// displacement, and moves the entire group.
+  BoardState _swapWithGroups(
+    PuzzleLoaded state,
+    int fromCell,
+    int toCell,
+  ) {
+    final grouping = state.grouping!;
+    final arrangement = (arrangement: state.arrangement);
+    final cols = grouping.cols;
 
-    final newRotations = List<int>.of(current.rotations);
-    newRotations[cellIndex] = (newRotations[cellIndex] + 1) % 4;
+    final sourceGroup = grouping.findGroup(fromCell);
 
-    _checkSolveAndEmit(current, (arrangement: current.arrangement, rotations: newRotations), movesDelta: 1);
+    if (sourceGroup != null) {
+      // Compute displacement: how far the target cell is from the
+      // source cell, in row/col terms.
+      final fromRow = fromCell ~/ cols;
+      final fromCol = fromCell % cols;
+      final toRow = toCell ~/ cols;
+      final toCol = toCell % cols;
+      final dRow = toRow - fromRow;
+      final dCol = toCol - fromCol;
+
+      if (TileSwapEngine.canMoveGroupByCells(
+        sourceGroup,
+        dRow,
+        dCol,
+        grouping,
+        state.arrangement,
+      )) {
+        return TileSwapEngine.moveGroupByCells(
+          arrangement,
+          grouping,
+          sourceGroup,
+          dRow,
+          dCol,
+        );
+      }
+      return arrangement;
+    }
+
+    // Both cells are ungrouped — standard swap.
+    return TileSwapEngine.swap(arrangement, fromCell, toCell);
   }
 
-  /// Automatically finds a piece that is in the wrong place, finds its correct home,
-  /// swaps it into place, and fixes its rotation.
+  /// Automatically finds a piece that is not at its correct position
+  /// and swaps it into place.
+  ///
+  /// For grouped levels, moves the first group toward its home position.
   Future<void> useHint() async {
     final current = state;
     if (current is! PuzzleLoaded || current.isSolved) return;
 
-    final boardState = (arrangement: current.arrangement, rotations: current.rotations);
+    final boardState = (arrangement: current.arrangement);
     AnalyticsService().logEvent(AnalyticsService.hintUsed);
-    
-    // Find first cell that is not locked
-    for (int i = 0; i < current.arrangement.length; i++) {
-      if (!TileSwapEngine.isCellLocked(boardState, i)) {
-        // The cell i is not locked. We want to place piece (i + 1) here.
-        // Where is piece (i + 1)?
-        final targetPiece = i + 1;
-        final currentPosOfTarget = current.arrangement.indexOf(targetPiece);
-        
-        // Swap them and fix rotation
-        var newState = TileSwapEngine.swap(boardState, i, currentPosOfTarget);
-        final newRotations = List<int>.of(newState.rotations);
-        newRotations[i] = 0; // Fix rotation of the hinted cell
-        newState = (arrangement: newState.arrangement, rotations: newRotations);
 
-        _checkSolveAndEmit(current, newState, movesDelta: 1);
+    if (current.hasGroups) {
+      // Find the first group not fully at home and move it toward (0,0).
+      final grouping = current.grouping!;
+      final cols = grouping.cols;
+      for (final group in grouping.groups) {
+        // Check if the group is at home (all cells at correct positions).
+        var isHome = true;
+        for (final cell in group.cells) {
+          if (current.arrangement[cell] != cell + 1) {
+            isHome = false;
+            break;
+          }
+        }
+        if (isHome) continue;
+
+        // Compute displacement toward home: average cell position → (0,0).
+        var sumRow = 0;
+        var sumCol = 0;
+        for (final cell in group.cells) {
+          sumRow += cell ~/ cols;
+          sumCol += cell % cols;
+        }
+        final avgRow = sumRow ~/ group.size;
+        final avgCol = sumCol ~/ group.size;
+        final dRow = -avgRow;
+        final dCol = -avgCol;
+
+        if (dRow == 0 && dCol == 0) continue;
+
+        if (TileSwapEngine.canMoveGroupByCells(
+          group,
+          dRow,
+          dCol,
+          grouping,
+          current.arrangement,
+        )) {
+          final newState = TileSwapEngine.moveGroupByCells(
+            boardState,
+            grouping,
+            group,
+            dRow,
+            dCol,
+          );
+          _checkSolveAndEmit(current, newState, movesDelta: 1);
+        }
         return;
+      }
+    } else {
+      // Find first cell that is not at its correct position.
+      for (int i = 0; i < current.arrangement.length; i++) {
+        if (current.arrangement[i] != i + 1) {
+          final targetPiece = i + 1;
+          final currentPosOfTarget = current.arrangement.indexOf(targetPiece);
+          final newState = TileSwapEngine.swap(
+            boardState,
+            i,
+            currentPosOfTarget,
+          );
+          _checkSolveAndEmit(current, newState, movesDelta: 1);
+          return;
+        }
       }
     }
   }
 
-  DateTime? _lastLockTime;
+  DateTime? _lastConnectionTime;
 
   void _checkSolveAndEmit(PuzzleLoaded current, BoardState newState, {required int movesDelta}) async {
-    int lockedBefore = 0;
-    for (int i = 0; i < current.arrangement.length; i++) {
-      if (TileSwapEngine.isCellLocked((arrangement: current.arrangement, rotations: current.rotations), i)) {
-        lockedBefore++;
-      }
-    }
+    final dims = boardDimensionsFromConfig(current.config);
 
-    int lockedAfter = 0;
-    for (int i = 0; i < newState.arrangement.length; i++) {
-      if (TileSwapEngine.isCellLocked(newState, i)) {
-        lockedAfter++;
-      }
-    }
+    // Compute new adjacency and groups.
+    final newAdjacency = computeAdjacency(
+      arrangement: newState.arrangement,
+      cols: dims.cols,
+      rows: dims.rows,
+    );
+    final newGrouping = PuzzleGrouping.fromAdjacency(
+      adjacency: newAdjacency,
+      cols: dims.cols,
+      rows: dims.rows,
+    );
+
+    // Count new connections formed.
+    final connectionsBefore = current.adjacency.totalConnections;
+    final connectionsAfter = newAdjacency.totalConnections;
+    final newConnections = connectionsAfter - connectionsBefore;
 
     int newCombo = current.currentCombo;
-    if (lockedAfter > lockedBefore) {
+    if (newConnections > 0) {
       final now = DateTime.now();
-      if (_lastLockTime != null && now.difference(_lastLockTime!).inSeconds <= 3) {
-        newCombo = newCombo <= 1 ? 2 : newCombo + (lockedAfter - lockedBefore);
+      if (_lastConnectionTime != null &&
+          now.difference(_lastConnectionTime!).inSeconds <= 3) {
+        newCombo = newCombo <= 1 ? 2 : newCombo + newConnections;
       } else {
         newCombo = 1; // Start chain
       }
-      _lastLockTime = now;
+      _lastConnectionTime = now;
     } else if (movesDelta > 0) {
       newCombo = 0; // Reset on non-scoring move
     }
 
     final solved = TileSwapEngine.isSolved(newState);
-    final madeProgress = lockedAfter > lockedBefore;
+    final madeProgress = newConnections > 0;
     _stalledStreak = madeProgress ? 0 : _stalledStreak + 1;
     final updated = current.copyWith(
       arrangement: newState.arrangement,
-      rotations: newState.rotations,
+      adjacency: newAdjacency,
+      grouping: newGrouping,
       moves: current.moves + movesDelta,
       isSolved: solved,
       currentCombo: newCombo,
