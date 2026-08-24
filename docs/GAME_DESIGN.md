@@ -65,6 +65,19 @@ Render pieces
 
 Drag one tile onto another to swap their positions. This is the core mechanic for rearranging pieces. Tiles always remain in their original orientation — no rotation is required.
 
+### Correctness Feedback
+
+Correctness is communicated through:
+- **Image continuity**: When pieces are correctly placed, the image becomes seamless across adjacent tiles
+- **Connected edges**: Shared borders disappear between correctly adjacent cells
+- **Snap animation**: A subtle pop animation plays when a piece becomes correctly placed
+- **Physical snapping**: Pieces feel like they snap into place
+
+Correctness is **never** communicated through:
+- Green borders or glows
+- Red borders or glows
+- Any color-based feedback
+
 ### Connected Edges & Groups (Hard+)
 
 On Hard difficulty and above, the board uses **connected edges** — when two adjacent cells are both correctly placed, the shared border between them disappears, visually joining them. Connected cells form a **movable group** that can be dragged as a single unit.
@@ -232,13 +245,9 @@ Stars are earned based on move efficiency compared to the **minimal swaps** need
 
 The initial shuffle uses Fisher-Yates. The shuffle guarantees the puzzle is **never already solved** at start. All pieces remain in their original orientation.
 
-### Locked Cells
-
-A cell is **locked** when its piece is in the correct position. Locked cells cannot be swapped — this prevents undoing progress.
-
 ### Combo System
 
-Rapid correct moves within a 3-second window trigger a **combo multiplier** (displayed with a fire icon badge).
+Rapid correct moves within a 3-second window trigger a **combo multiplier** (displayed with a fire icon badge). Correctness is communicated through image continuity and snap animation — never through color.
 
 ### Pity Shuffle
 
@@ -250,7 +259,7 @@ If the player makes **6 moves without any correct placement**, a "pity shuffle" 
 
 A hint:
 1. Auto-places one piece in its correct position
-2. Locks the cell
+2. The piece becomes part of a connected group if adjacent to correctly placed pieces
 
 ### Preview
 

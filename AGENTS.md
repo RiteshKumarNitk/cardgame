@@ -37,6 +37,25 @@ The player is **gradually completing artwork** by solving puzzles. Each complete
 
 ---
 
+## IMPORTANT: Current Gameplay Rule
+
+There is **no "locked cell" mechanic** in the current puzzle system.
+
+Historical references to locked cells in CHANGELOG.md are historical only.
+
+Current gameplay uses:
+- **Connected edges** — when two adjacent cells are correctly paired, the shared border is removed
+- **Dynamically formed movable groups** — connected cells form groups that move as one unit
+- **Edge-level border removal** — visual connection between correctly adjacent pieces
+
+A correctly positioned tile is **NOT** locked.
+A correctly connected group is **NOT** locked.
+All pieces remain movable until the puzzle is completely solved.
+
+Do **NOT** implement, reference, or re-introduce any form of cell locking. Do **NOT** treat `arrangement[cell] == cell + 1` as a reason to prevent movement. The only locked state is when the entire puzzle is solved.
+
+---
+
 ## Development Philosophy
 
 - **Build incrementally.** Do not rewrite working systems unnecessarily.

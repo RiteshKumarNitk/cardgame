@@ -24,8 +24,7 @@
 
 ## P2 — Improvements
 
-- [ ] Add haptic feedback to puzzle interactions (swap, lock)
-- [ ] Add visual feedback for locked cells (subtle lock icon or glow)
+- [ ] Add haptic feedback to puzzle interactions (swap, snap)
 - [ ] Add "skip level" option for stuck players (with appropriate cost/gating)
 - [ ] Add puzzle piece entrance animation (staggered deal-in per piece)
 - [ ] Improve collections page — show individual level progress within sections

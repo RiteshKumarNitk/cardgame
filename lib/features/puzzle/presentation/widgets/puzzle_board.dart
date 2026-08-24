@@ -341,9 +341,8 @@ class _BoardCellState extends State<_BoardCell>
     final isAnimatingSolved = solved > 0.0;
     final style = widget.pieceStyle;
 
-    // Colors driven by the equipped piece style, falling back to the
-    // classic green/gray scheme when none is equipped.
-    final correctColor = style?.correctColor ?? AppColors.success;
+    // Border color: always the idle border. Correctness is communicated
+    // through image continuity and snap animation, never through color.
     final idleBorderColor = style?.borderColor ?? AppColors.border;
 
     // Check connectivity for each edge.
@@ -367,19 +366,20 @@ class _BoardCellState extends State<_BoardCell>
     final borderFadeLocal =
         ((solved - widget.snapFraction) / widget.borderFadeFraction).clamp(0.0, 1.0);
 
-    // Base border color: green when correctly placed, group purple when
-    // in a group, default otherwise.
-    final baseBorderColor = widget.correct
-        ? correctColor
-        : (isInGroup ? _groupBorderColor : idleBorderColor);
+    // Base border color: always idle. Correctness is communicated through
+    // image continuity, not border color. Connected edges have transparent
+    // borders via _edgeBorder.
+    final baseBorderColor = idleBorderColor;
 
     final borderColor = isAnimatingSolved
         ? Color.lerp(baseBorderColor, Colors.transparent, borderFadeLocal)!
         : baseBorderColor;
 
+    // Border width: uniform for all cells. Connected edges will have
+    // transparent borders via _edgeBorder.
     final borderWidth = isAnimatingSolved
-        ? (widget.correct ? 2.0 : 0.5) * (1.0 - borderFadeLocal)
-        : (widget.correct ? 2.0 : (isInGroup ? 1.2 : 0.5));
+        ? 0.5 * (1.0 - borderFadeLocal)
+        : 0.5;
 
     // ── Phase 3: Tile glow (subtle lighten as borders disappear) ──
     final tileOpacity = isAnimatingSolved
@@ -428,16 +428,14 @@ class _BoardCellState extends State<_BoardCell>
       builder: (context, child) {
         return Transform.rotate(
           angle: _shake.value,
-          child: Container(
+            child: Container(
             decoration: BoxDecoration(
               border: _shakeController.isAnimating
                   ? Border.all(color: AppColors.danger, width: 3.0)
                   : effectiveBorder,
-              boxShadow: widget.correct && !isAnimatingSolved
-                  ? AppShadows.glow(correctColor, opacity: 0.3)
-                  : (_shakeController.isAnimating
-                      ? AppShadows.glow(AppColors.danger, opacity: 0.5)
-                      : null),
+              boxShadow: _shakeController.isAnimating
+                  ? AppShadows.glow(AppColors.danger, opacity: 0.5)
+                  : null,
             ),
             child: child,
           ),
@@ -535,25 +533,30 @@ class _BoardCellState extends State<_BoardCell>
 
           return Draggable<int>(
             data: widget.cellIndex,
-            // The lifted piece: scaled up ~8% with a soft drop shadow so
-            // it reads as physically picked up, not a same-size copy.
+            // The lifted piece: scaled up with layered drop shadow so
+            // it reads as a physical card picked up from the board.
             feedback: SizedBox(
               width: widget.cellWidth,
               height: widget.cellHeight,
               child: Material(
                 color: Colors.transparent,
                 child: Transform.scale(
-                  scale: 1.08,
+                  scale: 1.10,
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(
-                        (style?.cornerRadius ?? 0) * 1.08,
+                        (style?.cornerRadius ?? 0) * 1.10,
                       ),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: Color(0x59000000),
-                          blurRadius: 18,
-                          offset: Offset(0, 10),
+                          color: Colors.black.withValues(alpha: 0.30),
+                          blurRadius: 24,
+                          offset: const Offset(0, 12),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -698,15 +701,7 @@ class _BoardCellState extends State<_BoardCell>
             height: widget.cellHeight,
             child: ClipRRect(
               borderRadius: radius,
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: _groupBorderColor,
-                    width: 1.2,
-                  ),
-                ),
-                child: cellTile,
-              ),
+              child: cellTile,
             ),
           ),
         ),
@@ -723,11 +718,16 @@ class _BoardCellState extends State<_BoardCell>
           child: Container(
             decoration: BoxDecoration(
               borderRadius: radius,
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x59000000),
-                  blurRadius: 18,
-                  offset: Offset(0, 10),
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -737,9 +737,6 @@ class _BoardCellState extends State<_BoardCell>
       ),
     );
   }
-
-  /// Subtle border color for cells belonging to a connected group.
-  static const Color _groupBorderColor = Color(0xFF7E57C2); // Soft purple
 }
 
 /// Fallback tile shown while the image is still loading.

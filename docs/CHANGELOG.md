@@ -4,6 +4,24 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-08-24 (Visual & Interaction Overhaul)
+
+### Changed
+- **PuzzleBoard**: Removed all green correctness visual feedback — no green borders, no green glow, no thicker borders for correct cells. Correctness is now communicated purely through image continuity and snap animation
+- **PuzzleBoard**: Border width is now uniform (0.5) for all cells regardless of correctness
+- **PuzzleBoard**: Removed purple group border from individual cells in group feedback — group cells render without borders, creating a seamless physical object
+- **PuzzleBoard**: Enhanced group drag feedback with layered drop shadow (24px soft + 8px hard) for more realistic physical card feel
+- **PuzzleBoard**: Enhanced individual cell drag feedback with layered drop shadow and slightly larger scale (1.10) for better card-lift feel
+- **PuzzleBoard**: Removed `_groupBorderColor` constant (no longer used)
+
+### Corrected
+- GAME_DESIGN.md: Removed "Locked Cells" section (cells are never locked in current system)
+- GAME_DESIGN.md: Updated Hint System to not mention locking (hints place pieces, never lock)
+- GAME_DESIGN.md: Updated Combo System description
+- AGENTS.md: Added permanent rule that correctness is never communicated through color
+
+---
+
 ## 2026-08-24 (Connected-Edge Adjacency Mechanic)
 
 ### Added
