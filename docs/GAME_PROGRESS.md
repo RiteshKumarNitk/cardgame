@@ -23,6 +23,7 @@ Core feature implementation is advanced, but visual polish and core gameplay ref
 - [x] Image coverage fix (`ImageLayout.sourceRectFor()` derives every tile's crop from the board's own cell geometry, not the image's independently-scaled size — eliminates gaps/misalignment on non-matching aspect ratios)
 - [x] Neutral drag-drop feedback (removed red hover tint on drop targets; invalid group moves reject with a colorless shake + haptic/SFX instead of a colored target)
 - [x] Gameplay rule audit — removed a residual position-lock: a solo correctly-placed (but unconnected) tile is now always displaceable by an incoming group, matching "correct position ≠ locked" everywhere (`canMoveGroupByCells()` no longer special-cases correctness)
+- [x] Fixed a group-vs-group displacement direction bug (`canMoveGroupByCells`/`moveGroupByCells` used `cell + displacement` instead of `cell - displacement` when relocating a displaced group to the vacated cells) — dragging one connected group onto another matching-shaped group was previously rejected essentially always; now succeeds when shapes fit, per design
 - [x] Star rating system (3 tiers based on minimal swaps)
 - [x] Combo system (rapid correct moves)
 - [x] Pity shuffle (after 6 stalled moves)

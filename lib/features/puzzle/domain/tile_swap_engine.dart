@@ -132,14 +132,18 @@ abstract final class TileSwapEngine {
       }
     }
 
-    // 3. Check that displaced groups can fit in the old position.
+    // 3. Check that displaced groups can fit in the old position. A
+    //    displaced cell moves by the OPPOSITE of the incoming group's
+    //    displacement — it's sitting in the destination (newCells) and
+    //    needs to land back in the vacated source (oldCellSet), which is
+    //    newCells shifted by -(dRow, dCol).
     for (final displaced in displacedGroups) {
       // All cells of the displaced group must land within the old cells.
       for (final cell in displaced.cells) {
         final row = cell ~/ cols;
         final col = cell % cols;
-        final displacedNewRow = row + dRow;
-        final displacedNewCol = col + dCol;
+        final displacedNewRow = row - dRow;
+        final displacedNewCol = col - dCol;
         final displacedNewCell = displacedNewRow * cols + displacedNewCol;
         if (!oldCellSet.contains(displacedNewCell)) {
           return false;
@@ -219,12 +223,13 @@ abstract final class TileSwapEngine {
     }
 
     // 5. Place displaced groups at the old position.
-    //    Each displaced cell moves by the same displacement.
+    //    Each displaced cell moves by the OPPOSITE displacement — see
+    //    the matching comment in canMoveGroupByCells.
     for (final displaced in displacedGroups) {
       for (final cell in displaced.cells) {
         final row = cell ~/ cols;
         final col = cell % cols;
-        final displacedNewCell = (row + dRow) * cols + (col + dCol);
+        final displacedNewCell = (row - dRow) * cols + (col - dCol);
         newArr[displacedNewCell] = displacedContents[cell]!;
       }
     }

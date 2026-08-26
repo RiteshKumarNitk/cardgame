@@ -4,6 +4,14 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-08-26 (QA Audit: Group-vs-Group Displacement Direction Bug)
+
+### Fixed
+- **`TileSwapEngine`: displaced-group relocation used the wrong sign.** Both `canMoveGroupByCells()`'s fit check and `moveGroupByCells()`'s placement step computed a displaced group's new position as `cell + (dRow, dCol)` — the SAME direction as the incoming group's own displacement — when it needed to be `cell - (dRow, dCol)`, the OPPOSITE direction, to land the displaced group back in the incoming group's vacated old cells (as the code's own comment, "Place displaced groups at the old position," already said). Traced with concrete coordinates (a 3×3 board, a 1×2 domino sliding down onto a matching domino) — the old formula computed a target cell outside the vacated region in every non-trivial case, so `canMoveGroupByCells()` almost always returned `false` for a legitimate group-vs-group swap. Net effect: dragging one connected group onto another connected group was silently rejected as "invalid" essentially always, even when the shapes matched and the move should have succeeded — a real, reproducible defect, not a hypothetical one. Fixed by negating `dRow`/`dCol` in both the validation check and the execution step (kept mirrored, as they must be)
+- Verified conservation (every tile ID appears exactly once, no duplicates, no loss) holds for solo-vs-group, group-vs-group, and mixed group+solo displacement in the same move, by tracing that the fallback bucket-fill for solo cells reads from the untouched `origArr` (never the partially-mutated `newArr`), and that a rigid translation applied to disjoint cell sets can never produce colliding target cells
+
+---
+
 ## 2026-08-26 (Gameplay Rule Audit: Correct Position ≠ Locked)
 
 ### Fixed
