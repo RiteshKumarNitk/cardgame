@@ -125,9 +125,11 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     });
   }
 
-  Future<void> swapPieces(int fromCell, int toCell) async {
+  Future<bool> swapPieces(int fromCell, int toCell) async {
     final current = state;
-    if (current is! DailyChallengeReady || current.isComplete || current.isFailed) return;
+    if (current is! DailyChallengeReady || current.isComplete || current.isFailed) {
+      return false;
+    }
 
     final newState = TileSwapEngine.swap(
       (arrangement: current.arrangement),
@@ -137,7 +139,7 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
 
     // No-op swaps (same cell, or a locked cell) must not count a move.
     if (identical(newState.arrangement, current.arrangement)) {
-      return;
+      return false;
     }
 
     emit(current.copyWith(
@@ -148,6 +150,7 @@ class DailyChallengeCubit extends Cubit<DailyChallengeState> {
     if (TileSwapEngine.isSolved(newState)) {
       _onSolved(current, newState.arrangement);
     }
+    return true;
   }
 
   Future<void> _onSolved(DailyChallengeReady current, List<int> arrangement) async {

@@ -4,6 +4,37 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-08-26 (Gameplay Rule Audit: Correct Position ≠ Locked)
+
+### Fixed
+- **`TileSwapEngine.canMoveGroupByCells()` no longer treats a solo correctly-placed cell as an obstacle.** Previously, dragging a connected group onto a target region containing a lone correctly-placed ungrouped tile was silently rejected (`return false`) — a de facto position-lock that contradicted the game's own "no locked cells" rule. Multi-cell correct groups in the way were always displaceable; only a *solo* correct tile was special-cased as immovable. Removed that special case entirely: a solo cell in the way — correct or not — is now always displaced into a vacated cell by `moveGroupByCells()`'s existing solo-cell fallback, exactly as an incorrectly-placed solo cell always was. Verified by conservation argument: the number of cells vacated by the incoming group's move always equals the number of cells needing to be filled, regardless of whether the displaced content is grouped or solo, correct or not — so no capacity/fit check was needed for solo cells (multi-cell groups still get the existing shape-fit check, since a rigid group can legitimately fail to fit)
+- `canMoveGroupByCells()` no longer takes an `arrangement` parameter — it was only used by the removed correctness check. Updated both call sites in `PuzzleCubit` (`_swapWithGroups`, `useHint`)
+
+### Corrected
+- ARCHITECTURE.md: "Group Movement Rules" rewritten — target cells are no longer described as blocked by a "LOCKED individual cell"; a solo cell is never fit-checked or treated as an obstacle
+- Updated stale "locked cell" doc comments in `puzzle_board.dart` and `puzzle_cubit.dart` (both already described the *new* neutral-rejection UI correctly, but referenced "a locked cell" as the example rejection cause — replaced with "a group whose shifted shape doesn't fit")
+
+---
+
+## 2026-08-26 (Image Coverage Fix & Neutral Drop Feedback)
+
+### Fixed
+- **Root cause of image gaps/misalignment**: `PuzzleImageTile` independently recomputed its own per-cell size from the image's cover-scaled dimensions (`layout.scaledW / gridCols`), which only coincidentally matched the GridView's actual per-cell size (`boardWidth / cols`, accounting for the piece-style gap). Since the puzzle board fills an `Expanded` area of arbitrary aspect ratio and photos have arbitrary aspect ratios, these two independently-computed cell sizes almost never matched — whichever axis wasn't the cover-limiting one drifted further out of alignment with every row/column, producing exactly the reported right-side gaps, missing image regions, and misaligned adjacent edges
+- `ImageLayout` is now the single authority for both the cover-scale AND the per-cell geometry: `sourceRectFor(row, col)` derives each cell's source crop rectangle directly from the board's own `boardW/boardH/cols/rows/gap` — the same inputs the GridView delegate uses — so a tile's source rect always matches the canvas size Flutter actually gives it, regardless of image or board aspect ratio
+- `PuzzleImageTile` no longer sizes itself; it fills whatever box the GridView cell gives it and draws `layout.sourceRectFor(row, col)` stretched to that exact size via `drawImageRect`, eliminating the possibility of the two sizes ever diverging again
+- Added `FilterQuality.medium` to the tile paint so scaled/dragged pieces render smoothly instead of with nearest-neighbor aliasing
+
+### Changed
+- **PuzzleBoard drop-target feedback**: Removed the `AppColors.primary`-tinted border/glow/fill shown on every drag hover (`AppColors.primary` is literally the app's red — this was the "red destination background" reported as a correctness signal). Replaced with `_neutralHoverLift()`: a colorless 1.03x scale + soft black shadow that reads as "a piece can land here" without implying correct/incorrect
+- **PuzzleBoard invalid-move feedback**: `PuzzleCubit.swapPieces()` (and the Daily Challenge / Photo Puzzle equivalents) now return `Future<bool>` indicating whether the move was accepted. `_BoardCell._handleDrop()` uses this to trigger the existing (previously unwired) shake animation plus `AudioService().playError()` (haptic + soft error SFX) only when a group move is actually rejected — never a color change
+- **PuzzleBoard shake styling**: The shake animation's impact shadow is now a neutral black pulse instead of `AppColors.danger` (which was the same red as `AppColors.primary`)
+
+### Corrected
+- ARCHITECTURE.md: `ImageLayout` field list updated to reflect the board-geometry-driven model (`boardW`, `boardH`, `cellW`, `cellH`, `gap`, `sourceRectFor()`) in place of the old image-scale-only fields
+- GAME_DESIGN.md: Clarified that correctness feedback (or its absence) extends to drag hover state, not just border/glow color
+
+---
+
 ## 2026-08-24 (Visual & Interaction Overhaul)
 
 ### Changed

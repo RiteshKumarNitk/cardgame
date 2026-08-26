@@ -168,9 +168,15 @@ class PuzzleCubit extends Cubit<PuzzleState> {
   /// When groups are present, dragging any cell in a group moves the
   /// entire group by the displacement from [fromCell] to [toCell].
   /// Any cell can be moved — there are no locked cells.
-  Future<void> swapPieces(int fromCell, int toCell) async {
+  ///
+  /// Returns whether the move was accepted. A group move can be rejected
+  /// when its shifted shape doesn't fit the vacated cells (never because
+  /// of a locked cell — no cell is ever locked by its position) — the
+  /// caller uses this to play a neutral physical rejection (shake/haptic),
+  /// never a colored target.
+  Future<bool> swapPieces(int fromCell, int toCell) async {
     final current = state;
-    if (current is! PuzzleLoaded || current.isSolved) return;
+    if (current is! PuzzleLoaded || current.isSolved) return false;
 
     final newState = current.hasGroups
         ? _swapWithGroups(current, fromCell, toCell)
@@ -179,9 +185,10 @@ class PuzzleCubit extends Cubit<PuzzleState> {
             fromCell,
             toCell,
           );
-    if (identical(newState.arrangement, current.arrangement)) return;
+    if (identical(newState.arrangement, current.arrangement)) return false;
 
     _checkSolveAndEmit(current, newState, movesDelta: 1);
+    return true;
   }
 
   /// Group-aware swap: finds the group at fromCell, computes the
@@ -212,7 +219,6 @@ class PuzzleCubit extends Cubit<PuzzleState> {
         dRow,
         dCol,
         grouping,
-        state.arrangement,
       )) {
         return TileSwapEngine.moveGroupByCells(
           arrangement,
@@ -274,7 +280,6 @@ class PuzzleCubit extends Cubit<PuzzleState> {
           dRow,
           dCol,
           grouping,
-          current.arrangement,
         )) {
           final newState = TileSwapEngine.moveGroupByCells(
             boardState,

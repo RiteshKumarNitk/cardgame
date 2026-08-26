@@ -277,10 +277,12 @@ The puzzle engine consumes `LevelConfig` exclusively. It never touches `Chapter`
 | `Edge` | `features/puzzle/domain/puzzle_adjacency.dart` | top, right, bottom, left (bitmask enum) |
 | `PuzzleGroup` | `features/puzzle/domain/puzzle_group.dart` | id, cells, relativePositions, cols |
 | `PuzzleGrouping` | `features/puzzle/domain/puzzle_group.dart` | groups, cols, rows, cellToGroup |
-| `ImageLayout` | `features/puzzle/presentation/widgets/puzzle_image_tile.dart` | imgW, imgH, scale, scaledW, scaledH, offsetX, offsetY |
+| `ImageLayout` | `features/puzzle/presentation/widgets/puzzle_image_tile.dart` | imgW, imgH, boardW, boardH, cols, rows, gap, scale, scaledW, scaledH, offsetX, offsetY, cellW, cellH, `sourceRectFor(row, col)` |
 | `VictoryResult` | `features/victory/domain/entities/victory_result.dart` | level, stars, moves, timeSeconds, coinsEarned, nextLevelId |
 
 **Puzzle Image Pipeline (HIGH PRIORITY):** The puzzle image must completely cover the puzzle grid with no gaps. The correct approach is: load the full image → scale it using cover behavior to fill the board → crop puzzle pieces from that same scaled image. Never independently scale each tile. Changing difficulty changes the grid size only. See `docs/GAME_DESIGN.md` for full details.
+
+`ImageLayout` (built once per board layout pass in `PuzzleBoard`) is the single authority for this: it computes the cover-scale from `boardW/boardH/imgW/imgH`, and `sourceRectFor(row, col)` derives each cell's source crop rectangle from the SAME `boardW/boardH/cols/rows/gap` the GridView delegate uses to size its tiles. `PuzzleImageTile` never computes its own cell size — it fills whatever box the GridView gives it and paints `sourceRectFor(row, col)` stretched to that exact size. This is what guarantees a tile's source rect always matches its actual on-screen size: the board's own per-cell geometry, not the image's independently-scaled dimensions, is the source of truth for where a cell sits.
 
 **Connected Groups (Hard+):** See "Puzzle Group Architecture" section below.
 
@@ -420,15 +422,17 @@ SuitClash uses **connected-edge adjacency** for Hard/Expert/Master difficulties.
 2. Compute displacement: the row/col difference from source cell to target cell.
 3. Validate with `canMoveGroupByCells()`:
    - Bounds check: all cells must be within the board.
-   - Target cells: no LOCKED individual cell (ungrouped, correctly placed). Cells belonging to other movable groups are allowed — those groups will be displaced.
-   - Displaced groups: must fit within the vacated cells.
-4. Execute with `moveGroupByCells()`: clear old cells, place group at new position, displace other groups to old position.
+   - Target cells belonging to a multi-cell group: that group must fit entirely within the vacated old cells once shifted by the same displacement — those groups will be displaced there.
+   - A solo (ungrouped) target cell — correct or not — is never an obstacle. It is not fit-checked; it is simply displaced into a vacated cell by `moveGroupByCells()`'s solo-cell fallback (step 6), exactly like an incorrectly-placed solo cell always was.
+4. Execute with `moveGroupByCells()`: clear old cells, place group at new position, displace other groups to old position, then bucket-fill any displaced solo cells into remaining empty old cells.
 5. After the move, adjacency and groups are recomputed.
 
-**CONNECTED ≠ LOCKED:**
+**CORRECT POSITION ≠ LOCKED. CONNECTED ≠ LOCKED:**
 - All cells are always draggable — no cell is ever locked until the puzzle is solved.
+- A single tile sitting in its correct position but with no matched edge is exactly as movable as any other tile — being correctly placed does not lock it, whether the player drags it directly or a group is dragged onto it.
 - A connected group is fully movable at all times.
 - Groups can be repositioned anywhere on the board.
+- The only thing that can block a move is the board's bounds, or a multi-cell group whose shifted shape doesn't fit the vacated cells — never a cell's own correctness.
 - Groups never split, never rotate, never independently scale.
 
 ### Group Shuffle

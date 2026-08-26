@@ -152,9 +152,9 @@ class PhotoPuzzleCubit extends Cubit<PhotoPuzzleState> {
     });
   }
 
-  Future<void> swapPieces(int fromCell, int toCell) async {
+  Future<bool> swapPieces(int fromCell, int toCell) async {
     final current = state;
-    if (current is! PhotoPuzzleReady || current.isSolved) return;
+    if (current is! PhotoPuzzleReady || current.isSolved) return false;
 
     final newState = TileSwapEngine.swap(
       (arrangement: current.arrangement),
@@ -162,9 +162,10 @@ class PhotoPuzzleCubit extends Cubit<PhotoPuzzleState> {
       toCell,
     );
     if (identical(newState.arrangement, current.arrangement)) {
-      return;
+      return false;
     }
     _move(current, newState.arrangement);
+    return true;
   }
 
   void _move(

@@ -77,6 +77,9 @@ Correctness is **never** communicated through:
 - Green borders or glows
 - Red borders or glows
 - Any color-based feedback
+- Drag hover/drop-target color (the destination cell never tints red or green while a piece hovers over it — the hover affordance is a colorless lift + soft shadow, signaling "a piece can land here," not "this is correct")
+
+An invalid move (a group displaced onto a locked cell) is rejected with a neutral physical shake plus a soft error haptic/SFX — never a colored target or border.
 
 ### Connected Edges & Groups (Hard+)
 

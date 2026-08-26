@@ -82,19 +82,25 @@ abstract final class TileSwapEngine {
   /// A connected group is a MOVEABLE puzzle object. It can be
   /// repositioned anywhere on the board as long as:
   /// 1. Every cell of the group at the new position is within board bounds.
-  /// 2. No target cell is occupied by a LOCKED individual cell
-  ///    (ungrouped, correctly placed). Cells belonging to other movable
-  ///    groups are fine — those groups will be displaced.
-  /// 3. Any displaced group can fit in the group's vacated cells.
+  /// 2. Any full multi-cell group occupying a target cell can fit within
+  ///    the vacated old cells once shifted by the same displacement — it
+  ///    will be displaced there.
   ///
-  /// CONNECTED ≠ LOCKED. A group is never locked. It is fully movable
-  /// at all times until the puzzle is ultimately solved.
+  /// A solo cell in the way of the move — correct or not — is NEVER an
+  /// obstacle: [moveGroupByCells] simply displaces it into a vacated
+  /// cell, exactly as it always has for incorrectly-placed solo cells.
+  /// Position alone never locks a cell.
+  ///
+  /// CORRECT POSITION ≠ LOCKED. CONNECTED ≠ LOCKED. Nothing in this
+  /// puzzle is ever locked by virtue of where it sits — the only thing
+  /// that can block a move is the board's bounds, or a multi-cell group
+  /// whose shifted shape doesn't fit the vacated cells. A group is fully
+  /// movable at all times until the puzzle is ultimately solved.
   static bool canMoveGroupByCells(
     PuzzleGroup group,
     int dRow,
     int dCol,
     PuzzleGrouping grouping,
-    List<int> arrangement,
   ) {
     final cols = grouping.cols;
     final rows = grouping.rows;
@@ -113,34 +119,20 @@ abstract final class TileSwapEngine {
       newCells.add(newRow * cols + newCol);
     }
 
-    // 2. Check target cells: no LOCKED individual cell (ungrouped).
-    //    Cells belonging to other movable groups are allowed — those
-    //    groups will be displaced to the old position.
+    // 2. Collect any full multi-cell groups occupying target cells — a
+    //    solo cell (correct or not) is skipped entirely: it is never a
+    //    locking obstacle, just displaced by moveGroupByCells.
     final oldCellSet = group.cells.toSet();
-    for (final cell in newCells) {
-      if (oldCellSet.contains(cell)) continue; // Self-overlap is fine.
-
-      if (arrangement[cell] == cell + 1) {
-        // This cell is correctly placed. Check if it belongs to ANY
-        // group. If yes, the group is movable and will be displaced.
-        final occupant = grouping.findGroup(cell);
-        if (occupant != null) continue;
-
-        // Locked individual cell (no group) — cannot displace.
-        return false;
-      }
-    }
-
-    // 3. Check that displaced groups can fit in the old position.
     final displacedGroups = <PuzzleGroup>{};
     for (final cell in newCells) {
-      if (oldCellSet.contains(cell)) continue;
+      if (oldCellSet.contains(cell)) continue; // Self-overlap is fine.
       final occupant = grouping.findGroup(cell);
       if (occupant != null && occupant.id != group.id) {
         displacedGroups.add(occupant);
       }
     }
 
+    // 3. Check that displaced groups can fit in the old position.
     for (final displaced in displacedGroups) {
       // All cells of the displaced group must land within the old cells.
       for (final cell in displaced.cells) {
@@ -237,9 +229,9 @@ abstract final class TileSwapEngine {
       }
     }
 
-    // 6. Handle individual (ungrouped) cells that were displaced.
-    //    These cells had content but no group. Place them at remaining
-    //    empty old cells.
+    // 6. Handle solo (ungrouped) cells that were displaced — correctly
+    //    placed or not, a solo cell is never locked by its position.
+    //    Place each one at a remaining empty old cell.
     for (final cell in newCells) {
       if (newArr[cell] != 0) continue; // Already handled.
 

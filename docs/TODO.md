@@ -24,7 +24,7 @@
 
 ## P2 — Improvements
 
-- [ ] Add haptic feedback to puzzle interactions (swap, snap)
+- [x] Add haptic feedback to puzzle interactions (piece snap already had it; invalid group-move rejection now plays a haptic + soft error SFX via `AudioService().playError()`)
 - [ ] Add "skip level" option for stuck players (with appropriate cost/gating)
 - [ ] Add puzzle piece entrance animation (staggered deal-in per piece)
 - [ ] Improve collections page — show individual level progress within sections

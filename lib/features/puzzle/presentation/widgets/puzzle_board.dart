@@ -45,7 +45,10 @@ class PuzzleBoard extends StatefulWidget {
   /// `arrangement[cell]` is the 1-based piece index in that cell.
   final List<int> arrangement;
 
-  final void Function(int fromCell, int toCell) onSwap;
+  /// Attempts to move the piece(s) at [fromCell] onto [toCell]. Returns
+  /// whether the move was actually accepted — `false` triggers a neutral
+  /// snap-back/shake instead of any color-coded feedback.
+  final Future<bool> Function(int fromCell, int toCell) onSwap;
 
   /// 0.0–1.0 progress of the puzzle-solved celebration animation.
   /// 0 = just solved, 1 = about to navigate to Victory.
@@ -139,31 +142,21 @@ class _PuzzleBoardState extends State<PuzzleBoard> {
             (constraints.maxHeight - gap * (widget.dimensions.rows - 1)) /
             widget.dimensions.rows;
 
-        // Compute cover-scale layout once when image is available.
+        // Compute the shared cover-scale layout once when the image is
+        // available. Every tile crops from this SAME layout — it derives
+        // each cell's source rect from the board's own cell geometry
+        // (cols/rows/gap), not from the image's independently scaled
+        // size, so tiles can never drift out of alignment with the grid.
         ImageLayout? layout;
         if (_image != null) {
-          final boardW = constraints.maxWidth;
-          final boardH = constraints.maxHeight;
-          final imgW = _image!.width.toDouble();
-          final imgH = _image!.height.toDouble();
-
-          final scaleX = boardW / imgW;
-          final scaleY = boardH / imgH;
-          final scale = math.max(scaleX, scaleY);
-
-          final scaledW = imgW * scale;
-          final scaledH = imgH * scale;
-          final offsetX = (boardW - scaledW) / 2;
-          final offsetY = (boardH - scaledH) / 2;
-
           layout = ImageLayout(
-            imgW: imgW,
-            imgH: imgH,
-            scale: scale,
-            scaledW: scaledW,
-            scaledH: scaledH,
-            offsetX: offsetX,
-            offsetY: offsetY,
+            imgW: _image!.width.toDouble(),
+            imgH: _image!.height.toDouble(),
+            boardW: constraints.maxWidth,
+            boardH: constraints.maxHeight,
+            cols: widget.dimensions.cols,
+            rows: widget.dimensions.rows,
+            gap: gap,
           );
           _layout = layout;
         }
@@ -267,7 +260,10 @@ class _BoardCell extends StatefulWidget {
   final ImageLayout? layout;
   final String imageUrl;
   final bool correct;
-  final void Function(int fromCell, int toCell) onSwap;
+  /// Attempts to move the piece(s) at [fromCell] onto [toCell]. Returns
+  /// whether the move was actually accepted — `false` triggers a neutral
+  /// snap-back/shake instead of any color-coded feedback.
+  final Future<bool> Function(int fromCell, int toCell) onSwap;
   final double cellWidth;
   final double cellHeight;
   final double gap;
@@ -390,11 +386,8 @@ class _BoardCellState extends State<_BoardCell>
         ? PuzzleImageTile(
             image: widget.image!,
             layout: widget.layout!,
-            gridCols: widget.gridCols,
-            gridRows: widget.gridRows,
             row: row,
             col: col,
-            gap: widget.gap,
             opacity: tileOpacity.clamp(0.0, 1.0),
           )
         : _PlaceholderTile(
@@ -423,6 +416,10 @@ class _BoardCellState extends State<_BoardCell>
             width: borderWidth,
           );
 
+    // Invalid-move feedback is purely physical: a quick rotational shake
+    // plus a neutral dark impact shadow — never a color-coded (red/green)
+    // signal. Correctness is communicated by image continuity and edge
+    // connections alone.
     final decorated = AnimatedBuilder(
       animation: _shake,
       builder: (context, child) {
@@ -430,11 +427,15 @@ class _BoardCellState extends State<_BoardCell>
           angle: _shake.value,
             child: Container(
             decoration: BoxDecoration(
-              border: _shakeController.isAnimating
-                  ? Border.all(color: AppColors.danger, width: 3.0)
-                  : effectiveBorder,
+              border: effectiveBorder,
               boxShadow: _shakeController.isAnimating
-                  ? AppShadows.glow(AppColors.danger, opacity: 0.5)
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.28),
+                        blurRadius: 14,
+                        spreadRadius: 1,
+                      ),
+                    ]
                   : null,
             ),
             child: child,
@@ -462,31 +463,10 @@ class _BoardCellState extends State<_BoardCell>
       // ── Group cell: drag the entire group as one unit ──
       tree = DragTarget<int>(
         onWillAcceptWithDetails: (details) => details.data != widget.cellIndex,
-        onAcceptWithDetails: (details) =>
-            widget.onSwap(details.data, widget.cellIndex),
+        onAcceptWithDetails: (details) => _handleDrop(details.data),
         builder: (context, candidateData, rejectedData) {
           final hovering = candidateData.isNotEmpty;
-          final hoverRing = hovering
-              ? Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(style?.cornerRadius ?? 0),
-                    border: Border.all(color: AppColors.primary, width: 2.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.35),
-                        blurRadius: 14,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                    ),
-                    child: popped,
-                  ),
-                )
-              : popped;
+          final hoverRing = hovering ? _neutralHoverLift(popped, style) : popped;
 
           return Draggable<int>(
             data: widget.cellIndex,
@@ -503,33 +483,13 @@ class _BoardCellState extends State<_BoardCell>
       // ── Individual cell: standard drag-to-swap ──
       tree = DragTarget<int>(
         onWillAcceptWithDetails: (details) => details.data != widget.cellIndex,
-        onAcceptWithDetails: (details) =>
-            widget.onSwap(details.data, widget.cellIndex),
+        onAcceptWithDetails: (details) => _handleDrop(details.data),
         builder: (context, candidateData, rejectedData) {
           final hovering = candidateData.isNotEmpty;
-          // Drop-target ghost: a soft primary tint + glow ring where the
-          // dragged piece would land.
-          final hoverRing = hovering
-              ? Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(style?.cornerRadius ?? 0),
-                    border: Border.all(color: AppColors.primary, width: 2.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.35),
-                        blurRadius: 14,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                    ),
-                    child: popped,
-                  ),
-                )
-              : popped;
+          // Drop-target feedback is purely physical — a subtle lift and
+          // neutral shadow, never a color that could read as a
+          // correct/incorrect signal.
+          final hoverRing = hovering ? _neutralHoverLift(popped, style) : popped;
 
           return Draggable<int>(
             data: widget.cellIndex,
@@ -609,6 +569,44 @@ class _BoardCellState extends State<_BoardCell>
     );
   }
 
+  /// Attempts the move; if it was rejected (e.g. a group whose shifted
+  /// shape doesn't fit the vacated cells — never because of a locked
+  /// cell, since no cell is ever locked by its position), plays a
+  /// neutral physical "no" — a quick shake plus a soft error haptic/SFX
+  /// — instead of any color-coded target feedback. The piece simply
+  /// stays where it was; there is nothing to snap back since the
+  /// arrangement never changed.
+  Future<void> _handleDrop(int fromCell) async {
+    final accepted = await widget.onSwap(fromCell, widget.cellIndex);
+    if (!accepted && mounted) {
+      _shakeController.forward(from: 0);
+      AudioService().playError();
+    }
+  }
+
+  /// Neutral "this is a valid drop target" affordance: a slight lift and
+  /// a soft dark shadow. Deliberately colorless — correctness is never
+  /// communicated through target color.
+  Widget _neutralHoverLift(Widget child, PieceStyle? style) {
+    return Transform.scale(
+      scale: 1.03,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(style?.cornerRadius ?? 0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 16,
+              spreadRadius: 1,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: child,
+      ),
+    );
+  }
+
   /// Announces the piece for screen readers. Pieces are interactive the
   /// moment the board loads: drag to swap.
   Widget _withSemantics(Widget child) {
@@ -678,11 +676,8 @@ class _BoardCellState extends State<_BoardCell>
           ? PuzzleImageTile(
               image: widget.image!,
               layout: widget.layout!,
-              gridCols: widget.gridCols,
-              gridRows: widget.gridRows,
               row: displayRow,
               col: displayCol,
-              gap: widget.gap,
             )
           : _PlaceholderTile(
               imageUrl: widget.imageUrl,
