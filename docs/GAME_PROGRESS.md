@@ -24,6 +24,7 @@ Core feature implementation is advanced, but visual polish and core gameplay ref
 - [x] Neutral drag-drop feedback (removed red hover tint on drop targets; invalid group moves reject with a colorless shake + haptic/SFX instead of a colored target)
 - [x] Gameplay rule audit — removed a residual position-lock: a solo correctly-placed (but unconnected) tile is now always displaceable by an incoming group, matching "correct position ≠ locked" everywhere (`canMoveGroupByCells()` no longer special-cases correctness)
 - [x] Fixed a group-vs-group displacement direction bug (`canMoveGroupByCells`/`moveGroupByCells` used `cell + displacement` instead of `cell - displacement` when relocating a displaced group to the vacated cells) — dragging one connected group onto another matching-shaped group was previously rejected essentially always; now succeeds when shapes fit, per design
+- [x] Group drag feedback fix — every group member now fades together while dragging (not just the cell that started the drag, which previously looked like a duplicate/leftover tile), the grabbed cell stays under the pointer via a custom `dragAnchorStrategy`, and drag feedback (both individual tile and group) is rendered at exact board size with no scale-up and no drop shadow
 - [x] Star rating system (3 tiers based on minimal swaps)
 - [x] Combo system (rapid correct moves)
 - [x] Pity shuffle (after 6 stalled moves)

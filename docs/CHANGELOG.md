@@ -4,6 +4,20 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-08-26 (Group Drag Feedback: Duplicate Look, Pointer Jump, Shadow/Scale)
+
+Presentation-only fixes in `puzzle_board.dart` — no change to `TileSwapEngine`, `PuzzleAdjacency`, `PuzzleGrouping`, or any movement/displacement/completion logic.
+
+### Fixed
+- **Group drag looked duplicated.** Each cell in a connected group has its own independent `Draggable` (Flutter has no multi-cell drag primitive) — Flutter's `childWhenDragging` only fades the ONE cell whose own Draggable is active. Dragging B out of a connected `A—B` left A rendering normally at full opacity on the board while the A+B feedback (built from `_buildGroupFeedback`) followed the pointer — looking like a duplicate/leftover A tile beside the real group. Fixed by lifting a `_draggingGroupId` value to `_PuzzleBoardState` (set via each Draggable's `onDragStarted`/`onDragEnd`) and threading it down to every cell: any cell whose group id matches now fades to the same 0.35 opacity regardless of which cell actually started the drag
+- **Group feedback jumped away from the grabbed cell.** Draggable's default `childDragAnchorStrategy` maps "where within the grabbed cell you touched" onto the *same fraction* of the `feedback` widget. That's correct when `feedback` and `child` are the same size (individual tile), but wrong for a group: `feedback` is the whole group's bounding box, so the default anchored the pointer near the group's top-left (roughly cell A's position) instead of under whichever cell — e.g. B — was actually grabbed, causing a visible jump the instant the drag started. Fixed with a custom `dragAnchorStrategy` that adds the grabbed cell's own pixel offset within the group's bounding box (from `group.relativePositions`, the same data the movement engine uses) to the local grab point, so the grabbed cell stays exactly under the finger
+- **Drag feedback was scaled up and had a drop shadow**, for both individual tiles (`Transform.scale(1.10)` + two `BoxShadow`s) and groups (`Transform.scale(1.08)` + two `BoxShadow`s). Removed both entirely from `feedback:` in both paths — the dragged piece/group is now pixel-identical in size to its on-board appearance; only the pointer-following motion signals it's being moved. (The drop-target hover lift on the *receiving* cell — `_neutralHoverLift()`, a separate, still-neutral-colored affordance — was left untouched; it wasn't part of this bug report.)
+
+### Corrected
+- `_buildGroupFeedback()`'s doc comment updated to describe the current (unscaled, unshadowed) behavior and to note it derives directly from `group.cells`/`group.relativePositions` — the same shape data the movement engine consumes, not a re-derived interpretation
+
+---
+
 ## 2026-08-26 (QA Audit: Group-vs-Group Displacement Direction Bug)
 
 ### Fixed

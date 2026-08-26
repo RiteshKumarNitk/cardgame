@@ -82,6 +82,17 @@ class _PuzzleBoardState extends State<PuzzleBoard> {
   ui.Image? _image;
   ImageLayout? _layout;
 
+  /// The id of the group currently being dragged (from any of its member
+  /// cells), or `null` when nothing is being dragged. Every cell belonging
+  /// to this group fades on the board while it's set, so the whole group
+  /// reads as "picked up" — not just the one cell whose Draggable happens
+  /// to be active. Each cell has its own independent Draggable (Flutter
+  /// has no built-in notion of a multi-cell drag), so without this, only
+  /// the cell that started the drag would fade and its groupmates would
+  /// stay fully visible on the board — looking like a duplicate of the
+  /// group floating alongside the real one.
+  int? _draggingGroupId;
+
   @override
   void initState() {
     super.initState();
@@ -220,6 +231,9 @@ class _PuzzleBoardState extends State<PuzzleBoard> {
                 adjacency: widget.adjacency,
                 grouping: widget.grouping,
                 arrangement: widget.arrangement,
+                draggingGroupId: _draggingGroupId,
+                onGroupDragStart: (id) => setState(() => _draggingGroupId = id),
+                onGroupDragEnd: () => setState(() => _draggingGroupId = null),
               );
             },
           ),
@@ -250,6 +264,9 @@ class _BoardCell extends StatefulWidget {
     this.adjacency,
     this.grouping,
     this.arrangement,
+    this.draggingGroupId,
+    this.onGroupDragStart,
+    this.onGroupDragEnd,
   });
 
   final int cellIndex;
@@ -274,6 +291,13 @@ class _BoardCell extends StatefulWidget {
   final PuzzleAdjacency? adjacency;
   final PuzzleGrouping? grouping;
   final List<int>? arrangement;
+
+  /// The id of the group currently being dragged board-wide (from any
+  /// member cell), or `null`. Lets every cell in that group fade together
+  /// regardless of which specific cell's Draggable is the active one.
+  final int? draggingGroupId;
+  final ValueChanged<int>? onGroupDragStart;
+  final VoidCallback? onGroupDragEnd;
 
   @override
   State<_BoardCell> createState() => _BoardCellState();
@@ -461,20 +485,59 @@ class _BoardCellState extends State<_BoardCell>
       tree = popped;
     } else if (isInGroup && widget.image != null && widget.layout != null) {
       // ── Group cell: drag the entire group as one unit ──
+      //
+      // Every cell in the group has its OWN independent Draggable (Flutter
+      // has no multi-cell drag primitive), so whichever cell the player
+      // actually grabs is the one whose Draggable is "active." Without
+      // coordination, only THAT cell would fade via childWhenDragging —
+      // every other member would keep rendering normally on the board,
+      // looking like a duplicate/leftover tile beside the group that's
+      // following the pointer. `draggingGroupId` (lifted to the board)
+      // fixes this: every cell in the currently-dragged group fades,
+      // regardless of which one started the drag.
+      final isThisGroupDragging = widget.draggingGroupId == group.id;
+      final fadedForGroupDrag = Opacity(opacity: 0.35, child: decorated);
       tree = DragTarget<int>(
         onWillAcceptWithDetails: (details) => details.data != widget.cellIndex,
         onAcceptWithDetails: (details) => _handleDrop(details.data),
         builder: (context, candidateData, rejectedData) {
           final hovering = candidateData.isNotEmpty;
-          final hoverRing = hovering ? _neutralHoverLift(popped, style) : popped;
+          // Sibling cells (this group is dragging, but THIS cell isn't
+          // the one whose own Draggable is active) fade via this path.
+          // The actively-dragged cell fades via childWhenDragging below,
+          // unconditionally and with zero propagation delay.
+          final hoverRing = isThisGroupDragging
+              ? fadedForGroupDrag
+              : (hovering ? _neutralHoverLift(popped, style) : popped);
 
           return Draggable<int>(
             data: widget.cellIndex,
             feedback: _buildGroupFeedback(group, decorated),
-            childWhenDragging: Opacity(
-              opacity: 0.35,
-              child: decorated,
-            ),
+            // The default anchor strategy maps "where within the grabbed
+            // cell you touched" onto the SAME fraction of the feedback
+            // widget. That's correct for a single tile (child and
+            // feedback are the same size) but wrong for a group: the
+            // feedback is the whole group's bounding box, so the default
+            // would anchor the pointer near the group's top-left corner
+            // (roughly wherever cell A sits) instead of under the actual
+            // cell the player grabbed — a visible jump the instant the
+            // drag starts. This strategy adds this cell's own offset
+            // within the group's bounding box, so the grabbed cell stays
+            // exactly under the finger.
+            dragAnchorStrategy: (draggable, context, position) {
+              final box = context.findRenderObject()! as RenderBox;
+              final localGrab = box.globalToLocal(position);
+              final memberIndex = group.cells.indexOf(widget.cellIndex);
+              final rel = group.relativePositions[memberIndex];
+              final groupOffset = Offset(
+                rel.$2 * (widget.cellWidth + widget.gap),
+                rel.$1 * (widget.cellHeight + widget.gap),
+              );
+              return localGrab + groupOffset;
+            },
+            onDragStarted: () => widget.onGroupDragStart?.call(group.id),
+            onDragEnd: (_) => widget.onGroupDragEnd?.call(),
+            childWhenDragging: fadedForGroupDrag,
             child: hoverRing,
           );
         },
@@ -493,36 +556,15 @@ class _BoardCellState extends State<_BoardCell>
 
           return Draggable<int>(
             data: widget.cellIndex,
-            // The lifted piece: scaled up with layered drop shadow so
-            // it reads as a physical card picked up from the board.
+            // The lifted piece: the exact same physical size and
+            // appearance it has on the board — no scale-up, no shadow.
+            // Only the pointer-following motion signals "picked up."
             feedback: SizedBox(
               width: widget.cellWidth,
               height: widget.cellHeight,
               child: Material(
                 color: Colors.transparent,
-                child: Transform.scale(
-                  scale: 1.10,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(
-                        (style?.cornerRadius ?? 0) * 1.10,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.30),
-                          blurRadius: 24,
-                          offset: const Offset(0, 12),
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: decorated,
-                  ),
-                ),
+                child: decorated,
               ),
             ),
             childWhenDragging: Opacity(
@@ -628,8 +670,12 @@ class _BoardCellState extends State<_BoardCell>
 
   /// Builds the feedback widget for a connected group drag.
   ///
-  /// Shows all cells of the group in their relative positions, each with
-  /// its image content, scaled up with a drop shadow.
+  /// Shows every cell of [group] at its real relative position within the
+  /// group's bounding box, each with its own image content, at the exact
+  /// same size it has on the board — no scale, no shadow. This is built
+  /// directly from [group.cells]/[group.relativePositions] (the same
+  /// shape data the movement engine itself uses), not a re-derived
+  /// interpretation of the group's geometry.
   Widget _buildGroupFeedback(PuzzleGroup group, Widget cellContent) {
     final style = widget.pieceStyle;
     final radius = BorderRadius.circular(style?.cornerRadius ?? 0);
@@ -703,32 +749,16 @@ class _BoardCellState extends State<_BoardCell>
       );
     }
 
+    // Exactly the group's on-board footprint — no scale, no shadow. Empty
+    // cells inside the bounding box (an irregular group shape) stay
+    // transparent since only the group's actual cells add a Positioned
+    // child to the Stack.
     return SizedBox(
       width: groupWidth,
       height: groupHeight,
       child: Material(
         color: Colors.transparent,
-        child: Transform.scale(
-          scale: 1.08,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 24,
-                  offset: const Offset(0, 12),
-                ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Stack(children: groupCells),
-          ),
-        ),
+        child: Stack(children: groupCells),
       ),
     );
   }

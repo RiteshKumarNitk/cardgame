@@ -451,14 +451,14 @@ Groups do NOT affect image rendering. The image pipeline remains:
 `PuzzleBoard` accepts `PuzzleAdjacency?` and `PuzzleGrouping?` parameters.
 
 **Visual Indicators:**
-- Per-edge border rendering: connected edges have no border, unconnected edges show the normal border.
-- Cells in groups get a subtle purple border on unconnected edges.
-- The `correct` flag (pieceIndex == cellIndex + 1) drives the pop animation and green glow.
+- Per-edge border rendering: connected edges have no border, unconnected edges show the normal (idle-colored, never green/red) border.
+- The `correct` flag (pieceIndex == cellIndex + 1) drives the pop-scale snap animation only — never a color.
 
 **Drag Behavior:**
 - All cells are always draggable — no cell is ever locked.
-- When dragging a group cell, the feedback shows the entire group shape with all cells and their image content.
-- Group feedback is scaled up 1.08x with a drop shadow.
+- When dragging a group cell, the feedback shows the entire group's real shape (`_buildGroupFeedback()`, built from `group.cells`/`group.relativePositions`) with all cells and their image content — never a single-tile screenshot.
+- Group feedback is rendered at the exact same size as the group's on-board footprint — no scale, no shadow. Every cell belonging to the dragged group fades on the board (via a `draggingGroupId` value lifted to `_PuzzleBoardState`), not just the cell whose own `Draggable` is active, so the group never appears to leave a "duplicate" tile behind.
+- A custom `dragAnchorStrategy` keeps the actually-grabbed cell under the pointer (Flutter's default anchor strategy would otherwise anchor near the group's top-left corner, since the feedback widget is larger than the single cell that started the drag).
 
 ### Backward Compatibility
 
