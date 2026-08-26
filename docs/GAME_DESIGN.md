@@ -68,10 +68,10 @@ Drag one tile onto another to swap their positions. This is the core mechanic fo
 ### Correctness Feedback
 
 Correctness is communicated through:
-- **Image continuity**: When pieces are correctly placed, the image becomes seamless across adjacent tiles
-- **Connected edges**: Shared borders disappear between correctly adjacent cells
-- **Snap animation**: A subtle pop animation plays when a piece becomes correctly placed
-- **Physical snapping**: Pieces feel like they snap into place
+- **Image continuity**: When two solved-image-neighbor pieces are placed next to each other, that stretch of the image becomes seamless — wherever on the board it happens
+- **Connected edges**: Shared borders disappear between two currently-adjacent pieces that are solved-image neighbors of each other (see "Connected Edges & Groups" below) — not between merely correctly-positioned cells
+- **Snap animation**: A subtle pop animation plays the moment a piece gains its first edge connection — the "click" of two pieces fitting together — not when it merely reaches its own correct absolute cell
+- **Physical snapping**: Pieces feel like they snap into place when they connect
 
 Correctness is **never** communicated through:
 - Green borders or glows
@@ -79,16 +79,30 @@ Correctness is **never** communicated through:
 - Any color-based feedback
 - Drag hover/drop-target color (the destination cell never tints red or green while a piece hovers over it — the hover affordance is a colorless lift + soft shadow, signaling "a piece can land here," not "this is correct")
 
-An invalid move (a group displaced onto a locked cell) is rejected with a neutral physical shake plus a soft error haptic/SFX — never a colored target or border.
+An invalid move (a connected group whose shifted shape doesn't fit the vacated cells) is rejected with a neutral physical shake plus a soft error haptic/SFX — never a colored target or border.
 
 ### Connected Edges & Groups (Hard+)
 
-On Hard difficulty and above, the board uses **connected edges** — when two adjacent cells are both correctly placed, the shared border between them disappears, visually joining them. Connected cells form a **movable group** that can be dragged as a single unit.
+On Hard difficulty and above, the board uses **connected edges** — when the pieces currently sitting in two board-adjacent cells are each other's neighbors in the solved image, the shared border between them disappears, visually joining them. Connected cells form a **movable group** that can be dragged as a single unit.
 
-**How connections form:**
-- Two adjacent cells are connected when both contain correctly placed pieces
-- Connections form dynamically as the player creates correct adjacencies
+**How connections form — EDGE MATCH, not absolute position:**
+
+There are two separate concepts, and they are never conflated:
+
+| Concept | Meaning |
+|---|---|
+| **Edge match** | The pieces currently in two adjacent cells are solved-image neighbors of each other |
+| **Correct absolute position** | A piece is sitting in its own final board cell |
+
+A connection is created purely from **edge match** — it never requires either piece to be at its correct absolute position:
+
+- Two board-adjacent cells connect when the piece on the left is the solved-image left-neighbor of the piece on the right (and symmetrically for top/bottom) — evaluated entirely from each piece's own solved row/column, not from `arrangement[cell] == cell + 1`
+- This means two pieces that belong together can connect the moment the player places them next to each other, **anywhere on the board** — long before either has reached its own final cell
+- Connections form dynamically, recomputed from the current arrangement after every move — an old connection is never persisted once the pieces are no longer adjacent solved-neighbors
 - Groups grow naturally: piece + piece → group, group + piece → larger group
+- A correctly-positioned piece is not automatically connected to anything — it only connects if a currently-adjacent piece also happens to be its solved-image neighbor
+
+**Why this matters for the player:** the game rewards *discovering relationships* ("these two pieces belong together") rather than *guessing exact coordinates* ("this piece goes in square 14"). A player can build a partial `A—B—C` chain anywhere on the board, then move the whole chain toward its final spot.
 
 **CONNECTED ≠ LOCKED:**
 - A connected group is one movable puzzle object — it never splits
@@ -101,12 +115,12 @@ On Hard difficulty and above, the board uses **connected edges** — when two ad
 **Border behavior:**
 - Connected edges: shared border is removed (cells appear joined)
 - Unconnected edges: normal border is visible
-- Example: two correctly adjacent A pieces:
+- Example: two solved-image-neighbor A pieces placed next to each other on the board:
 ```
 A ═ A C D E
 A F G H I
 ```
-The border between the two A cells disappears, visually connecting them.
+The border between the two A cells disappears, visually connecting them — wherever on the board this happens to occur.
 
 **Example (4×4 grid with connections):**
 ```
@@ -115,7 +129,7 @@ The border between the two A cells disappears, visually connecting them.
 [I] [J] [K] [L]
 [M] [N] [O] [P]
 ```
-If B and F are correctly adjacent, the border between them disappears:
+If the pieces currently at B and F are solved-image neighbors (regardless of whether B and F are themselves at their own correct absolute positions), the border between them disappears:
 ```
 [A]  B ═ F  [C] [D]
 [E]  B ═ F  [G] [H]

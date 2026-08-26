@@ -4,6 +4,25 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-08-26 (Gameplay Change: Relative Edge Connections, Not Absolute Position)
+
+### Changed
+- **`computeAdjacency()` now connects pieces by RELATIVE solved-image adjacency, not absolute board position.** Previously, two board-adjacent cells connected only when `arrangement[cell] == cell + 1` was true for BOTH cells (i.e. both pieces were at their own correct final position). Now, two board-adjacent cells connect whenever the pieces currently sitting in them are each other's solved-image neighbors — evaluated purely from each piece's own solved row/column (`solvedRow(piece) = (piece - 1) ~/ cols`, `solvedCol(piece) = (piece - 1) % cols`) — regardless of whether either piece is anywhere near its own correct cell. A piece can now connect to its solved neighbor the moment the player places them next to each other, anywhere on the board. `arrangement[cell] == cell + 1` is no longer a prerequisite anywhere in `computeAdjacency()`
+- **`_BoardCellState`'s snap-pop animation now triggers on a cell's first edge connection, not on reaching its correct absolute position.** Its own doc comment already claimed to fire "when a new adjacency is formed," but the code actually gated on `widget.correct` (absolute position) — under the old absolute-position connection rule these were closely correlated, but under the new relative rule they're fully decoupled, so leaving it keyed on `correct` would have made the primary "pieces click together" feedback moment silent for most of normal play. Now compares `PuzzleAdjacency.hasAnyConnection(cellIndex)` before/after instead
+
+### Why
+This is a deliberate game-design shift from "guess the exact coordinate" to "discover which pieces belong together" — the player can now build a partial `A—B—C` chain anywhere on the board (not just at its final destination) and then move the whole chain toward its final spot, same as assembling a physical jigsaw puzzle off to the side of the box lid.
+
+### Explicitly unchanged
+Per the request, this was scoped to the connection *criterion* only: `TileSwapEngine` (movement/displacement/`isSolved`), `PuzzleGrouping.fromAdjacency()` (still a pure union-find consumer of whatever `computeAdjacency()` produces), group drag feedback/rendering/scale/shadow/pointer-anchor (from the previous fix), and completion logic are all untouched. Completion still requires the full absolute `arrangement[i] == i + 1` for every cell — connections are a mid-game aid, not a substitute for the win condition.
+
+### Corrected
+- `PuzzleAdjacency`, `computeAdjacency()`, `PuzzleGroup`, and `PuzzleLoaded.adjacency` doc comments rewritten to describe the relative rule
+- GAME_DESIGN.md: "Connected Edges & Groups" section rewritten with an explicit Edge Match vs. Correct Absolute Position table; "Correctness Feedback" section updated to match
+- ARCHITECTURE.md: "How Connections Form," "Group Shuffle," and the Puzzle Group Architecture overview updated; noted that a shuffle can now start with a few connections already present by chance (impossible under the old absolute-position rule)
+
+---
+
 ## 2026-08-26 (Group Drag Feedback: Duplicate Look, Pointer Jump, Shadow/Scale)
 
 Presentation-only fixes in `puzzle_board.dart` — no change to `TileSwapEngine`, `PuzzleAdjacency`, `PuzzleGrouping`, or any movement/displacement/completion logic.

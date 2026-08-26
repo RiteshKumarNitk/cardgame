@@ -388,13 +388,13 @@ All visual tokens live in `lib/core/design_system/`:
 
 ### Overview
 
-SuitClash uses **connected-edge adjacency** for Hard/Expert/Master difficulties. When two adjacent cells are both correctly placed, the shared border between them disappears, and the cells form a **connected group** that moves as one unit. Groups form dynamically from correct adjacencies — they are NOT pre-defined.
+SuitClash uses **connected-edge adjacency** for Hard/Expert/Master difficulties. When the pieces currently sitting in two board-adjacent cells are each other's neighbors in the solved image, the shared border between them disappears, and the cells form a **connected group** that moves as one unit. This is a RELATIVE relationship (edge match) — it never requires either piece to be at its own correct absolute board position. Groups form dynamically from these edge matches — they are NOT pre-defined.
 
 ### Key Concepts
 
 **Atomic Grid**: The image is always divided into atomic grid cells (e.g., 8×10 = 80 cells). Each cell is a crop from the same shared scaled image. The atomic grid is the source of truth for image rendering.
 
-**PuzzleAdjacency**: Edge-level connection state. For every cell, determines which of its four edges (top, right, bottom, left) are connected to correctly adjacent neighbors. Two cells are connected when both are correctly placed and adjacent.
+**PuzzleAdjacency**: Edge-level connection state. For every cell, determines which of its four edges (top, right, bottom, left) are connected to a currently-adjacent solved-image neighbor. Two board-adjacent cells are connected when the PIECES currently sitting in them are each other's solved-image neighbors — a relative relationship evaluated from each piece's own solved row/column, independent of whether either piece is at its own correct absolute board position.
 
 **PuzzleGroup**: A connected group of cells that move together as one unit. Groups form dynamically from adjacency connections using union-find. **CONNECTED ≠ LOCKED** — a group is fully movable at all times until the puzzle is ultimately solved.
 
@@ -410,11 +410,14 @@ SuitClash uses **connected-edge adjacency** for Hard/Expert/Master difficulties.
 
 ### How Connections Form
 
-1. After every move, `computeAdjacency()` checks all adjacent cell pairs.
-2. Two cells are connected when: `arrangement[cell] == cell + 1` AND `arrangement[neighbor] == neighbor + 1`.
+**Edge match ≠ correct absolute position.** These are two separate concepts and the code never conflates them:
+
+1. After every move, `computeAdjacency()` checks all board-adjacent cell pairs.
+2. Two cells are connected when the pieces currently in them are solved-image neighbors — for a horizontal pair, `solvedRow(rightPiece) == solvedRow(leftPiece) && solvedCol(rightPiece) == solvedCol(leftPiece) + 1` (mirrored for vertical pairs), where `solvedRow`/`solvedCol` are derived purely from each piece's own index (`piece - 1`). This is **NOT** `arrangement[cell] == cell + 1` — a piece does not need to be at its own correct absolute board position to connect to its solved neighbor.
 3. Connected edges have their shared border removed visually.
-4. `PuzzleGrouping.fromAdjacency()` uses union-find to compute connected components.
+4. `PuzzleGrouping.fromAdjacency()` uses union-find to compute connected components — unchanged by the above; it only consumes whatever `computeAdjacency()` produces.
 5. Multi-cell components become groups. Single cells remain ungrouped.
+6. Because this is recomputed from scratch after every move, a connection is never "remembered" — if a move separates two previously-adjacent solved-neighbor pieces, the connection simply doesn't exist in the next recomputation.
 
 ### Group Movement Rules
 
@@ -437,7 +440,7 @@ SuitClash uses **connected-edge adjacency** for Hard/Expert/Master difficulties.
 
 ### Group Shuffle
 
-All levels use the same shuffling: pieces start in random positions (Fisher-Yates). Groups form dynamically from correct adjacencies that happen to exist in the shuffled arrangement. There is no pre-generation of groups.
+All levels use the same shuffling: pieces start in random positions (Fisher-Yates). Groups form dynamically from solved-neighbor edge matches that happen to exist in the shuffled arrangement — since this no longer requires either piece to be at its correct absolute position, it's common (and expected) for a shuffle to start with a few small connections already present purely by chance, especially on larger boards. There is no pre-generation of groups.
 
 ### Image Rendering
 
