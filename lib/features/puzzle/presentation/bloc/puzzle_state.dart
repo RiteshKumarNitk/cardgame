@@ -54,8 +54,10 @@ final class PuzzleLoaded extends PuzzleState {
   final int minimalSwaps;
 
   /// Edge-level adjacency state. For every cell, determines which of
-  /// its four edges are connected to correctly adjacent neighbors.
-  /// Computed after every move from the current arrangement.
+  /// its four edges are connected to a currently-adjacent piece that is
+  /// also its solved-image neighbor (relative to the piece, not the
+  /// board — see [computeAdjacency]). Computed after every move from the
+  /// current arrangement.
   final PuzzleAdjacency adjacency;
 
   /// Dynamically-computed groups formed from adjacency connections.

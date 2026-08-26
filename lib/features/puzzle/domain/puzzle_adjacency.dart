@@ -1,15 +1,20 @@
 /// Edge-level adjacency state for the puzzle board.
 ///
 /// For every atomic cell, determines whether each of its four edges is
-/// connected to its correct neighboring piece. Two adjacent cells are
-/// connected when:
+/// connected to its currently neighboring piece. Two board-adjacent cells
+/// are connected when the PIECES currently sitting in them are neighbors
+/// in the solved image — i.e. a purely RELATIVE relationship:
 ///
-/// 1. Both cells contain correctly placed pieces (`arrangement[cell] == cell + 1`).
-/// 2. The two pieces are correctly adjacent in the solved puzzle.
+///     current[right] is the piece immediately right of current[left]
+///     in the solved image
 ///
-/// Connected edges have their shared border removed, visually joining
-/// the cells. The connected cells remain fully movable — they form a
-/// connected group, not a locked region.
+/// This is deliberately independent of whether either piece is at its
+/// own correct absolute board position. Two pieces that belong next to
+/// each other connect the moment they're placed next to each other on
+/// the board, wherever that happens to be — exactly like discovering two
+/// jigsaw pieces fit together. Connected edges have their shared border
+/// removed, visually joining the cells. The connected cells remain fully
+/// movable — they form a connected group, never a locked region.
 class PuzzleAdjacency {
   const PuzzleAdjacency({
     required this.edges,
@@ -20,7 +25,8 @@ class PuzzleAdjacency {
   /// Per-cell edge connectivity bitmask.
   ///
   /// [edges][cell] is a bitmask of [Edge] flags indicating which edges
-  /// of that cell are connected to correctly adjacent neighbors.
+  /// of that cell are connected to a currently-adjacent piece that is
+  /// also its solved-image neighbor — see [computeAdjacency].
   final List<int> edges;
 
   /// Board column count.
@@ -91,11 +97,17 @@ enum Edge {
 
 /// Computes edge-level adjacency for the current arrangement.
 ///
-/// Two adjacent cells are connected when both contain correctly placed
-/// pieces that are correctly adjacent in the solved puzzle.
+/// Two board-adjacent cells are connected when the pieces CURRENTLY
+/// sitting in them are neighbors in the solved image — a relative
+/// relationship, evaluated purely from each piece's own solved row/col,
+/// never from whether either piece is at its own correct absolute board
+/// position. `arrangement[cell] == cell + 1` (absolute correctness) is
+/// NOT a prerequisite anywhere in this function — a piece two rows away
+/// from home can still connect to its solved neighbor the moment the
+/// player places them next to each other.
 ///
 /// For Easy/Medium (no groups), adjacency is still computed for visual
-/// border removal between correctly adjacent individual tiles.
+/// border removal between currently-adjacent solved-neighbor tiles.
 PuzzleAdjacency computeAdjacency({
   required List<int> arrangement,
   required int cols,
@@ -104,33 +116,40 @@ PuzzleAdjacency computeAdjacency({
   final cellCount = cols * rows;
   final edges = List.filled(cellCount, 0);
 
+  // A piece's row/col in the SOLVED image (piece indices are 1-based;
+  // solved cell index is piece - 1).
+  int solvedRowOf(int piece) => (piece - 1) ~/ cols;
+  int solvedColOf(int piece) => (piece - 1) % cols;
+
   for (var cell = 0; cell < cellCount; cell++) {
     final row = cell ~/ cols;
     final col = cell % cols;
     final piece = arrangement[cell];
 
-    // A cell is correctly placed when arrangement[cell] == cell + 1.
-    final isCorrect = piece == cell + 1;
-
-    if (!isCorrect) continue;
-
-    // Check right neighbor.
+    // Check right neighbor: connect when the piece currently to the
+    // right is this piece's solved right-neighbor — same solved row,
+    // one solved column over. The same-row check guards against a
+    // false match at a solved row boundary (e.g. the last piece of one
+    // row and the first piece of the next differ by exactly 1 in index
+    // but are not actually horizontally adjacent in the solved image).
     if (col < cols - 1) {
       final rightCell = cell + 1;
       final rightPiece = arrangement[rightCell];
-      // Right neighbor is correct when arrangement[rightCell] == rightCell + 1.
-      if (rightPiece == rightCell + 1) {
+      if (solvedRowOf(rightPiece) == solvedRowOf(piece) &&
+          solvedColOf(rightPiece) == solvedColOf(piece) + 1) {
         edges[cell] |= Edge.right.mask;
         edges[rightCell] |= Edge.left.mask;
       }
     }
 
-    // Check bottom neighbor.
+    // Check bottom neighbor: connect when the piece currently below is
+    // this piece's solved bottom-neighbor — same solved column, one
+    // solved row down.
     if (row < rows - 1) {
       final bottomCell = cell + cols;
       final bottomPiece = arrangement[bottomCell];
-      // Bottom neighbor is correct when arrangement[bottomCell] == bottomCell + 1.
-      if (bottomPiece == bottomCell + 1) {
+      if (solvedColOf(bottomPiece) == solvedColOf(piece) &&
+          solvedRowOf(bottomPiece) == solvedRowOf(piece) + 1) {
         edges[cell] |= Edge.bottom.mask;
         edges[bottomCell] |= Edge.top.mask;
       }

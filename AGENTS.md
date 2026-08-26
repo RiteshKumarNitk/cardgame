@@ -44,12 +44,13 @@ There is **no "locked cell" mechanic** in the current puzzle system.
 Historical references to locked cells in CHANGELOG.md are historical only.
 
 Current gameplay uses:
-- **Connected edges** — when two adjacent cells are correctly paired, the shared border is removed
+- **Connected edges** — when two board-adjacent cells hold pieces that are each other's neighbors in the SOLVED image, the shared border is removed. This is a RELATIVE relationship (edge match), evaluated from each piece's own solved row/column — it is never conditioned on either piece being at its own correct absolute board position (`arrangement[cell] == cell + 1` is not a prerequisite for a connection to form)
 - **Dynamically formed movable groups** — connected cells form groups that move as one unit
-- **Edge-level border removal** — visual connection between correctly adjacent pieces
+- **Edge-level border removal** — visual connection between two currently-adjacent solved-image-neighbor pieces, wherever on the board that happens
 
 A correctly positioned tile is **NOT** locked.
 A correctly connected group is **NOT** locked.
+A tile or group does **NOT** need to be at its correct absolute position to become connected — two pieces that belong together connect the moment they're placed next to each other, anywhere on the board.
 All pieces remain movable until the puzzle is completely solved.
 
 Do **NOT** implement, reference, or re-introduce any form of cell locking. Do **NOT** treat `arrangement[cell] == cell + 1` as a reason to prevent movement. The only locked state is when the entire puzzle is solved.
@@ -102,7 +103,7 @@ Do **NOT** implement, reference, or re-introduce any form of cell locking. Do **
 | GridView puzzle board | Standard Flutter widgets for accessibility and simplicity |
 | Cover-scale-then-crop image pipeline | Puzzle image must cover the board with no gaps; never independently scale tiles (HIGH PRIORITY) |
 | LevelConfig-driven puzzle engine | Engine receives pure data class; never touches Chapter/Section directly |
-| Connected puzzle groups (Hard+) | Dynamic adjacency-based formation: correct adjacencies create connections, removing shared borders; connected cells form movable groups; groups never lock, split, or rotate; rebuilt from adjacency after every move |
+| Connected puzzle groups (Hard+) | Dynamic adjacency-based formation: RELATIVE solved-image-neighbor adjacencies create connections (never absolute position), removing shared borders; connected cells form movable groups; groups never lock, split, or rotate; rebuilt from adjacency after every move |
 | Data-driven content architecture | Chapters/sections/levels added by appending blueprints; no engine changes needed |
 | GoogleFonts (not bundled fonts) | Baloo2.ttf/Nunito.ttf are declared but typography uses Quicksand/Roboto via GoogleFonts |
 | Single light theme | Bright, colorful casual game aesthetic; **light mode only — no dark mode, no toggle, no system-theme following** (permanent design constraint) |

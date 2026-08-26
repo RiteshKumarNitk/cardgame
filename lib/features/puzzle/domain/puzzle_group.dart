@@ -2,9 +2,11 @@ import 'puzzle_adjacency.dart';
 
 /// A connected group of cells that move together as one unit.
 ///
-/// Groups form dynamically from correct adjacencies: when two adjacent
-/// cells are both correctly placed, they connect into a group. Groups
-/// grow as more correct adjacencies are created.
+/// Groups form dynamically from relative-neighbor adjacencies: when the
+/// pieces currently in two adjacent cells are each other's solved-image
+/// neighbors, they connect into a group — regardless of whether either
+/// piece is at its own correct absolute board position. Groups grow as
+/// more such connections are created.
 ///
 /// **CONNECTED ≠ LOCKED.** A group is fully movable at all times.
 /// It can be repositioned anywhere on the board. The group is never

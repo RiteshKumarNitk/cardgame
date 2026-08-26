@@ -67,7 +67,9 @@ class PuzzleBoard extends StatefulWidget {
   final PieceStyle? pieceStyle;
 
   /// Edge-level adjacency state. For every cell, determines which of
-  /// its four edges are connected to correctly adjacent neighbors.
+  /// its four edges are connected to a currently-adjacent solved-image
+  /// neighbor — a relative relationship, independent of either piece's
+  /// own absolute board position.
   final PuzzleAdjacency? adjacency;
 
   /// Dynamically-computed groups formed from adjacency connections.
@@ -339,8 +341,17 @@ class _BoardCellState extends State<_BoardCell>
   @override
   void didUpdateWidget(covariant _BoardCell oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Pop animation plays when a new adjacency is formed for this cell.
-    if (!oldWidget.correct && widget.correct) {
+    // Pop animation plays the moment this cell gains its first edge
+    // connection — the "click" of two pieces fitting together — not when
+    // it merely reaches its own correct absolute position. Connections
+    // are relative (see computeAdjacency): a piece can connect to its
+    // solved neighbor long before either piece is at its final cell, and
+    // that's the moment worth celebrating.
+    final wasConnected =
+        oldWidget.adjacency?.hasAnyConnection(oldWidget.cellIndex) ?? false;
+    final isConnected =
+        widget.adjacency?.hasAnyConnection(widget.cellIndex) ?? false;
+    if (!wasConnected && isConnected) {
       _popController.forward(from: 0);
       AudioService().playPieceSnap();
     }
@@ -586,7 +597,7 @@ class _BoardCellState extends State<_BoardCell>
   }
 
   /// Builds a per-edge [Border] that hides edges where the cell is
-  /// connected to a correctly adjacent neighbor.
+  /// connected to a currently-adjacent solved-image neighbor.
   static Border _edgeBorder({
     required bool top,
     required bool right,
