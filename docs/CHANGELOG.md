@@ -21,6 +21,23 @@ The grouped hint's "move toward (0,0)" heuristic predates the relative-adjacency
 
 ---
 
+## 2026-08-27 (QA Fix: Group→Group Displacement Rejected Valid Short Moves — Generic Translation)
+
+`TileSwapEngine` only. No engine rewrite, no rendering / drag-visual / cubit changes. Direction- and size-agnostic; the previous no-overlap guarantee is preserved.
+
+### Fixed
+- **A connected group dragged onto another connected group was rejected whenever the move was shorter than the moving group's own extent along that axis** — regardless of board size, group size, group shape, or direction (it was just most visible with larger groups nudged a short way "up"). `canMoveGroupByCells()` / `moveGroupByCells()` displaced other groups by the *plain inverse* translation `(-dRow, -dCol)`. That inverse is only geometrically correct when source and destination footprints **don't overlap** (`|delta| ≥ moverExtent`). For a shorter move the footprints overlap, and `-delta` lands the displaced group back on cells the moving group re-occupies — which `vacatedSet` (`oldCells \ newCells`) correctly excludes — so the move was rejected even though the displaced group would sit perfectly in the vacated slab a little further along. Solo tiles never hit this because they bucket-fill *any* free vacated cell, not a fixed offset.
+- **New generic displacement translation** — `_displacedShift(dRow, dCol, moverHeight, moverWidth)`: per axis, `-sign(delta) * max(|delta|, moverExtent)`. `max(...)` picks `-delta` for non-overlapping moves (unchanged behaviour) and stretches to the moving group's full bounding-box extent for overlapping ones (landing displaced content in the trailing vacated slab). `sign(...)` makes it identical for up/down, left/right, and negative/positive deltas — the direction falls out of the math, no `if (movingUp)` branch. It reads only cell coordinates via `_extentOf()` (min/max bounding box, works for rectangle / L / T / cross / any connected component), so there is no condition on group size, group shape, or board dimensions. `moveGroupByCells()` steps 5 and 6 apply the exact same shift the validator checked.
+- Multiple affected groups in one move are all displaced by that single shared vector — disjoint components stay disjoint, each is verified to land entirely inside `vacatedSet`, and the leftover vacated cells exactly match the displaced-solo count. `_isPermutation()` remains the final atomic all-or-nothing gate.
+
+### Why
+The movement contract is "allow every move that yields a valid board state under the rigid-displacement rules; reject only those that genuinely can't." The old fixed `-delta` was a special case of the correct rule that silently failed on the overlap regime. Moves that still can't produce a valid rigid arrangement (displaced group larger than the freed slab, an irregular shape that only fits under rotation, a cell pushed off-board) are still rejected cleanly with the board untouched.
+
+### Corrected
+- ARCHITECTURE.md "Group Movement Rules": step 3/4 reworded around the generic stretched-inverse translation and `_displacedShift` / `_extentOf`.
+
+---
+
 ## 2026-08-27 (QA Fix: Connected-Group Move Could Overlap Pieces on Self-Overlapping Moves)
 
 Movement/displacement only. No change to `computeAdjacency()`, `PuzzleGrouping.fromAdjacency()`, image rendering, drag visuals, or completion logic. No locking reintroduced.

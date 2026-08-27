@@ -142,28 +142,28 @@ abstract final class TileSwapEngine {
       }
     }
 
-    // 3. Check that every displaced multi-cell group fits ENTIRELY inside
-    //    the vacated cells once shifted by the OPPOSITE of the incoming
-    //    group's displacement — it's sitting in the destination and must
-    //    land back in the source the moving group is leaving. If any of
-    //    its cells would land off the board, or on a non-vacated cell
-    //    (outside the old footprint, or an overlap cell the moving group
-    //    re-occupies), the move is rejected whole. A connected group is
-    //    never split or partially displaced.
+    // 3. Every displaced multi-cell group is pushed rigidly by ONE
+    //    translation ([_displacedShift]) — the inverse of the move,
+    //    stretched past the moving group's own footprint when the move is
+    //    short enough that source and destination overlap. Check the FULL
+    //    component of each affected group (not just the cells inside the
+    //    destination): every one of its cells must land on a vacated cell
+    //    and stay on the board. Otherwise the group would be split,
+    //    overlapped, or pushed off the edge, and the whole move is
+    //    rejected. This reads only cell coordinates — it is independent of
+    //    group size, group shape, move direction, and board dimensions.
+    final moverExtent = _extentOf(group.cells, cols);
+    final shift = _displacedShift(dRow, dCol, moverExtent.$1, moverExtent.$2);
+    final shiftRow = shift.$1;
+    final shiftCol = shift.$2;
     for (final displaced in displacedGroups) {
       for (final cell in displaced.cells) {
-        final row = cell ~/ cols;
-        final col = cell % cols;
-        final displacedNewRow = row - dRow;
-        final displacedNewCol = col - dCol;
-        if (displacedNewRow < 0 ||
-            displacedNewRow >= rows ||
-            displacedNewCol < 0 ||
-            displacedNewCol >= cols) {
+        final newRow = cell ~/ cols + shiftRow;
+        final newCol = cell % cols + shiftCol;
+        if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= cols) {
           return false;
         }
-        final displacedNewCell = displacedNewRow * cols + displacedNewCol;
-        if (!vacatedSet.contains(displacedNewCell)) {
+        if (!vacatedSet.contains(newRow * cols + newCol)) {
           return false;
         }
       }
@@ -240,15 +240,19 @@ abstract final class TileSwapEngine {
       newArr[newCells[i]] = oldContents[oldCells[i]]!;
     }
 
-    // 5. Place displaced groups at the old position.
-    //    Each displaced cell moves by the OPPOSITE displacement — see
-    //    the matching comment in canMoveGroupByCells.
+    // 5. Place displaced groups into the vacated cells, translated
+    //    rigidly by the exact shift canMoveGroupByCells validated (see
+    //    [_displacedShift]). Same vector for every affected group, so
+    //    disjoint groups stay disjoint. Size / shape / direction-agnostic.
+    final moverExtent = _extentOf(oldCells, cols);
+    final shift = _displacedShift(dRow, dCol, moverExtent.$1, moverExtent.$2);
+    final shiftRow = shift.$1;
+    final shiftCol = shift.$2;
     for (final displaced in displacedGroups) {
       for (final cell in displaced.cells) {
-        final row = cell ~/ cols;
-        final col = cell % cols;
-        final displacedNewCell = (row - dRow) * cols + (col - dCol);
-        newArr[displacedNewCell] = displacedContents[cell]!;
+        final destRow = cell ~/ cols + shiftRow;
+        final destCol = cell % cols + shiftCol;
+        newArr[destRow * cols + destCol] = displacedContents[cell]!;
       }
     }
 
@@ -270,10 +274,8 @@ abstract final class TileSwapEngine {
       if (displacedContents.containsKey(cell)) continue; // Moved as a group.
 
       final piece = origArr[cell];
-      final row = cell ~/ cols;
-      final col = cell % cols;
-      final preferredRow = row - dRow;
-      final preferredCol = col - dCol;
+      final preferredRow = cell ~/ cols + shiftRow;
+      final preferredCol = cell % cols + shiftCol;
       final preferredCell = preferredRow * cols + preferredCol;
       final preferredInBounds = preferredRow >= 0 &&
           preferredRow < rows &&
@@ -317,5 +319,63 @@ abstract final class TileSwapEngine {
       seen[id] = true;
     }
     return true;
+  }
+
+  /// Bounding-box extent `(height, width)`, in cells, of an arbitrary set
+  /// of board [cells]. Works for any shape — rectangle, L, T, cross,
+  /// disconnected — since it only takes the min/max row and column.
+  static (int, int) _extentOf(Iterable<int> cells, int cols) {
+    var minRow = 1 << 30;
+    var maxRow = -1;
+    var minCol = 1 << 30;
+    var maxCol = -1;
+    for (final cell in cells) {
+      final row = cell ~/ cols;
+      final col = cell % cols;
+      if (row < minRow) minRow = row;
+      if (row > maxRow) maxRow = row;
+      if (col < minCol) minCol = col;
+      if (col > maxCol) maxCol = col;
+    }
+    return (maxRow - minRow + 1, maxCol - minCol + 1);
+  }
+
+  /// The single rigid translation `(dRow, dCol)` applied to every piece
+  /// and group the moving group displaces.
+  ///
+  /// Displaced content is pushed OPPOSITE to the move, into the cells the
+  /// moving group frees:
+  ///
+  /// * When the move is at least as long as the moving group's own extent
+  ///   along an axis, source and destination footprints do NOT overlap,
+  ///   and the plain inverse `-delta` lands displaced content exactly on
+  ///   the vacated old cells.
+  /// * When the move is SHORTER than that extent the footprints overlap;
+  ///   `-delta` would land displaced content on cells the moving group
+  ///   re-occupies. Stretching the translation to the group's full extent
+  ///   ([moverHeight] / [moverWidth]) instead lands it in the vacated slab
+  ///   at the trailing edge.
+  ///
+  /// `max(|delta|, extent)` selects the right magnitude in both regimes;
+  /// `sign` makes it direction-symmetric — up/down, left/right, and
+  /// negative/positive deltas all go through the exact same expression.
+  /// A zero delta on an axis yields a zero shift on that axis. This is
+  /// pure board geometry: no branch on group size, group shape, drag
+  /// direction, or board dimensions.
+  static (int, int) _displacedShift(
+    int dRow,
+    int dCol,
+    int moverHeight,
+    int moverWidth,
+  ) {
+    final absRow = dRow.abs();
+    final absCol = dCol.abs();
+    final tRow = dRow == 0
+        ? 0
+        : -dRow.sign * (absRow > moverHeight ? absRow : moverHeight);
+    final tCol = dCol == 0
+        ? 0
+        : -dCol.sign * (absCol > moverWidth ? absCol : moverWidth);
+    return (tRow, tCol);
   }
 }
