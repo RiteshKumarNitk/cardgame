@@ -426,9 +426,11 @@ SuitClash uses **connected-edge adjacency** for Hard/Expert/Master difficulties.
 3. Validate with `canMoveGroupByCells()`:
    - Bounds check: all cells must be within the board.
    - Target cells belonging to a multi-cell group: that group must fit entirely within the vacated old cells once shifted by the same displacement — those groups will be displaced there.
-   - A solo (ungrouped) target cell — correct or not — is never an obstacle. It is not fit-checked; it is simply displaced into a vacated cell by `moveGroupByCells()`'s solo-cell fallback (step 6), exactly like an incorrectly-placed solo cell always was.
-4. Execute with `moveGroupByCells()`: clear old cells, place group at new position, displace other groups to old position, then bucket-fill any displaced solo cells into remaining empty old cells.
+   - A solo (ungrouped) target cell — correct or not — is never an obstacle. It is not fit-checked; it is simply displaced into a vacated cell by `moveGroupByCells()`'s solo-cell relocation (step 6), exactly like an incorrectly-placed solo cell always was.
+4. Execute with `moveGroupByCells()`: clear old cells, place group at new position, displace other multi-cell groups to the old position, then relocate every displaced solo piece into a vacated old cell — preferring the cell reached by the opposite displacement (so `[A A]` dragged onto solo `[B C]` gives `[B C A A]`), otherwise any still-empty vacated cell. The number of displaced solo pieces always equals the number of empty vacated cells, so the arrangement stays a valid permutation of `1..N` — no piece is ever lost or overwritten.
 5. After the move, adjacency and groups are recomputed.
+
+**Solo tile dropped onto a connected group:** a connected group is one physical object. `PuzzleCubit._swapWithGroups()` never swaps a solo tile with a single group member — when the source cell is solo and the destination cell belongs to a multi-cell group, the entire destination group is displaced toward the solo tile's cell (validated by `canMoveGroupByCells()`), or the move is rejected and the board is left exactly unchanged. The group is never split or partially replaced.
 
 **CORRECT POSITION ≠ LOCKED. CONNECTED ≠ LOCKED:**
 - All cells are always draggable — no cell is ever locked until the puzzle is solved.

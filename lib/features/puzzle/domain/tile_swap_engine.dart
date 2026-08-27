@@ -234,16 +234,43 @@ abstract final class TileSwapEngine {
       }
     }
 
-    // 6. Handle solo (ungrouped) cells that were displaced — correctly
-    //    placed or not, a solo cell is never locked by its position.
-    //    Place each one at a remaining empty old cell.
+    // 6. Relocate the solo (ungrouped) pieces that were sitting in the
+    //    group's destination cells. A solo piece is never an obstacle —
+    //    correctly placed or not, it is simply shoved into a cell the
+    //    group vacated. It must NOT be left overwritten: the number of
+    //    displaced solo pieces always equals the number of still-empty
+    //    vacated cells, so every piece is conserved and the arrangement
+    //    stays a valid permutation.
+    //
+    //    Prefer the cell reached by the OPPOSITE displacement so a plain
+    //    swap reads naturally (e.g. [A A] dragged onto solo [B C] gives
+    //    [B C A A]); otherwise drop the piece in any still-empty vacated
+    //    cell.
+    final rows = grouping.rows;
     for (final cell in newCells) {
-      if (newArr[cell] != 0) continue; // Already handled.
+      if (oldCellSet.contains(cell)) continue; // Group re-occupied it.
+      if (displacedContents.containsKey(cell)) continue; // Moved as a group.
 
-      // This cell's content was cleared. Find an empty old cell.
+      final piece = origArr[cell];
+      final row = cell ~/ cols;
+      final col = cell % cols;
+      final preferredRow = row - dRow;
+      final preferredCol = col - dCol;
+      final preferredCell = preferredRow * cols + preferredCol;
+      final preferredInBounds = preferredRow >= 0 &&
+          preferredRow < rows &&
+          preferredCol >= 0 &&
+          preferredCol < cols;
+
+      if (preferredInBounds &&
+          oldCellSet.contains(preferredCell) &&
+          newArr[preferredCell] == 0) {
+        newArr[preferredCell] = piece;
+        continue;
+      }
       for (final oldCell in oldCells) {
         if (newArr[oldCell] == 0) {
-          newArr[oldCell] = origArr[cell];
+          newArr[oldCell] = piece;
           break;
         }
       }

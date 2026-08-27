@@ -231,6 +231,37 @@ class PuzzleCubit extends Cubit<PuzzleState> {
       return arrangement;
     }
 
+    // Source is a solo tile. If the DESTINATION cell belongs to a
+    // connected group, that group is a single physical object — a plain
+    // two-cell swap would overwrite one member and split the group.
+    // Instead displace the whole destination group toward the solo
+    // tile's cell, or reject cleanly (board unchanged) if it can't fit.
+    final destGroup = grouping.findGroup(toCell);
+    if (destGroup != null) {
+      final fromRow = fromCell ~/ cols;
+      final fromCol = fromCell % cols;
+      final toRow = toCell ~/ cols;
+      final toCol = toCell % cols;
+      final dRow = fromRow - toRow;
+      final dCol = fromCol - toCol;
+
+      if (TileSwapEngine.canMoveGroupByCells(
+        destGroup,
+        dRow,
+        dCol,
+        grouping,
+      )) {
+        return TileSwapEngine.moveGroupByCells(
+          arrangement,
+          grouping,
+          destGroup,
+          dRow,
+          dCol,
+        );
+      }
+      return arrangement;
+    }
+
     // Both cells are ungrouped — standard swap.
     return TileSwapEngine.swap(arrangement, fromCell, toCell);
   }

@@ -4,6 +4,22 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-08-27 (QA Fix: Movement Overwrite — Displaced Solo Tiles Vanished, Solo→Group Split the Group)
+
+Movement/displacement only. No change to `computeAdjacency()`, `PuzzleGrouping.fromAdjacency()`, image rendering, drag visuals, or completion logic. No locking reintroduced.
+
+### Fixed
+- **`TileSwapEngine.moveGroupByCells()` step 6 was dead code — displaced solo tiles disappeared.** The loop guarded on `if (newArr[cell] != 0) continue;` for every `cell` in the group's destination cells, but step 4 had already filled *every* destination cell with the moving group's pieces, so the body never ran. Any solo (ungrouped) tile sitting where the group landed was overwritten in step 4 and never relocated — the vacated source cell stayed `0` and the piece was lost, breaking the tile-conservation invariant. Example: `A A B C` with `[A A]` a connected group, drag `[A A]` onto `[B C]` → produced `_ _ A A` (B and C gone) instead of `B C A A`. Step 6 now iterates the genuinely-displaced solo cells (destination cells not re-occupied by the group and not part of a displaced multi-cell group) and places each piece into a vacated source cell — preferring the cell reached by the opposite displacement (so `A A B C` → `B C A A`), otherwise any still-empty vacated cell. The count of displaced solo pieces always equals the count of empty vacated cells, so the arrangement stays a valid permutation.
+- **`PuzzleCubit._swapWithGroups()` overwrote a single member of a connected group.** When the dragged (source) cell was a solo tile, it called `TileSwapEngine.swap(arrangement, fromCell, toCell)` unconditionally — even when the *destination* cell belonged to a multi-cell connected group. That swapped the solo tile with exactly one group member, splitting the group (`A A` + drag `B` onto the first `A` → `B A`). Now, when the source is solo and the destination is a connected group, the whole destination group is displaced toward the solo tile's cell via `canMoveGroupByCells()` / `moveGroupByCells()` (the solo tile is shoved into a vacated cell by the step-6 fix above); if the group's shifted shape doesn't fit, the move is rejected and the board is left exactly unchanged (the caller plays the neutral shake). A connected group is never partially replaced.
+
+### Why
+Physical-jigsaw invariant: after every successful move the arrangement must remain a permutation of `1..N` — no piece disappears, duplicates, or is overwritten, and a connected group is one rigid object that moves whole or not at all. Both bugs violated this. Correct absolute position is still never consulted for movement (`arrangement[cell] == cell + 1` is not used anywhere in the movement path); the only things that block a move remain board bounds and a multi-cell group whose shifted shape doesn't fit the vacated cells.
+
+### Corrected
+- ARCHITECTURE.md "Group Movement Rules": step 4 reworded to describe the working solo-cell bucket-fill; added a note that a solo→connected-group drop displaces the entire destination group (or is rejected), never a single member.
+
+---
+
 ## 2026-08-26 (Gameplay Change: Relative Edge Connections, Not Absolute Position)
 
 ### Changed
