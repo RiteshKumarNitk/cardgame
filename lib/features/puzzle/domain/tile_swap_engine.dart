@@ -123,6 +123,16 @@ abstract final class TileSwapEngine {
     //    solo cell (correct or not) is skipped entirely: it is never a
     //    locking obstacle, just displaced by moveGroupByCells.
     final oldCellSet = group.cells.toSet();
+    final newCellSet = newCells.toSet();
+
+    // The cells the moving group actually frees for displaced content:
+    // its old cells MINUS the ones it re-occupies at the new position.
+    // When the move distance is smaller than the group's own extent, the
+    // old and new footprints overlap; those overlap cells are filled by
+    // the moving group itself, so displaced content must never land on
+    // them — doing so would put two pieces on one cell.
+    final vacatedSet = oldCellSet.difference(newCellSet);
+
     final displacedGroups = <PuzzleGroup>{};
     for (final cell in newCells) {
       if (oldCellSet.contains(cell)) continue; // Self-overlap is fine.
@@ -132,20 +142,28 @@ abstract final class TileSwapEngine {
       }
     }
 
-    // 3. Check that displaced groups can fit in the old position. A
-    //    displaced cell moves by the OPPOSITE of the incoming group's
-    //    displacement — it's sitting in the destination (newCells) and
-    //    needs to land back in the vacated source (oldCellSet), which is
-    //    newCells shifted by -(dRow, dCol).
+    // 3. Check that every displaced multi-cell group fits ENTIRELY inside
+    //    the vacated cells once shifted by the OPPOSITE of the incoming
+    //    group's displacement — it's sitting in the destination and must
+    //    land back in the source the moving group is leaving. If any of
+    //    its cells would land off the board, or on a non-vacated cell
+    //    (outside the old footprint, or an overlap cell the moving group
+    //    re-occupies), the move is rejected whole. A connected group is
+    //    never split or partially displaced.
     for (final displaced in displacedGroups) {
-      // All cells of the displaced group must land within the old cells.
       for (final cell in displaced.cells) {
         final row = cell ~/ cols;
         final col = cell % cols;
         final displacedNewRow = row - dRow;
         final displacedNewCol = col - dCol;
+        if (displacedNewRow < 0 ||
+            displacedNewRow >= rows ||
+            displacedNewCol < 0 ||
+            displacedNewCol >= cols) {
+          return false;
+        }
         final displacedNewCell = displacedNewRow * cols + displacedNewCol;
-        if (!oldCellSet.contains(displacedNewCell)) {
+        if (!vacatedSet.contains(displacedNewCell)) {
           return false;
         }
       }
@@ -276,6 +294,28 @@ abstract final class TileSwapEngine {
       }
     }
 
+    // Final safety net — atomic all-or-nothing. The candidate board MUST
+    // be a permutation of the original: same length, every tile id once,
+    // no cleared (0) cell left behind. canMoveGroupByCells already
+    // rejects the geometry that could break this; if anything ever slips
+    // through, discard the whole candidate and leave the board exactly as
+    // it was rather than emit an overlapping / inconsistent arrangement.
+    if (!_isPermutation(newArr)) {
+      return state;
+    }
+
     return (arrangement: newArr);
+  }
+
+  /// Whether [candidate] is a permutation of `1..candidate.length` — the
+  /// board invariant: every tile id appears exactly once, with no
+  /// duplicates, no missing ids, and no 0 (empty) cell.
+  static bool _isPermutation(List<int> candidate) {
+    final seen = List<bool>.filled(candidate.length + 1, false);
+    for (final id in candidate) {
+      if (id < 1 || id > candidate.length || seen[id]) return false;
+      seen[id] = true;
+    }
+    return true;
   }
 }

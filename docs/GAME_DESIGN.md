@@ -266,6 +266,10 @@ The initial shuffle uses Fisher-Yates. The shuffle guarantees the puzzle is **ne
 
 Rapid correct moves within a 3-second window trigger a **combo multiplier** (displayed with a fire icon badge). Correctness is communicated through image continuity and snap animation — never through color.
 
+### Elapsed Timer
+
+The elapsed-time clock does **not** run during the opening "beginning stage" — while the deal-in animation plays and the player studies the board. It starts on the **player's first move** (a drag that changes the board, or a hint) and then ticks every second until the puzzle is solved. It also stops while the pause menu is up. The Victory time is therefore "time spent actually playing", measured from the first move.
+
 ### Pity Shuffle
 
 If the player makes **6 moves without any correct placement**, a "pity shuffle" option appears, offering to re-randomize the puzzle.
@@ -274,9 +278,10 @@ If the player makes **6 moves without any correct placement**, a "pity shuffle" 
 
 **Cost: 10 coins** (or watch a rewarded ad when coins are insufficient)
 
-A hint:
-1. Auto-places one piece in its correct position
-2. The piece becomes part of a connected group if adjacent to correctly placed pieces
+A hint makes one guaranteed-progress move:
+1. On grouped levels, it sends the first not-yet-home connected group toward its own home position — the full jump if the path is clear, otherwise a single nudge toward home, then the next group. A connected group's pieces are always in the correct relative layout, so the whole group shares one translation home.
+2. Otherwise (and as a fallback when every group is home or blocked) it swaps one misplaced piece straight into its correct cell, without ever splitting a connected group.
+3. A placed piece becomes part of a connected group if it lands next to its solved-image neighbours.
 
 ### Preview
 

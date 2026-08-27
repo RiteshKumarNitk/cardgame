@@ -118,9 +118,9 @@ void main() {
     // At least the not-yet-correct cells should be interactive.
     expect(find.byType(DragTarget<int>), findsWidgets);
 
-    // A loaded puzzle starts a repeating Timer (the elapsed-time clock).
-    // Unmount to dispose the cubit (cancelling it) before the test ends —
-    // otherwise flutter_test flags it as a leaked pending Timer.
+    // The elapsed-time clock only starts on the first move, so nothing is
+    // ticking here — but unmount anyway to dispose the cubit cleanly
+    // before the test ends.
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

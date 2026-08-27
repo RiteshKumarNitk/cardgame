@@ -4,6 +4,39 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-08-27 (QA Fix: Hint Broken on Grouped Levels + Timer Runs During the Untimed Opening)
+
+`PuzzleCubit` only. No engine, rendering, or UI-widget changes.
+
+### Fixed
+- **`useHint()` did nothing on grouped (Hard+) levels.** It computed the group's displacement as `(-avgRow, -avgCol)` — i.e. toward the board's top-left **corner**, not toward the group's actual home cells — and then, if `canMoveGroupByCells()` rejected that (which it almost always did: any group cell above/left of the group's own centroid produced a negative destination row/col → out of bounds, or the corner was occupied), it `return`ed without trying anything else. The coins were already spent by the top bar, so a hint on a grouped level typically did nothing at all. Now it derives the group's true home translation from any member (`(homeCell - cell)` in row/col — valid because a connected group's pieces are always in the correct relative layout), attempts the full jump home, then a single nudge toward home, then the next group; if no group can move it falls through to the solo path (swap a misplaced ungrouped piece straight home, never splitting a group). The Easy/Medium hint path is unchanged in behaviour.
+- **The elapsed clock ran during the opening "beginning stage".** `loadLevel()` started the repeating timer immediately, so it ticked through the deal-in animation and while the player was still studying the board. The timer now starts on the **player's first move** (`_ensureTimerStarted()`, called from `_checkSolveAndEmit()` when `movesDelta > 0`), covering both drags and hints. `loadLevel()` resets `_timerStarted` and cancels any stray timer; `setPaused(false)` only resumes the clock if it was already started, so pausing/resuming during the untimed opening does not kick it off early. Victory time is now measured from the first move.
+
+### Why
+The grouped hint's "move toward (0,0)" heuristic predates the relative-adjacency model and was never a real path home. Starting the clock before the first interaction penalised players for the intro animation and for planning — a first-move start is the conventional puzzle-game behaviour.
+
+### Corrected
+- GAME_DESIGN.md: "Hint System" rewritten to describe the home-directed group hint + solo fallback; new "Elapsed Timer" subsection describing the first-move start.
+- `test/features/puzzle/puzzle_cubit_test.dart`: the pause/resume clock test now makes a move first (the clock no longer runs on load); header note updated. `test/features/puzzle/puzzle_page_test.dart`: stale "loaded puzzle starts a Timer" comment corrected.
+
+---
+
+## 2026-08-27 (QA Fix: Connected-Group Move Could Overlap Pieces on Self-Overlapping Moves)
+
+Movement/displacement only. No change to `computeAdjacency()`, `PuzzleGrouping.fromAdjacency()`, image rendering, drag visuals, or completion logic. No locking reintroduced.
+
+### Fixed
+- **`canMoveGroupByCells()` validated displaced multi-cell groups against the wrong target set, so a self-overlapping group move could place two pieces on one cell.** It checked that each displaced group cell, shifted by the opposite displacement, landed somewhere in `oldCellSet` (the moving group's *entire* old footprint). When the move distance is smaller than the group's own extent, the old and new footprints overlap, and those overlap cells are re-filled by the moving group itself in `moveGroupByCells()` step 4. A displaced group whose opposite-shift landed on such an overlap cell passed validation, then step 5 wrote it on top of the moving group's tile — the overwritten tile vanished (its vacated source cell stayed `0`), producing a duplicate-looking / inconsistent board. Now the displaced group is checked against `vacatedSet = oldCellSet \ newCellSet` (only the cells the moving group genuinely frees), and each shifted cell is also bounds-checked (`0 ≤ row < rows`, `0 ≤ col < cols`) so an off-board opposite-shift can't alias onto a valid linear index. If any cell of a displaced group fails, the whole move is rejected and the board is left exactly unchanged — a connected group is never split or partially displaced.
+- **`moveGroupByCells()` now verifies the candidate arrangement before returning it (atomic all-or-nothing).** After constructing the new board it checks `_isPermutation()` — length unchanged, every tile id `1..N` present exactly once, no `0` cell. If the check fails for any reason, it returns the original `BoardState` unchanged (the cubit already treats an identical arrangement as a rejected move → neutral shake). This is a defensive net on top of the `canMoveGroupByCells()` fix; it guarantees the board can never be emitted in an overlapping / duplicate / missing-tile state.
+
+### Why
+Board invariant: one cell holds exactly one piece, and the arrangement is always a permutation of `1..N`. The old displaced-group check was a necessary-but-not-sufficient condition — correct for non-overlapping moves (the common case, still unaffected) but not for a group dragged a short distance across its own footprint while another connected group sat in the destination. Correct absolute position is still never consulted (`arrangement[cell] == cell + 1` appears nowhere in the movement path); the only things that block a move remain board bounds and a multi-cell group whose shifted shape doesn't fit the vacated cells.
+
+### Corrected
+- ARCHITECTURE.md "Group Movement Rules": step 3 reworded to say displaced groups must fit the *vacated* cells (`oldCells \ newCells`), not the whole old footprint; added the post-construction permutation check to step 4.
+
+---
+
 ## 2026-08-27 (QA Fix: Movement Overwrite — Displaced Solo Tiles Vanished, Solo→Group Split the Group)
 
 Movement/displacement only. No change to `computeAdjacency()`, `PuzzleGrouping.fromAdjacency()`, image rendering, drag visuals, or completion logic. No locking reintroduced.

@@ -4,9 +4,10 @@
 // next one). Pure Dart, backed by an in-memory fake LevelsRepository; no
 // widgets, no gestures.
 //
-// Note: loading a level starts a repeating Timer (the elapsed-time
-// clock), so every test closes the cubit in tearDown to cancel it —
-// otherwise it's a leaked pending Timer.
+// Note: the player's first move starts a repeating Timer (the elapsed-
+// time clock), so every test that moves closes the cubit in tearDown to
+// cancel it — otherwise it's a leaked pending Timer. Loading a level on
+// its own no longer starts the clock (the opening stage is untimed).
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -182,6 +183,10 @@ void main() {
   test('setPaused stops the clock and resumes it on unpause', () async {
     await cubit.loadLevel(1);
     expect((cubit.state as PuzzleLoaded).isPaused, isFalse);
+
+    // The elapsed clock only starts on the first move — the opening
+    // "beginning stage" is untimed.
+    await cubit.swapPieces(0, 1);
 
     cubit.setPaused(true);
     expect((cubit.state as PuzzleLoaded).isPaused, isTrue);

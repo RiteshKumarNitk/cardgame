@@ -47,6 +47,11 @@ class PuzzleCubit extends Cubit<PuzzleState> {
   List<Level> _levels = [];
   Timer? _timer;
 
+  /// The elapsed clock stays at zero until the player's first move — the
+  /// opening "beginning stage" (deal-in animation, studying the board,
+  /// planning the first drag) is not timed. Reset on every (re)load.
+  bool _timerStarted = false;
+
   /// How many times the current level has been restarted, so each restart
   /// re-shuffles into a different arrangement instead of restoring the
   /// exact same board (the base seed is the level id).
@@ -102,6 +107,9 @@ class PuzzleCubit extends Cubit<PuzzleState> {
 
       _shuffleGeneration += 1;
       _stalledStreak = 0;
+      _timerStarted = false;
+      _timer?.cancel();
+      _timer = null;
       emit(
         PuzzleLoaded(
           level: level,
@@ -123,10 +131,19 @@ class PuzzleCubit extends Cubit<PuzzleState> {
           'progress_role': config.progressRole.name,
         },
       );
-      _startTimer();
+      // The elapsed clock is deliberately NOT started here — it begins on
+      // the player's first move (see [_ensureTimerStarted]).
     } catch (e) {
       emit(PuzzleError(e.toString()));
     }
+  }
+
+  /// Starts the elapsed clock the first time the player moves, and never
+  /// again for the same board. Pause/resume drives [_startTimer] directly.
+  void _ensureTimerStarted() {
+    if (_timerStarted) return;
+    _timerStarted = true;
+    _startTimer();
   }
 
   /// Re-loads the current level from scratch: fresh shuffle, zero moves
@@ -157,7 +174,10 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     if (paused) {
       _timer?.cancel();
       _timer = null;
-    } else {
+    } else if (_timerStarted) {
+      // Only resume the clock if the player has actually started it with a
+      // move — pausing/resuming during the untimed beginning stage must
+      // not kick it off early.
       _startTimer();
     }
     emit(current.copyWith(isPaused: paused));
@@ -266,84 +286,89 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     return TileSwapEngine.swap(arrangement, fromCell, toCell);
   }
 
-  /// Automatically finds a piece that is not at its correct position
-  /// and swaps it into place.
+  /// Spends a hint: makes one guaranteed-progress move for the player.
   ///
-  /// For grouped levels, moves the first group toward its home position.
+  /// Grouped levels: sends the first not-yet-home connected group toward
+  /// its own home position. A connected group's pieces are always in the
+  /// correct RELATIVE layout, so the whole group shares a single
+  /// translation home — `(homeRow - row, homeCol - col)` from any member.
+  /// If the full jump is blocked (board bounds or another group in the
+  /// way) it tries a single nudge toward home, then the next group. If no
+  /// group can move, it falls through to the solo path.
+  ///
+  /// Ungrouped levels (and the grouped fallback): swaps a misplaced piece
+  /// straight to its home cell, skipping any cell that belongs to a
+  /// connected group so a raw swap never splits one.
   Future<void> useHint() async {
     final current = state;
     if (current is! PuzzleLoaded || current.isSolved) return;
 
     final boardState = (arrangement: current.arrangement);
+    final arrangement = current.arrangement;
     AnalyticsService().logEvent(AnalyticsService.hintUsed);
 
+    final grouping = current.grouping;
+
     if (current.hasGroups) {
-      // Find the first group not fully at home and move it toward (0,0).
-      final grouping = current.grouping!;
-      final cols = grouping.cols;
+      final cols = grouping!.cols;
       for (final group in grouping.groups) {
-        // Check if the group is at home (all cells at correct positions).
-        var isHome = true;
-        for (final cell in group.cells) {
-          if (current.arrangement[cell] != cell + 1) {
-            isHome = false;
-            break;
+        final anchor = group.cells.first;
+        final homeCell = arrangement[anchor] - 1;
+        final dRow = homeCell ~/ cols - anchor ~/ cols;
+        final dCol = homeCell % cols - anchor % cols;
+        if (dRow == 0 && dCol == 0) continue; // Already home.
+
+        // Full jump home first, then progressively smaller nudges toward
+        // it (`.sign` is the unit step) when the whole distance is blocked.
+        final candidates = <(int, int)>[
+          (dRow, dCol),
+          (dRow.sign, dCol.sign),
+          (dRow.sign, 0),
+          (0, dCol.sign),
+        ];
+        for (final move in candidates) {
+          final mRow = move.$1;
+          final mCol = move.$2;
+          if (mRow == 0 && mCol == 0) continue;
+          if (!TileSwapEngine.canMoveGroupByCells(group, mRow, mCol, grouping)) {
+            continue;
           }
-        }
-        if (isHome) continue;
-
-        // Compute displacement toward home: average cell position → (0,0).
-        var sumRow = 0;
-        var sumCol = 0;
-        for (final cell in group.cells) {
-          sumRow += cell ~/ cols;
-          sumCol += cell % cols;
-        }
-        final avgRow = sumRow ~/ group.size;
-        final avgCol = sumCol ~/ group.size;
-        final dRow = -avgRow;
-        final dCol = -avgCol;
-
-        if (dRow == 0 && dCol == 0) continue;
-
-        if (TileSwapEngine.canMoveGroupByCells(
-          group,
-          dRow,
-          dCol,
-          grouping,
-        )) {
           final newState = TileSwapEngine.moveGroupByCells(
             boardState,
             grouping,
             group,
-            dRow,
-            dCol,
+            mRow,
+            mCol,
           );
-          _checkSolveAndEmit(current, newState, movesDelta: 1);
-        }
-        return;
-      }
-    } else {
-      // Find first cell that is not at its correct position.
-      for (int i = 0; i < current.arrangement.length; i++) {
-        if (current.arrangement[i] != i + 1) {
-          final targetPiece = i + 1;
-          final currentPosOfTarget = current.arrangement.indexOf(targetPiece);
-          final newState = TileSwapEngine.swap(
-            boardState,
-            i,
-            currentPosOfTarget,
-          );
+          if (identical(newState.arrangement, arrangement)) continue;
           _checkSolveAndEmit(current, newState, movesDelta: 1);
           return;
         }
       }
+    }
+
+    // Solo path: the whole Easy/Medium hint, and the grouped fallback
+    // when every group is already home or blocked.
+    for (var i = 0; i < arrangement.length; i++) {
+      if (arrangement[i] == i + 1) continue;
+      final from = arrangement.indexOf(i + 1);
+      if (grouping != null &&
+          (grouping.findGroup(i) != null || grouping.findGroup(from) != null)) {
+        continue;
+      }
+      final newState = TileSwapEngine.swap(boardState, i, from);
+      _checkSolveAndEmit(current, newState, movesDelta: 1);
+      return;
     }
   }
 
   DateTime? _lastConnectionTime;
 
   void _checkSolveAndEmit(PuzzleLoaded current, BoardState newState, {required int movesDelta}) async {
+    // First actual move of the board — start the elapsed clock now, not
+    // when the level loaded.
+    if (movesDelta > 0) _ensureTimerStarted();
+
     final dims = boardDimensionsFromConfig(current.config);
 
     // Compute new adjacency and groups.
