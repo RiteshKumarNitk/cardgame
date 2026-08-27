@@ -309,6 +309,66 @@ abstract final class TileSwapEngine {
     return (arrangement: newArr);
   }
 
+  // ─── Group ⇄ Group Swap ───────────────────────────────────────────
+
+  /// Whether [a] and [b] are the same rigid shape — identical cell count
+  /// and identical set of cell offsets relative to each group's own
+  /// bounding-box top-left. Only the shape matters; where the two groups
+  /// currently sit is irrelevant. This is the eligibility test for a
+  /// direct [swapGroups] exchange.
+  ///
+  /// Pure geometry via each group's precomputed `relativePositions`: no
+  /// board dimensions, no absolute coordinates, no size threshold — a
+  /// 2-cell domino, a 7-cell blob and everything between run the exact
+  /// same set comparison. Records compare structurally, so the
+  /// `Set<(int, int)>` membership check is value-based.
+  static bool groupsShareShape(PuzzleGroup a, PuzzleGroup b) {
+    if (a.cells.length != b.cells.length) return false;
+    final shapeA = a.relativePositions.toSet();
+    final shapeB = b.relativePositions.toSet();
+    return shapeA.length == shapeB.length && shapeA.containsAll(shapeB);
+  }
+
+  /// Atomically exchanges the board contents of two connected groups [a]
+  /// and [b] that pass [groupsShareShape].
+  ///
+  /// Each cell of [a] trades contents with the cell of [b] at the SAME
+  /// normalized offset, so both groups keep their exact internal
+  /// arrangement — and therefore their edge connections — and simply
+  /// change places. Nothing else on the board moves.
+  ///
+  /// Direction-agnostic by construction: no displacement vector, no sign,
+  /// no bounds arithmetic — just a bijection between two equal-shaped,
+  /// disjoint cell sets, so it behaves identically for left⇄right,
+  /// right⇄left, top⇄bottom, bottom⇄top and on any board size. Distinct
+  /// groups from [PuzzleGrouping.fromAdjacency] are always disjoint, so
+  /// no cell is written twice.
+  ///
+  /// Computes the whole candidate first, then commits once. Returns
+  /// [state] unchanged if the shapes don't line up or the result would
+  /// not be a permutation (defensive — callers gate on [groupsShareShape]
+  /// first, so the board is never left half-mutated).
+  static BoardState swapGroups(BoardState state, PuzzleGroup a, PuzzleGroup b) {
+    final origArr = state.arrangement;
+    final newArr = List<int>.of(origArr);
+
+    final bCellByOffset = <(int, int), int>{};
+    for (var i = 0; i < b.cells.length; i++) {
+      bCellByOffset[b.relativePositions[i]] = b.cells[i];
+    }
+
+    for (var i = 0; i < a.cells.length; i++) {
+      final aCell = a.cells[i];
+      final bCell = bCellByOffset[a.relativePositions[i]];
+      if (bCell == null) return state; // Shapes don't line up — no-op.
+      newArr[aCell] = origArr[bCell];
+      newArr[bCell] = origArr[aCell];
+    }
+
+    if (!_isPermutation(newArr)) return state;
+    return (arrangement: newArr);
+  }
+
   /// Whether [candidate] is a permutation of `1..candidate.length` — the
   /// board invariant: every tile id appears exactly once, with no
   /// duplicates, no missing ids, and no 0 (empty) cell.

@@ -421,6 +421,15 @@ SuitClash uses **connected-edge adjacency** for Hard/Expert/Master difficulties.
 
 ### Group Movement Rules
 
+`PuzzleCubit._swapWithGroups()` resolves the **full** source and destination connected components (from any grabbed / dropped cell) and picks one branch:
+
+- **Group → group of the same shape → direct atomic swap** (`TileSwapEngine.groupsShareShape()` + `swapGroups()`). The two components trade board contents cell-for-cell at matching bounding-box-relative offsets, so both keep their exact internal arrangement (and edge connections) and simply change places — nothing else on the board moves. No displacement vector: it is a bijection between two equal-shaped, disjoint cell sets, identical in every direction and on any board size. Decided from the whole components, never the single drop cell, so grabbing any member of one group and dropping on any member of the other does the same clean exchange. `_isPermutation`-gated; board untouched on any mismatch.
+- **Group → solo tiles, or group → a shape-incompatible group → displacement path** (steps below).
+- **Solo → group → displace the whole destination group** toward the solo tile's cell (same displacement path), or reject cleanly.
+- **Solo → solo → plain `TileSwapEngine.swap()`**.
+
+Displacement path:
+
 1. Find which group the source cell belongs to.
 2. Compute displacement: the row/col difference from source cell to target cell.
 3. Validate with `canMoveGroupByCells()` — pure cell-set geometry, no branch on group size, group shape, drag direction, or board dimensions:

@@ -109,6 +109,8 @@ A connection is created purely from **edge match** — it never requires either 
 - All cells are always draggable — no cell is ever locked (until the entire puzzle is solved)
 - A group can be repositioned anywhere on the board
 - Groups can displace other groups (displacement-based collision)
+- Dragging a group onto another group **of the same shape** swaps the two groups' positions directly — they exchange places, both keep their shape and internal connections. Shapes that don't match fall back to displacement, or the move is rejected (board unchanged) if nothing valid is possible
+- A group stays fully movable after a swap or displacement — grouping is recomputed from the resulting board, never remembered
 - The image content inside a group is never independently scaled or distorted
 - Groups do not rotate
 

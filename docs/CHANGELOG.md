@@ -21,6 +21,25 @@ The grouped hint's "move toward (0,0)" heuristic predates the relative-adjacency
 
 ---
 
+## 2026-08-27 (Feature: Direct Group ⇄ Group Atomic Swap)
+
+`TileSwapEngine` + `PuzzleCubit._swapWithGroups()` only. No engine rewrite, no rendering / drag-visual changes. No locking, no correctness checks.
+
+### Added
+- **`TileSwapEngine.groupsShareShape(a, b)`** — true when two connected groups have the same cell count and the same set of bounding-box-relative cell offsets (via each group's precomputed `relativePositions`). Pure geometry: no board dimensions, no absolute coordinates, no group-size threshold; records compare structurally so the `Set<(int,int)>` check is value-based. A 2-cell domino and a 7-cell blob run the identical comparison.
+- **`TileSwapEngine.swapGroups(state, a, b)`** — atomically exchanges the board contents of two shape-compatible connected groups. Each cell of `a` trades contents with the cell of `b` at the same normalized offset, so both groups keep their exact internal arrangement (and edge connections) and simply change places; nothing else on the board moves. No displacement vector, no sign, no bounds math — a bijection between two equal-shaped, disjoint cell sets — so it is identical for left⇄right, right⇄left, top⇄bottom, bottom⇄top and on any board size. Whole candidate computed first, `_isPermutation`-gated, then committed once; returns the board unchanged on any mismatch.
+
+### Changed
+- **`PuzzleCubit._swapWithGroups()`** now resolves the full source and destination components up front and has three explicit branches: (1) **group → group of the same shape → `swapGroups`** (direct exchange); (2) group → anything else (solo, or a shape-incompatible group) → the existing generic displacement path (`canMoveGroupByCells` / `moveGroupByCells`), which displaces or rejects cleanly; (3) solo → group → displace the destination group toward the solo; (4) solo → solo → plain `TileSwapEngine.swap`. The group→group swap is decided from the two **full connected components**, not the single drop cell, so grabbing any member of one group and dropping on any member of the other performs the same clean exchange — no partial-overlap, no split, no dropped/duplicated tiles.
+
+### Why
+The generic displacement algorithm (previous entry) is correct but, for two equal-shaped groups dropped onto each other, it only succeeds when the inverse-translated destination group lands exactly in the moving group's vacated cells — which fails for many drop positions (e.g. grabbing the trailing cell of `A A` and dropping on the leading cell of `B B`). A same-shape group pair exchanging places is unambiguous and always valid, so it now has its own path. Shape-incompatible pairs still go through the geometric displacement logic and are rejected cleanly when no valid arrangement exists. Groups remain fully movable after the swap — adjacency and grouping are rebuilt from the resulting arrangement as after any move.
+
+### Corrected
+- ARCHITECTURE.md "Group Movement Rules" and GAME_DESIGN.md "Connected Edges & Groups" note the group⇄group swap branch.
+
+---
+
 ## 2026-08-27 (QA Fix: Group→Group Displacement Rejected Valid Short Moves — Generic Translation)
 
 `TileSwapEngine` only. No engine rewrite, no rendering / drag-visual / cubit changes. Direction- and size-agnostic; the previous no-overlap guarantee is preserved.

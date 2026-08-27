@@ -223,6 +223,22 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     final cols = grouping.cols;
 
     final sourceGroup = grouping.findGroup(fromCell);
+    final destGroup = grouping.findGroup(toCell);
+
+    // ── Group → Group: direct atomic swap ──
+    // A connected group dragged onto a DIFFERENT connected group of the
+    // same rigid shape simply trades places with it — both keep their
+    // shape and internal connections. Resolved from the two FULL
+    // components (never just the drop cell), with no displacement vector,
+    // so it is identical in every direction and on any board size.
+    // Shape-incompatible pairs fall through to the generic displacement
+    // path below, which displaces them or rejects cleanly.
+    if (sourceGroup != null &&
+        destGroup != null &&
+        destGroup.id != sourceGroup.id &&
+        TileSwapEngine.groupsShareShape(sourceGroup, destGroup)) {
+      return TileSwapEngine.swapGroups(arrangement, sourceGroup, destGroup);
+    }
 
     if (sourceGroup != null) {
       // Compute displacement: how far the target cell is from the
@@ -256,7 +272,6 @@ class PuzzleCubit extends Cubit<PuzzleState> {
     // two-cell swap would overwrite one member and split the group.
     // Instead displace the whole destination group toward the solo
     // tile's cell, or reject cleanly (board unchanged) if it can't fit.
-    final destGroup = grouping.findGroup(toCell);
     if (destGroup != null) {
       final fromRow = fromCell ~/ cols;
       final fromCol = fromCell % cols;
