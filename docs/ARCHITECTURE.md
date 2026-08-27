@@ -430,15 +430,13 @@ SuitClash uses **connected-edge adjacency** for Hard/Expert/Master difficulties.
 
 Displacement path:
 
-1. Find which group the source cell belongs to.
+1. Find which group the source cell belongs to (the MOVER — the one thing that stays rigid, per Rule 1).
 2. Compute displacement: the row/col difference from source cell to target cell.
-3. Validate with `canMoveGroupByCells()` — pure cell-set geometry, no branch on group size, group shape, drag direction, or board dimensions:
-   - Bounds check: every moving-group cell shifted by `(dRow, dCol)` must be on the board.
-   - `vacatedSet = oldCells \ newCells` — the moving group's old footprint minus any cells it re-occupies at the new position (source and destination footprints overlap when the move is shorter than the group's own extent along an axis).
-   - Every multi-cell group with any cell in the destination is displaced rigidly by **one** translation, `_displacedShift(dRow, dCol, moverH, moverW)` = per axis `-sign(delta) * max(|delta|, moverExtent)` (`moverExtent` from `_extentOf()`, the moving group's bounding box). `max(...)` gives the plain inverse `-delta` for non-overlapping moves and stretches to the moving group's full extent for overlapping ones, so displaced content always lands in the trailing vacated slab rather than on a re-occupied cell. `sign(...)` makes it identical in every direction. The **full component** of each affected group (not just its cells inside the destination) must land on-board and inside `vacatedSet`, or the whole move is rejected — a connected group is never split or partially displaced. Multiple affected groups share the same shift, so disjoint components stay disjoint.
-   - A solo (ungrouped) target cell — correct or not — is never an obstacle. It is not fit-checked; it is bucket-filled into a vacated cell by `moveGroupByCells()` step 6.
-4. Execute with `moveGroupByCells()`: clear old cells, place the group at its new position, displace every affected multi-cell group by the exact `_displacedShift` the validator checked, then relocate each displaced solo piece — preferring its `_displacedShift` cell, otherwise any still-empty vacated cell (the displaced-solo count always equals the leftover vacated-cell count). Before returning, the candidate board is verified with `_isPermutation()` (length unchanged, every id `1..N` exactly once, no `0` cell); if it ever fails, the original `BoardState` is returned unchanged, so a move is atomic all-or-nothing and an inconsistent board can never be emitted.
-5. After the move, adjacency and groups are recomputed.
+3. Validate with `canMoveGroupByCells()` — the only real constraint is the mover's own rigidity: every moving-group cell shifted by `(dRow, dCol)` must land on the board. **Nothing at the destination is fit-checked or can block the move.** A destination group is never treated as a protected, rigid whole that must move (or fit) as one piece — see "Displaced content is never protected" below.
+4. Execute with `moveGroupByCells()`: clear the mover's old cells, place the mover at its new position, then relocate whatever the mover's destination cells displaced — **per CELL, not per group**. Each displaced cell prefers the spot reached by `_displacedShift(dRow, dCol, moverH, moverW)` = per axis `-sign(delta) * max(|delta|, moverExtent)` (`moverExtent` from `_extentOf()`, the mover's bounding box; this gives the plain inverse `-delta` for non-overlapping moves and stretches into the trailing vacated slab for overlapping ones), falling back to any other still-vacant cell. The count of vacated cells (`oldCells \ newCells`) always exactly equals the count of displaced pieces (`newCells \ oldCells`) — same-size sets, since old/new are just a shift of each other — so every displaced piece always has somewhere to go; this can never be a reason to reject a move. `_isPermutation()` remains a defensive final check (kept for the invariant, though by construction it can no longer actually fail) — the original `BoardState` is returned unchanged if it ever did.
+5. After the move, adjacency and groups are recomputed from scratch — a group is never carried forward as an object; only the resulting arrangement is real.
+
+**Displaced content is never protected.** A group sitting at the destination is not required to move as one rigid unit, and its old shape has no bearing on the move: only the specific cells the mover actually lands on are displaced (each relocated independently), while any other members of that group are left completely untouched. Once grouping is recomputed from the resulting arrangement, that group may come out split into smaller groups or solo tiles — a stale "it used to be connected" is never a reason to keep it whole. (A same-shape group ⇄ group swap, above, is the one deliberate exception: both groups keep their shape because they're *exchanging places* wholesale, not colliding.)
 
 **Solo tile dropped onto a connected group:** a connected group is one physical object. `PuzzleCubit._swapWithGroups()` never swaps a solo tile with a single group member — when the source cell is solo and the destination cell belongs to a multi-cell group, the entire destination group is displaced toward the solo tile's cell (validated by `canMoveGroupByCells()`), or the move is rejected and the board is left exactly unchanged. The group is never split or partially replaced.
 
@@ -447,8 +445,8 @@ Displacement path:
 - A single tile sitting in its correct position but with no matched edge is exactly as movable as any other tile — being correctly placed does not lock it, whether the player drags it directly or a group is dragged onto it.
 - A connected group is fully movable at all times.
 - Groups can be repositioned anywhere on the board.
-- The only thing that can block a move is the board's bounds, or a multi-cell group whose shifted shape doesn't fit the vacated cells — never a cell's own correctness.
-- Groups never split, never rotate, never independently scale.
+- The only thing that can block a move is the board's bounds for the group being dragged — never a cell's own correctness, and never the shape of whatever group happens to be sitting at the destination.
+- The MOVING group never splits, rotates, or independently scales. A DESTINATION group has no such protection — it can be displaced, split, or scattered across separate vacated cells depending on where the mover lands; it is only ever a snapshot of the current adjacency, never a persistent object.
 
 ### Group Shuffle
 

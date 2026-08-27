@@ -79,7 +79,7 @@ Correctness is **never** communicated through:
 - Any color-based feedback
 - Drag hover/drop-target color (the destination cell never tints red or green while a piece hovers over it — the hover affordance is a colorless lift + soft shadow, signaling "a piece can land here," not "this is correct")
 
-An invalid move (a connected group whose shifted shape doesn't fit the vacated cells) is rejected with a neutral physical shake plus a soft error haptic/SFX — never a colored target or border.
+An invalid move (the dragged group would land off the board) is rejected with a neutral physical shake plus a soft error haptic/SFX — never a colored target or border. Whatever sits at the destination is never itself a reason to reject a move.
 
 ### Connected Edges & Groups (Hard+)
 
@@ -105,12 +105,13 @@ A connection is created purely from **edge match** — it never requires either 
 **Why this matters for the player:** the game rewards *discovering relationships* ("these two pieces belong together") rather than *guessing exact coordinates* ("this piece goes in square 14"). A player can build a partial `A—B—C` chain anywhere on the board, then move the whole chain toward its final spot.
 
 **CONNECTED ≠ LOCKED:**
-- A connected group is one movable puzzle object — it never splits
+- The group you're actually dragging is one rigid movable puzzle object — it never splits, rotates, or stretches while it's the one being moved
+- A group sitting at the DESTINATION has no such protection: it is not a sacred, permanent object. It can be displaced, or scattered across separate cells if the mover only overlaps part of it — whatever it becomes is decided purely by regrouping the resulting board, never by what it used to be
 - All cells are always draggable — no cell is ever locked (until the entire puzzle is solved)
 - A group can be repositioned anywhere on the board
-- Groups can displace other groups (displacement-based collision)
-- Dragging a group onto another group **of the same shape** swaps the two groups' positions directly — they exchange places, both keep their shape and internal connections. Shapes that don't match fall back to displacement, or the move is rejected (board unchanged) if nothing valid is possible
-- A group stays fully movable after a swap or displacement — grouping is recomputed from the resulting board, never remembered
+- Groups can displace other groups — displacement is resolved per cell, not by moving the whole destination group as a block, so a destination group can end up split into smaller groups or solo tiles
+- Dragging a group onto another group **of the same shape** swaps the two groups' positions directly — they exchange places, both keep their shape and internal connections (this is the one deliberate exception: the two groups are exchanging places, not colliding). Shape-incompatible pairs fall back to displacement, which always succeeds as long as the dragged group itself fits on the board
+- A group stays fully movable after a swap or displacement — grouping is recomputed from the resulting board, never remembered; a group is only ever a snapshot of the current adjacency, not a persistent object
 - The image content inside a group is never independently scaled or distorted
 - Groups do not rotate
 

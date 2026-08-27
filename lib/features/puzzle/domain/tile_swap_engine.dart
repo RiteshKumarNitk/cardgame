@@ -79,23 +79,24 @@ abstract final class TileSwapEngine {
 
   /// Checks whether [group] can move by displacement ([dRow], [dCol]).
   ///
-  /// A connected group is a MOVEABLE puzzle object. It can be
-  /// repositioned anywhere on the board as long as:
-  /// 1. Every cell of the group at the new position is within board bounds.
-  /// 2. Any full multi-cell group occupying a target cell can fit within
-  ///    the vacated old cells once shifted by the same displacement — it
-  ///    will be displaced there.
+  /// A connected group is a MOVEABLE puzzle object. The only real
+  /// constraint on a move is the MOVING group's own rigidity: every one of
+  /// its cells, shifted by ([dRow], [dCol]), must land on the board.
   ///
-  /// A solo cell in the way of the move — correct or not — is NEVER an
-  /// obstacle: [moveGroupByCells] simply displaces it into a vacated
-  /// cell, exactly as it always has for incorrectly-placed solo cells.
-  /// Position alone never locks a cell.
+  /// Whatever currently occupies the destination cells — a solo tile, part
+  /// of a connected group, or a whole group — is NEVER an obstacle and
+  /// never protected as a rigid unit. [moveGroupByCells] displaces each
+  /// individual displaced cell into a vacated cell; a group sitting at the
+  /// destination is not required to move as one piece and may end up
+  /// split once the board is re-grouped from scratch. This is always
+  /// geometrically possible: a rigid shift of an N-cell group vacates
+  /// exactly as many old cells as it overwrites at the destination, so
+  /// every displaced piece always has a home to go to.
   ///
-  /// CORRECT POSITION ≠ LOCKED. CONNECTED ≠ LOCKED. Nothing in this
-  /// puzzle is ever locked by virtue of where it sits — the only thing
-  /// that can block a move is the board's bounds, or a multi-cell group
-  /// whose shifted shape doesn't fit the vacated cells. A group is fully
-  /// movable at all times until the puzzle is ultimately solved.
+  /// CORRECT POSITION ≠ LOCKED. CONNECTED ≠ LOCKED. A group is fully
+  /// movable at all times until the puzzle is ultimately solved, and a
+  /// group's PAST shape/connections have no bearing on future moves —
+  /// grouping is always recomputed from scratch after the move.
   static bool canMoveGroupByCells(
     PuzzleGroup group,
     int dRow,
@@ -105,9 +106,8 @@ abstract final class TileSwapEngine {
     final cols = grouping.cols;
     final rows = grouping.rows;
 
-    // 1. Check bounds: every cell of the group at the new position
-    //    must be within the board.
-    final newCells = <int>[];
+    // The only real constraint: every cell of the MOVING group, shifted
+    // to its new position, must stay on the board.
     for (final cell in group.cells) {
       final row = cell ~/ cols;
       final col = cell % cols;
@@ -115,57 +115,6 @@ abstract final class TileSwapEngine {
       final newCol = col + dCol;
       if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= cols) {
         return false;
-      }
-      newCells.add(newRow * cols + newCol);
-    }
-
-    // 2. Collect any full multi-cell groups occupying target cells — a
-    //    solo cell (correct or not) is skipped entirely: it is never a
-    //    locking obstacle, just displaced by moveGroupByCells.
-    final oldCellSet = group.cells.toSet();
-    final newCellSet = newCells.toSet();
-
-    // The cells the moving group actually frees for displaced content:
-    // its old cells MINUS the ones it re-occupies at the new position.
-    // When the move distance is smaller than the group's own extent, the
-    // old and new footprints overlap; those overlap cells are filled by
-    // the moving group itself, so displaced content must never land on
-    // them — doing so would put two pieces on one cell.
-    final vacatedSet = oldCellSet.difference(newCellSet);
-
-    final displacedGroups = <PuzzleGroup>{};
-    for (final cell in newCells) {
-      if (oldCellSet.contains(cell)) continue; // Self-overlap is fine.
-      final occupant = grouping.findGroup(cell);
-      if (occupant != null && occupant.id != group.id) {
-        displacedGroups.add(occupant);
-      }
-    }
-
-    // 3. Every displaced multi-cell group is pushed rigidly by ONE
-    //    translation ([_displacedShift]) — the inverse of the move,
-    //    stretched past the moving group's own footprint when the move is
-    //    short enough that source and destination overlap. Check the FULL
-    //    component of each affected group (not just the cells inside the
-    //    destination): every one of its cells must land on a vacated cell
-    //    and stay on the board. Otherwise the group would be split,
-    //    overlapped, or pushed off the edge, and the whole move is
-    //    rejected. This reads only cell coordinates — it is independent of
-    //    group size, group shape, move direction, and board dimensions.
-    final moverExtent = _extentOf(group.cells, cols);
-    final shift = _displacedShift(dRow, dCol, moverExtent.$1, moverExtent.$2);
-    final shiftRow = shift.$1;
-    final shiftCol = shift.$2;
-    for (final displaced in displacedGroups) {
-      for (final cell in displaced.cells) {
-        final newRow = cell ~/ cols + shiftRow;
-        final newCol = cell % cols + shiftCol;
-        if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= cols) {
-          return false;
-        }
-        if (!vacatedSet.contains(newRow * cols + newCol)) {
-          return false;
-        }
       }
     }
 
@@ -180,8 +129,17 @@ abstract final class TileSwapEngine {
   /// Movement rules:
   /// - The group's old cells are completely vacated.
   /// - The group's new cells are filled with the group's piece indices.
-  /// - Displaced content (other groups) goes to the group's old position.
-  /// - After the move, [grouping] is updated (cell map rebuilt).
+  /// - Whatever occupies the destination cells is displaced per CELL, not
+  ///   per group — a group sitting at the destination is never treated as
+  ///   a protected, rigid whole. Only the cells the moving group actually
+  ///   lands on are displaced; any other members of that group are left
+  ///   completely untouched. A destination group can therefore end up
+  ///   split across the board once grouping is recomputed from the
+  ///   resulting arrangement — it is never preserved just because it used
+  ///   to be connected.
+  /// - After the move, [grouping] must be rebuilt from scratch by the
+  ///   caller (adjacency → grouping) — this function only produces the
+  ///   new arrangement.
   static BoardState moveGroupByCells(
     BoardState state,
     PuzzleGrouping grouping,
@@ -192,6 +150,7 @@ abstract final class TileSwapEngine {
     if (dRow == 0 && dCol == 0) return state;
 
     final cols = grouping.cols;
+    final rows = grouping.rows;
     final origArr = state.arrangement;
     final newArr = List<int>.of(origArr);
 
@@ -203,77 +162,54 @@ abstract final class TileSwapEngine {
       final col = cell % cols;
       newCells.add((row + dRow) * cols + (col + dCol));
     }
+    final oldCellSet = oldCells.toSet();
 
-    // 1. Record what was in the old cells (from original arrangement).
+    // 1. Record what was in the old cells, then vacate them.
     final oldContents = <int, int>{};
     for (final cell in oldCells) {
       oldContents[cell] = origArr[cell];
     }
-
-    // 2. Clear all old cells.
     for (final cell in oldCells) {
       newArr[cell] = 0;
     }
 
-    // 3. Find and clear displaced groups.
-    final displacedGroups = <PuzzleGroup>{};
-    final oldCellSet = oldCells.toSet();
-    for (final cell in newCells) {
-      if (oldCellSet.contains(cell)) continue;
-      final occupant = grouping.findGroup(cell);
-      if (occupant != null && occupant.id != group.id) {
-        displacedGroups.add(occupant);
-      }
-    }
-
-    // Record displaced group contents and clear their cells.
+    // 2. Record whatever sits in the destination cells the mover doesn't
+    //    already occupy, then clear those cells — per CELL, regardless of
+    //    whether that cell's occupant belongs to a group. A group is
+    //    never treated as an all-or-nothing block here.
     final displacedContents = <int, int>{};
-    for (final displaced in displacedGroups) {
-      for (final cell in displaced.cells) {
-        displacedContents[cell] = origArr[cell];
-        newArr[cell] = 0;
-      }
+    for (final cell in newCells) {
+      if (oldCellSet.contains(cell)) continue; // Self-overlap: mover keeps it.
+      displacedContents[cell] = origArr[cell];
+      newArr[cell] = 0;
     }
 
-    // 4. Place the group at its new position.
+    // 3. Place the group at its new position.
     for (var i = 0; i < newCells.length; i++) {
       newArr[newCells[i]] = oldContents[oldCells[i]]!;
     }
 
-    // 5. Place displaced groups into the vacated cells, translated
-    //    rigidly by the exact shift canMoveGroupByCells validated (see
-    //    [_displacedShift]). Same vector for every affected group, so
-    //    disjoint groups stay disjoint. Size / shape / direction-agnostic.
+    // 4. Relocate every displaced piece into a vacated cell. The number of
+    //    vacated cells (`oldCells \ newCells`) always exactly equals the
+    //    number of displaced pieces (`newCells \ oldCells`), since oldCells
+    //    and newCells are the same size — so every piece always finds a
+    //    home; this can never be the reason a move is rejected. Prefer the
+    //    cell reached by the OPPOSITE displacement so a plain push reads
+    //    naturally (e.g. [A A] dragged onto [B C] gives [B C A A]);
+    //    otherwise drop the piece in any still-vacant cell. Each piece is
+    //    relocated independently, so a group that was sitting at the
+    //    destination can scatter across separate vacated cells instead of
+    //    moving as one rigid unit.
     final moverExtent = _extentOf(oldCells, cols);
     final shift = _displacedShift(dRow, dCol, moverExtent.$1, moverExtent.$2);
     final shiftRow = shift.$1;
     final shiftCol = shift.$2;
-    for (final displaced in displacedGroups) {
-      for (final cell in displaced.cells) {
-        final destRow = cell ~/ cols + shiftRow;
-        final destCol = cell % cols + shiftCol;
-        newArr[destRow * cols + destCol] = displacedContents[cell]!;
-      }
-    }
+    final remainingVacated = oldCellSet.difference(newCells.toSet()).toList();
 
-    // 6. Relocate the solo (ungrouped) pieces that were sitting in the
-    //    group's destination cells. A solo piece is never an obstacle —
-    //    correctly placed or not, it is simply shoved into a cell the
-    //    group vacated. It must NOT be left overwritten: the number of
-    //    displaced solo pieces always equals the number of still-empty
-    //    vacated cells, so every piece is conserved and the arrangement
-    //    stays a valid permutation.
-    //
-    //    Prefer the cell reached by the OPPOSITE displacement so a plain
-    //    swap reads naturally (e.g. [A A] dragged onto solo [B C] gives
-    //    [B C A A]); otherwise drop the piece in any still-empty vacated
-    //    cell.
-    final rows = grouping.rows;
-    for (final cell in newCells) {
-      if (oldCellSet.contains(cell)) continue; // Group re-occupied it.
-      if (displacedContents.containsKey(cell)) continue; // Moved as a group.
+    for (final entry in displacedContents.entries) {
+      final cell = entry.key;
+      final piece = entry.value;
 
-      final piece = origArr[cell];
       final preferredRow = cell ~/ cols + shiftRow;
       final preferredCol = cell % cols + shiftCol;
       final preferredCell = preferredRow * cols + preferredCol;
@@ -282,26 +218,18 @@ abstract final class TileSwapEngine {
           preferredCol >= 0 &&
           preferredCol < cols;
 
-      if (preferredInBounds &&
-          oldCellSet.contains(preferredCell) &&
-          newArr[preferredCell] == 0) {
-        newArr[preferredCell] = piece;
-        continue;
-      }
-      for (final oldCell in oldCells) {
-        if (newArr[oldCell] == 0) {
-          newArr[oldCell] = piece;
-          break;
-        }
-      }
+      final target = (preferredInBounds && remainingVacated.contains(preferredCell))
+          ? preferredCell
+          : remainingVacated.first;
+      newArr[target] = piece;
+      remainingVacated.remove(target);
     }
 
     // Final safety net — atomic all-or-nothing. The candidate board MUST
     // be a permutation of the original: same length, every tile id once,
-    // no cleared (0) cell left behind. canMoveGroupByCells already
-    // rejects the geometry that could break this; if anything ever slips
-    // through, discard the whole candidate and leave the board exactly as
-    // it was rather than emit an overlapping / inconsistent arrangement.
+    // no cleared (0) cell left behind. This can never actually fail given
+    // the construction above; kept as a defensive invariant check so an
+    // inconsistent board is never emitted instead of a move being rejected.
     if (!_isPermutation(newArr)) {
       return state;
     }

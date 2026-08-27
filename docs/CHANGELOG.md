@@ -4,6 +4,23 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-08-27 (QA Fix: Destination Groups Were Protected as Rigid, Unsplittable Blocks)
+
+`TileSwapEngine` only (`canMoveGroupByCells()`, `moveGroupByCells()`). No cubit, rendering, or drag-visual changes.
+
+### Fixed
+- **A group sitting at a move's destination could never actually split, even when the resulting board should no longer keep it connected.** `canMoveGroupByCells()` required the FULL component of every displaced multi-cell group to fit, as one rigid block, inside the cells the mover vacated (`_displacedShift` applied once per group) — rejecting the whole move otherwise. Since a rigid translation preserves a group's internal relative offsets, whenever a move *did* succeed the displaced group's shape (and therefore its adjacency) was mechanically guaranteed to reform — functionally indistinguishable from the group's old connection being "remembered," even though adjacency itself was always recomputed fresh. Solo displaced tiles never had this problem (they already bucket-filled into any vacated cell), but grouped destination content was treated as a protected, all-or-nothing unit.
+- **`canMoveGroupByCells()` now only validates the MOVING group's own bounds** — every one of its cells, shifted by `(dRow, dCol)`, must land on the board. That's the only real constraint. **`moveGroupByCells()` now displaces destination content per CELL, not per group**: only the specific cells the mover actually lands on are cleared and relocated (preferring the `_displacedShift` cell, otherwise any remaining vacated cell); any other members of a destination group are left completely untouched. The vacated-cell count always exactly equals the displaced-piece count (same-size old/new cell sets), so a displacement can never fail to find every piece a home — this is no longer a possible rejection reason at all.
+
+### Why
+Groups must be a pure function of the current arrangement, never preserved objects (see AGENTS.md / ARCHITECTURE.md "Puzzle Group Architecture"). Requiring a destination group to move as one rigid block — or reject the whole move — was quietly re-introducing group permanence through the back door: a group could displace, but only ever as its old, intact self. Now a destination group can be displaced, split into smaller groups, or scattered into solo tiles depending purely on where the dragged group actually lands; adjacency and grouping are recomputed from scratch afterward exactly as before, and that recomputation is what decides the outcome, not the group's prior shape. The direct group⇄group same-shape swap is unaffected — that path is a deliberate exchange between two groups, not a collision.
+
+### Corrected
+- ARCHITECTURE.md "Group Movement Rules" (displacement path rewritten around per-cell relocation) and "CORRECT POSITION ≠ LOCKED" bullets.
+- GAME_DESIGN.md "Connected Edges & Groups" and the invalid-move description under "Correctness Feedback".
+
+---
+
 ## 2026-08-27 (QA Fix: Hint Broken on Grouped Levels + Timer Runs During the Untimed Opening)
 
 `PuzzleCubit` only. No engine, rendering, or UI-widget changes.
