@@ -12,6 +12,17 @@ String puzzleImageUrlFor(int levelId) {
 
 /// The puzzle image for a given day's Daily Challenge (`dateKey` is
 /// `yyyy-mm-dd`) — same picture all day, a new one each day.
-/// Uses internet photos so daily challenges have an unbounded supply.
-String puzzleImageUrlForDaily(String dateKey) =>
-    'https://picsum.photos/seed/puzzle-cards-daily-$dateKey/600/800';
+///
+/// Uses the same bundled photo set as regular levels (no network) so the
+/// Daily Challenge works offline and ships no third-party imagery. The
+/// date string is hashed to a stable photo id, so a given day always maps
+/// to the same picture and consecutive days rarely repeat.
+String puzzleImageUrlForDaily(String dateKey) {
+  const photos = 300;
+  var hash = 0;
+  for (final codeUnit in dateKey.codeUnits) {
+    hash = (hash * 31 + codeUnit) & 0x7fffffff;
+  }
+  final assetId = (hash % photos) + 1;
+  return 'assets/images/collections/level_$assetId.jpg';
+}

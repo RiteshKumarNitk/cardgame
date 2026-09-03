@@ -9,9 +9,10 @@ import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_card.dart';
 
-/// In-app Privacy Policy — required for store submission (Google Play
-/// Data Safety / App Store privacy). This is a placeholder template: the
-/// store-facing policy must be written by the publisher and linked here.
+/// In-app Privacy Policy summary — required for store submission (Google
+/// Play Data Safety / App Store privacy). The authoritative full policy is
+/// hosted publicly (see docs/legal/privacy-policy.html); keep this summary
+/// in sync with it. Update the hosted URL string below before release.
 class PrivacyPolicyPage extends StatelessWidget {
   const PrivacyPolicyPage({super.key});
 
@@ -57,7 +58,8 @@ class PrivacyPolicyPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Last updated: [DATE]',
+                            'The full policy is published at '
+                            'suitclash.example.com/privacy — this is a summary.',
                             style: textTheme.bodySmall?.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -67,46 +69,33 @@ class PrivacyPolicyPage extends StatelessWidget {
                             title: 'Data we collect',
                             body: '${AppConstants.appName} stores your game '
                                 'progress, coin balance, achievements and '
-                                'settings locally on your device. With your '
-                                'consent we also use anonymous analytics '
-                                '(Firebase Analytics) and crash reporting '
-                                '(Firebase Crashlytics) to improve the game. '
-                                'Advertising (AdMob) may collect '
-                                'advertising identifiers; you can opt out of '
-                                'personalized ads at any time in your device '
-                                'settings.',
+                                'settings locally on your device. We also use '
+                                'anonymous analytics (Firebase Analytics) and '
+                                'crash reporting (Firebase Crashlytics) to '
+                                'improve the game. This version shows no ads '
+                                'and collects no advertising identifier.',
                           ),
                           _Section(
                             title: 'Cloud sync',
-                            body: 'When cloud sync is enabled, your progress '
-                                'and coins are backed up to Firebase under '
-                                'an anonymous user ID. You can erase this '
-                                'data by using the "Erase my data" option in '
-                                'Settings.',
+                            body: 'Your progress and coins are backed up to '
+                                'Firebase under an anonymous user ID that is '
+                                'not linked to your name, email or Google '
+                                'account. If you set a display name it appears '
+                                'on the public leaderboard. Erase this data '
+                                'any time with "Erase my data" in Settings.',
                           ),
                           _Section(
                             title: 'Purchases',
-                            body: 'In-app purchases are processed by the '
-                                'platform store (Google Play / App Store) '
-                                'and its payment processor. We do not see or '
-                                'store your payment details.',
+                            body: 'In-app purchases are processed by Google '
+                                'Play. We do not see or store your payment '
+                                'details.',
                           ),
                           _Section(
                             title: 'Your choices',
                             body: 'You can disable sound and music, reset '
-                                'your local progress, and restore purchases '
-                                'from Settings at any time. To request '
-                                'deletion of cloud data, contact the '
-                                'publisher.',
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            'Replace this placeholder with the publisher\'s '
-                            'actual policy and the effective date before '
-                            'store submission.',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: AppColors.danger,
-                            ),
+                                'your local progress, restore purchases, and '
+                                'erase your cloud data from Settings at any '
+                                'time.',
                           ),
                         ],
                       ),

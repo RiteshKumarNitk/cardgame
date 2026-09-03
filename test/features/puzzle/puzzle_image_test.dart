@@ -1,7 +1,7 @@
 // Verifies level image resolution: every level maps to one of the bundled
 // real photos (assets/images/collections/level_1.jpg .. level_300.jpg),
 // cycling after photo 300, and the Daily Challenge resolves to a
-// date-seeded internet photo.
+// date-seeded bundled photo (no network).
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,15 +40,22 @@ void main() {
     }
   });
 
-  test('daily challenge uses a date-seeded internet photo', () {
-    expect(
-      puzzleImageUrlForDaily('2026-08-11'),
-      'https://picsum.photos/seed/puzzle-cards-daily-2026-08-11/600/800',
-    );
-    // Different days resolve to different photos.
+  test('daily challenge resolves to a date-seeded bundled photo (no network)', () {
+    final url = puzzleImageUrlForDaily('2026-08-11');
+    expect(url, startsWith('assets/images/collections/level_'));
+    expect(url, endsWith('.jpg'));
+    expect(url, isNot(contains('http')));
+    // Stable for a given day.
+    expect(puzzleImageUrlForDaily('2026-08-11'), url);
+    // Different days rarely collide.
     expect(
       puzzleImageUrlForDaily('2026-08-11'),
       isNot(puzzleImageUrlForDaily('2026-08-12')),
     );
+    // Always within the bundled photo range.
+    final id = int.parse(
+      url.substring('assets/images/collections/level_'.length, url.length - 4),
+    );
+    expect(id, inInclusiveRange(1, 300));
   });
 }

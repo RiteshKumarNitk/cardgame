@@ -1,5 +1,5 @@
 name: puzzle_cards
-description: "A new Flutter project."
+description: "SuitClash — a relaxing jigsaw puzzle game. Slide and swap the pieces to rebuild hundreds of photo puzzles across themed chapters."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -73,15 +73,21 @@ dev_dependencies:
   # shipped in the app itself.
   image: ^4.5.4
 
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
+  image_path: "assets/images/suitclash.png"
+  min_sdk_android: 24
+  # Adaptive icon (Android 8+): solid brand background + the logo as the
+  # foreground layer. Regenerate with: dart run flutter_launcher_icons
+  adaptive_icon_background: "#0175C2"
+  adaptive_icon_foreground: "assets/images/suitclash.png"
+  remove_alpha_ios: true
   web:
     generate: true
     image_path: "assets/images/suitclash.png"
     background_color: "#0175C2"
     theme_color: "#0175C2"
-  image_path: "assets/images/suitclash.png"
 
 flutter_native_splash:
   color: "#F0F8FF"

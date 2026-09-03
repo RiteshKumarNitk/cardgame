@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// SuitClash Firestore security rules.
+//
+// Data model (see lib/services/cloud_save_service.dart + leaderboard_service.dart):
+//   users/{uid}        — one doc per player: coins, totalStars, completedCount,
+//                        completedLevelIds, lastSynced. Private to its owner.
+//   leaderboard/{uid}  — one doc per player: uid, score, name, timestamp.
+//                        Readable by any signed-in player; writable only by
+//                        its owner.
+//
+// Every client signs in anonymously at startup, so `request.auth != null`
+// always holds for a real user. Nothing is world-writable.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Per-player save data ──────────────────────────────────────────
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── Global leaderboard ───────────────────────────────────────────
+    match /leaderboard/{uid} {
+      allow read: if request.auth != null;
+
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.score is int
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= 100000
+        && (!('name' in request.resource.data)
+            || (request.resource.data.name is string
+                && request.resource.data.name.size() <= 40));
+
+      allow delete: if false;
+    }
+
+    // ── Everything else: denied ─────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

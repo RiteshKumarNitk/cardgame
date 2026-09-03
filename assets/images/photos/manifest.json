@@ -3,17 +3,17 @@
     {
       "id": "sunset_bay",
       "title": "Sunset Bay",
-      "url": "https://picsum.photos/seed/photo-puzzle-sunset-bay/600/800"
+      "url": "assets/images/collections/level_12.jpg"
     },
     {
       "id": "mountain_lake",
       "title": "Mountain Lake",
-      "url": "https://picsum.photos/seed/photo-puzzle-mountain-lake/600/800"
+      "url": "assets/images/collections/level_47.jpg"
     },
     {
       "id": "city_lights",
       "title": "City Lights",
-      "url": "https://picsum.photos/seed/photo-puzzle-city-lights/600/800"
+      "url": "assets/images/collections/level_83.jpg"
     }
   ]
 }

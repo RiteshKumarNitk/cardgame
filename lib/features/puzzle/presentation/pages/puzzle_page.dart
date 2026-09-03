@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/config/app_config.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../services/audio_service.dart';
 import '../../../../core/design_system/app_radius.dart';
@@ -687,9 +688,16 @@ class _PuzzleTopBar extends StatelessWidget {
                     if (success && context.mounted) {
                       context.read<PuzzleCubit>().useHint();
                     }
-                  } else {
+                  } else if (AppConfig.adsEnabled) {
                     // Not enough coins? Offer a rewarded ad!
                     _showRewardedAdOffer(context);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Not enough coins for a hint'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                   }
                 },
               ),

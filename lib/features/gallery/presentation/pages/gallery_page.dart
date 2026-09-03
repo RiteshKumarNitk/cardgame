@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/config/app_config.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_spacing.dart';
@@ -103,13 +104,16 @@ class _GalleryPageState extends State<GalleryPage> {
                       iconColor: AppColors.secondary,
                       onTap: () => context.goNamed(RouteNames.collections),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    // Photo Puzzles: the developer's real-photo section.
-                    CircleIconButton(
-                      icon: Icons.photo_camera_rounded,
-                      iconColor: AppColors.warning,
-                      onTap: () => context.goNamed(RouteNames.photoPuzzles),
-                    ),
+                    // Photo Puzzles — developer sandbox, hidden in the
+                    // shipped build (see AppConfig.photoPuzzlesEnabled).
+                    if (AppConfig.photoPuzzlesEnabled) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      CircleIconButton(
+                        icon: Icons.photo_camera_rounded,
+                        iconColor: AppColors.warning,
+                        onTap: () => context.goNamed(RouteNames.photoPuzzles),
+                      ),
+                    ],
                   ],
                 ),
               ),

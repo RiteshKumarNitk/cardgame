@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
+import '../core/config/app_config.dart';
 import 'ad_service.dart';
 import 'analytics_service.dart';
 import 'cloud_save_service.dart';
@@ -88,12 +89,14 @@ class AppBootstrap {
       }
 
       stage.value = BootstrapStage.loadingAds;
-      try {
-        await MobileAds.instance.initialize();
-        AdService().loadRewardedAd();
-        AdService().loadInterstitial();
-      } catch (e) {
-        debugPrint('Ads init failed: $e');
+      if (AppConfig.adsEnabled) {
+        try {
+          await MobileAds.instance.initialize();
+          AdService().loadRewardedAd();
+          AdService().loadInterstitial();
+        } catch (e) {
+          debugPrint('Ads init failed: $e');
+        }
       }
     }
 

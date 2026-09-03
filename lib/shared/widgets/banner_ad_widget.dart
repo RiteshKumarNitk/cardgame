@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import '../../core/config/app_config.dart';
+
 class BannerAdWidget extends StatefulWidget {
   const BannerAdWidget({super.key});
 
@@ -21,10 +23,9 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   @override
   void initState() {
     super.initState();
-    // google_mobile_ads has no banner support on web — skip entirely so
-    // the widget is a safe no-op there (defaultTargetPlatform would also
-    // otherwise throw for dart:io Platform).
-    if (kIsWeb) return;
+    // Ads disabled for this build, or web (google_mobile_ads has no
+    // banner support on web) — the widget stays a safe no-op.
+    if (!AppConfig.adsEnabled || kIsWeb) return;
     _loadAd();
   }
 

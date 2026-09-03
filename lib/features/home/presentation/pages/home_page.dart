@@ -7,6 +7,7 @@ import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_shadows.dart';
 import '../../../../core/design_system/app_spacing.dart';
+import '../../../../core/config/app_config.dart';
 import '../../../../core/design_system/color_utils.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/game_progress_manager.dart';
@@ -431,50 +432,51 @@ class _QuickActionsRow extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          _QuickAction(
+        children: [
+          const _QuickAction(
             icon: Icons.card_giftcard_rounded,
             label: 'Daily Challenge',
             color: AppColors.accent,
             onTap: _openDailyPuzzle,
           ),
-          SizedBox(width: AppSpacing.sm),
-          _QuickAction(
+          const SizedBox(width: AppSpacing.sm),
+          const _QuickAction(
             icon: Icons.storefront_rounded,
             label: 'Shop',
             color: AppColors.secondary,
             onTap: _openShop,
           ),
-          SizedBox(width: AppSpacing.sm),
-          _QuickAction(
+          const SizedBox(width: AppSpacing.sm),
+          const _QuickAction(
             icon: Icons.photo_library_rounded,
             label: 'Gallery',
             color: AppColors.success,
             onTap: _openGallery,
           ),
-          SizedBox(width: AppSpacing.sm),
-          _QuickAction(
+          const SizedBox(width: AppSpacing.sm),
+          const _QuickAction(
             icon: Icons.emoji_events_rounded,
             label: 'Achievements',
             color: AppColors.premiumGradientEnd,
             onTap: _openAchievements,
           ),
-          SizedBox(width: AppSpacing.sm),
-          _QuickAction(
+          const SizedBox(width: AppSpacing.sm),
+          const _QuickAction(
             icon: Icons.map_rounded,
             label: 'Journey',
             color: AppColors.primary,
             onTap: _openLevels,
           ),
-          SizedBox(width: AppSpacing.sm),
-          // Photo Puzzles: the developer's real-photo section — a
-          // showcase of their own images, playable as puzzles.
-          _QuickAction(
-            icon: Icons.photo_camera_rounded,
-            label: 'Photos',
-            color: AppColors.warning,
-            onTap: _openPhotos,
-          ),
+          // Photo Puzzles — developer sandbox, hidden in the shipped build.
+          if (AppConfig.photoPuzzlesEnabled) ...const [
+            SizedBox(width: AppSpacing.sm),
+            _QuickAction(
+              icon: Icons.photo_camera_rounded,
+              label: 'Photos',
+              color: AppColors.warning,
+              onTap: _openPhotos,
+            ),
+          ],
         ],
       ),
     );

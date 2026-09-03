@@ -22,5 +22,8 @@ Rules:
 - `id` must be unique and lowercase-with-dashes.
 - `title` is what players see.
 - Use `image` for files in this folder, `url` for internet images — pick one.
-- The example entries use picsum.photos (free internet photos) so the
-  section works out of the box; replace or delete them whenever you like.
+- The default entries point at bundled photos from
+  `assets/images/collections/` so the section ships no third-party
+  imagery and works offline; replace or delete them whenever you like.
+- Photo Puzzles is disabled in the shipped build via
+  `AppConfig.photoPuzzlesEnabled` — flip that flag to surface it.

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:hive/hive.dart';
 
+import '../core/config/app_config.dart';
 import '../core/constants/app_constants.dart';
 import 'analytics_service.dart';
 
@@ -55,7 +56,7 @@ class AdService {
   bool _isLoadingInterstitial = false;
 
   void loadInterstitial() {
-    if (kIsWeb) return;
+    if (!AppConfig.adsEnabled || kIsWeb) return;
     if (_isLoadingInterstitial || _interstitialAd != null) return;
     _isLoadingInterstitial = true;
     try {
@@ -143,8 +144,8 @@ class AdService {
   bool _isLoading = false;
 
   void loadRewardedAd() {
-    // google_mobile_ads has no rewarded-ad support on web — no-op there.
-    if (kIsWeb) return;
+    // Ads disabled for this build, or web (no rewarded-ad support) — no-op.
+    if (!AppConfig.adsEnabled || kIsWeb) return;
     if (_isLoading || _rewardedAd != null) return;
     _isLoading = true;
 
