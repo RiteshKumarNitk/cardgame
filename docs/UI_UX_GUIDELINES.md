@@ -48,10 +48,10 @@ All colors are defined in `lib/core/design_system/app_colors.dart`.
 
 | Name | Hex | Usage |
 |------|-----|-------|
-| Primary | `#D32F2F` | Primary actions, accents |
-| Secondary | `#1E1E1E` | Secondary elements, text emphasis |
+| Primary | `#D32F2F` | Primary actions, accents, puzzle top bar |
+| Secondary | `#1E1E1E` | Secondary text, icons, charcoal elements |
 | Accent (Gold/Coin) | `#FFC107` | Coins, rewards, premium elements |
-| Success | `#4CAF50` | Success states, positive feedback |
+| Success | `#4CAF50` | Completion states, positive feedback |
 | Warning | `#FF9800` | Caution states |
 | Danger | `#D32F2F` | Error states |
 
@@ -59,7 +59,7 @@ All colors are defined in `lib/core/design_system/app_colors.dart`.
 
 | Name | Hex | Usage |
 |------|-----|-------|
-| Background | `#F1F8F4` | Very light mint — main screen background |
+| Background | `#F1F8F4` | Soft mint-white — main screen background |
 | Card | `#FFFFFF` | Pure white for cards and elevated surfaces |
 
 ### Text Colors
@@ -202,9 +202,10 @@ Defined in `lib/core/design_system/app_animations.dart`.
 
 Every screen uses `GameBackground` widget:
 1. Gradient fill (screen background gradient from theme extension)
-2. Glowing blurred circles at strategic positions
+2. Glowing blurred circles at strategic positions (warm gold/premium tones, not saturated reds/greens)
 3. Optional Flame floating puzzle pieces (decorative, non-interactive)
-4. Optional drifting decorative elements (legacy card suit symbols — may be replaced during visual refinement)
+
+Card suit symbols (♠♥♦♣) are legacy decorative elements that have been removed from the background. The visual identity is puzzle + artwork + collection, not casino/card-game.
 
 ---
 
@@ -212,12 +213,12 @@ Every screen uses `GameBackground` widget:
 
 ### GameButton
 
-Primary action button: pill-shaped with gradient fill, shadow, press-scale animation.
+Primary action button: pill-shaped with gradient fill, soft shadow, subtle top gloss, and press-scale animation. Cleaner and more premium than the earlier toy-block style.
 
 **Variants:**
-- Primary (red gradient)
-- Secondary (grey gradient)
-- Premium (gold/orange gradient)
+- Primary (red gradient) — main CTAs like Play, Continue, Next Level
+- Secondary (grey gradient) — secondary actions like Replay, Back
+- Premium (gold/orange gradient) — special actions like coin purchases
 
 ### CircleIconButton
 
@@ -229,9 +230,7 @@ Circular icon-only button for navigation (back, settings, etc.)
 
 ### GameCard
 
-Rounded rectangle container with white background, card shadow, optional gradient border.
-
-Used for level cards, achievement cards, collection cards.
+Rounded rectangle container with white background, soft shadow, thin glossy outline. Used for level cards, achievement cards, collection cards, bottom sheets, and content cards across all screens.
 
 ---
 
@@ -314,7 +313,7 @@ DraggableScrollableSheet
 
 - Material Icons for standard UI elements (back, settings, play, etc.)
 - Emoji for achievement icons and special effects
-- Legacy card suit symbols (♠♥♦♣) exist as background decoration — may be replaced during visual refinement
+- Card suit symbols (♠♥♦♣) were legacy background decorations and have been removed. The visual identity is puzzle + artwork + collection.
 
 ---
 

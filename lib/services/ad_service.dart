@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:hive/hive.dart';
 
+import '../core/config/ad_config.dart';
 import '../core/config/app_config.dart';
 import '../core/constants/app_constants.dart';
+import 'ad_logger.dart';
 import 'analytics_service.dart';
 
 class AdService {
@@ -11,41 +13,13 @@ class AdService {
   factory AdService() => _instance;
   AdService._();
 
-  /// Real ad unit IDs are injected at build time with --dart-define:
-  ///   flutter build --dart-define=REWARDED_AD_UNIT_ID_ANDROID=...
-  ///   flutter build --dart-define=REWARDED_AD_UNIT_ID_IOS=...
-  /// Without them, the well-known Google test IDs are used, so the app
-  /// runs in development without any AdMob account.
-  static const String _rewardedAndroidUnitId = String.fromEnvironment(
-    'REWARDED_AD_UNIT_ID_ANDROID',
-    defaultValue: 'ca-app-pub-3940256099942544/5224354917',
-  );
-  static const String _rewardedIosUnitId = String.fromEnvironment(
-    'REWARDED_AD_UNIT_ID_IOS',
-    defaultValue: 'ca-app-pub-3940256099942544/1712485313',
-  );
+  /// All ad unit IDs come from [AdConfig] — test IDs in debug, real IDs
+  /// (injected via --dart-define) in release. See that class for details.
+  String get _rewardedAdUnitId => AdConfig.rewardedAdUnitId;
 
-  String get _rewardedAdUnitId => defaultTargetPlatform == TargetPlatform.android
-      ? _rewardedAndroidUnitId
-      : _rewardedIosUnitId;
+  String get _interstitialAdUnitId => AdConfig.interstitialAdUnitId;
 
   // ── Interstitial ads ──
-
-  /// Google test interstitial IDs — replaced with real units via
-  /// --dart-define=INTERSTITIAL_AD_UNIT_ID_ANDROID / _IOS at build time.
-  static const String _interstitialAndroidUnitId = String.fromEnvironment(
-    'INTERSTITIAL_AD_UNIT_ID_ANDROID',
-    defaultValue: 'ca-app-pub-3940256099942544/1033173712',
-  );
-  static const String _interstitialIosUnitId = String.fromEnvironment(
-    'INTERSTITIAL_AD_UNIT_ID_IOS',
-    defaultValue: 'ca-app-pub-3940256099942544/4411468910',
-  );
-
-  String get _interstitialAdUnitId =>
-      defaultTargetPlatform == TargetPlatform.android
-      ? _interstitialAndroidUnitId
-      : _interstitialIosUnitId;
 
   /// Max interstitials per day — enough to monetize without being hostile.
   static const int _maxInterstitialsPerDay = 4;
@@ -59,23 +33,25 @@ class AdService {
     if (!AppConfig.adsEnabled || kIsWeb) return;
     if (_isLoadingInterstitial || _interstitialAd != null) return;
     _isLoadingInterstitial = true;
+    AdLogger.log('Interstitial loading (unit=$_interstitialAdUnitId)');
     try {
       InterstitialAd.load(
         adUnitId: _interstitialAdUnitId,
         request: const AdRequest(),
         adLoadCallback: InterstitialAdLoadCallback(
           onAdLoaded: (ad) {
+            AdLogger.log('Interstitial loaded');
             _interstitialAd = ad;
             _isLoadingInterstitial = false;
           },
           onAdFailedToLoad: (error) {
-            debugPrint('InterstitialAd failed to load: $error');
+            AdLogger.logLoadError('Interstitial', error);
             _isLoadingInterstitial = false;
           },
         ),
       );
     } catch (e) {
-      debugPrint('InterstitialAd load threw: $e');
+      AdLogger.log('Interstitial load threw: $e');
       _isLoadingInterstitial = false;
     }
   }
@@ -148,18 +124,20 @@ class AdService {
     if (!AppConfig.adsEnabled || kIsWeb) return;
     if (_isLoading || _rewardedAd != null) return;
     _isLoading = true;
+    AdLogger.log('Rewarded loading (unit=$_rewardedAdUnitId)');
 
     RewardedAd.load(
       adUnitId: _rewardedAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
+          AdLogger.log('Rewarded loaded');
           _rewardedAd = ad;
           _isLoading = false;
           AnalyticsService().logEvent(AnalyticsService.rewardedAdLoaded);
         },
         onAdFailedToLoad: (error) {
-          debugPrint('RewardedAd failed to load: $error');
+          AdLogger.logLoadError('Rewarded', error);
           _isLoading = false;
           AnalyticsService().logEvent(
             AnalyticsService.rewardedAdFailed,

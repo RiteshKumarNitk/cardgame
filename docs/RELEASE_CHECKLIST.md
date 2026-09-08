@@ -1,6 +1,6 @@
 # RELEASE_CHECKLIST.md — Play Store (Android) v1.0.0
 
-First release: **no ads**, bundled photos only, ~780 levels / 16 chapters.
+First release: bundled photos only, ~780 levels / 16 chapters.
 
 Legend: `[x]` done in the repo · `[ ]` needs you (account access / hosting / device).
 
@@ -8,9 +8,17 @@ Legend: `[x]` done in the repo · `[ ]` needs you (account access / hosting / de
 
 ## Done in code
 
-- [x] `AppConfig.adsEnabled = false` — no banner widgets, no rewarded/interstitial
-      loads, `MobileAds` never initialised. Low-coins hint shows a plain message
-      instead of an ad offer.
+- [x] `AppConfig.adsEnabled = true` (changed 2026-09-08) — `MobileAds` initialises
+      on splash, `BannerAdWidget` renders on Home/Gallery/Journey, interstitial on
+      Victory, rewarded on the out-of-time offer. **Debug builds use Google test
+      ad IDs; release builds fall back to test IDs unless real ones are injected
+      via `--dart-define`** (see below + `AdConfig`). Shipping with test ads is
+      safe — it just earns nothing.
+- [ ] **Before shipping real ads:** create the AdMob app + 3 units, pass real
+      unit IDs via `--dart-define` (`BANNER_/INTERSTITIAL_/REWARDED_AD_UNIT_ID_ANDROID`),
+      replace the sample **App ID** in `AndroidManifest.xml` (currently
+      `ca-app-pub-3940256099942544~3347511713`) and iOS `Info.plist`
+      `GADApplicationIdentifier`, and add a UMP consent form.
 - [x] **All `picsum.photos` removed.** Daily Challenge + Photo Puzzles use the
       bundled `assets/images/collections/` photos (offline, no third-party media).
 - [x] `AppConfig.photoPuzzlesEnabled = false` — unfinished sandbox hidden.
@@ -107,9 +115,10 @@ Legend: `[x]` done in the repo · `[ ]` needs you (account access / hosting / de
 
 ## Deferred to v1.1+ (not blockers)
 
-- Ads: AdMob account + real unit IDs via `--dart-define`, replace the sample
-  AdMob **App ID** in `AndroidManifest.xml`, add a UMP consent form, flip
-  `AppConfig.adsEnabled = true`.
+- Ads: `AppConfig.adsEnabled` is now `true` (test ads work out of the box). For
+  real revenue: AdMob account + real unit IDs via `--dart-define`, replace the
+  sample AdMob **App ID** in `AndroidManifest.xml` + iOS `Info.plist`, add a UMP
+  consent form. See `docs/GAME_PROGRESS.md` → "AdMob / Ads".
 - RevenueCat: real products/entitlements, set `REVENUECAT_ANDROID_KEY`.
 - Replace placeholder audio (`assets/audio/` — procedurally generated sine waves).
 - AAB is 78.5 MB (300 bundled JPGs). Fine under the 200 MB limit; Play Asset

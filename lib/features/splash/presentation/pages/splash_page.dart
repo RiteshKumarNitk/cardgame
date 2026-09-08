@@ -84,7 +84,6 @@ class _SplashPageState extends State<SplashPage>
 
     return Scaffold(
       body: GameBackground(
-        showClouds: true,
         child: Stack(
           children: [
             const Positioned.fill(

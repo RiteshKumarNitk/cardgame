@@ -8,6 +8,7 @@ import 'package:confetti/confetti.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../services/audio_service.dart';
 import '../../../../core/design_system/app_radius.dart';
@@ -81,7 +82,7 @@ class _VictoryPageState extends State<VictoryPage>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3200),
+      duration: const Duration(milliseconds: 3000),
     );
 
     _confettiController = ConfettiController(
@@ -90,36 +91,38 @@ class _VictoryPageState extends State<VictoryPage>
 
     _imageReveal = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.0, 0.45, curve: Curves.easeOutBack),
+      curve: const Interval(0.0, 0.55, curve: Curves.easeOutBack),
     );
 
     _imageGlow = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.3, 0.7, curve: Curves.easeOut),
+      curve: const Interval(0.35, 0.8, curve: Curves.easeOut),
     );
 
     _contentSlide = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.5, 0.85, curve: Curves.easeOutBack),
+      curve: const Interval(0.55, 0.95, curve: Curves.easeOutCubic),
     );
 
     _flashOpacity = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.4, 0.5, curve: Curves.easeOut),
+      curve: const Interval(0.45, 0.55, curve: Curves.easeOut),
     );
 
-    // Start the sequence after a brief pause
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) {
-        _controller.forward();
-        final reduceMotion = _reduceMotion ?? false;
-        if (!reduceMotion) {
-          _confettiController.play();
-        }
-        setState(() => _showCelebration = true);
-        AudioService().playVictory();
+    // Start the sequence after a brief pause — gives the player a beat to
+    // register "puzzle solved" before the celebration begins.
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      _controller.forward();
+      final reduceMotion = _reduceMotion ?? false;
+      if (!reduceMotion) {
+        HapticFeedback.mediumImpact();
+        _confettiController.play();
       }
+      setState(() => _showCelebration = true);
+      AudioService().playVictory();
     });
+  }
   }
 
   /// Reads the reduced-motion preference here (not initState — MediaQuery
@@ -158,7 +161,7 @@ class _VictoryPageState extends State<VictoryPage>
       final title = widget.result?.level.title ?? 'a puzzle';
       await SharePlus.instance.share(
         ShareParams(
-          text: 'I solved a $title puzzle on Puzzle Cards! 🧩',
+          text: 'I solved a $title puzzle on SuitClash! 🧩',
           files: [XFile(file.path)],
         ),
       );
@@ -438,10 +441,10 @@ class _VictoryContent extends StatelessWidget {
                     opacity: contentSlide,
                     child: Transform.translate(
                       offset: Offset(0, 80 * (1 - contentSlide)),
-                      child: BounceIn(
-                        delay: celebrationDelay,
-                        child: CoinRewardChip(coins: result.coinsEarned),
-                      ),
+                child: BounceIn.slideUp(
+                  delay: celebrationDelay,
+                  child: CoinRewardChip(coins: result.coinsEarned),
+                ),
                     ),
                   ),
                 ],
@@ -518,7 +521,7 @@ class _AnimatedPuzzleImage extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: ClipRRect(
               borderRadius: AppRadius.xlRadius,
-              child: Stack(
+              child:                Stack(
                 fit: StackFit.expand,
                 children: [
                   // The seamless image
@@ -526,38 +529,6 @@ class _AnimatedPuzzleImage extends StatelessWidget {
                     imagePath: imageUrl,
                     fit: BoxFit.cover,
                   ),
-                  // Grid lines that fade away as reveal progresses
-                  // to simulate borders dissolving
-                  ...List.generate(3, (index) {
-                    final pos = (index + 1) / 4;
-                    return Positioned(
-                      left: 0,
-                      right: 0,
-                      top: imageHeight * reveal * pos - 1,
-                      child: Opacity(
-                        opacity: (1.0 - reveal).clamp(0.0, 1.0),
-                        child: Container(
-                          height: 2,
-                          color: Colors.white.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    );
-                  }),
-                  ...List.generate(2, (index) {
-                    final pos = (index + 1) / 3;
-                    return Positioned(
-                      top: 0,
-                      bottom: 0,
-                      left: imageWidth * reveal * pos - 1,
-                      child: Opacity(
-                        opacity: (1.0 - reveal).clamp(0.0, 1.0),
-                        child: Container(
-                          width: 2,
-                          color: Colors.white.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    );
-                  }),
                 ],
               ),
             ),
@@ -752,7 +723,7 @@ class _ActionButtons extends StatelessWidget {
         // Continue / Next Level
         if (nextLevelId != null) ...[
           BounceIn(
-            delay: celebrationDelay + const Duration(milliseconds: 200),
+            delay: celebrationDelay + const Duration(milliseconds: 80),
             child: PulsingGlow(
               color: AppColors.primaryGradientEnd,
               borderRadius: AppRadius.pillRadius,
@@ -764,7 +735,7 @@ class _ActionButtons extends StatelessWidget {
                     : 'Next Level',
                 icon: Icons.double_arrow_rounded,
                 width: double.infinity,
-                height: 68,
+                height: 64,
                 onTap: () async {
                   if (isChapterComplete) {
                     final nextChapter = chapter.id < ChapterCatalog.chapters.length
@@ -832,7 +803,7 @@ class _ActionButtons extends StatelessWidget {
               label: 'All Levels Complete!',
               icon: Icons.celebration_rounded,
               width: double.infinity,
-              height: 68,
+              height: 64,
               variant: GameButtonVariant.premium,
               onTap: () {},
             ),
@@ -845,11 +816,11 @@ class _ActionButtons extends StatelessWidget {
           children: [
             Expanded(
               child: BounceIn(
-                delay: celebrationDelay + const Duration(milliseconds: 350),
+                delay: celebrationDelay + const Duration(milliseconds: 300),
                 child: GameButton(
                   label: 'Replay',
                   icon: Icons.replay_rounded,
-                  height: 54,
+                  height: 50,
                   variant: GameButtonVariant.secondary,
                   onTap: () => _continueWithAd(context, () {
                     context.goNamed(
@@ -862,9 +833,9 @@ class _ActionButtons extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: BounceIn(
-                delay: celebrationDelay + const Duration(milliseconds: 450),
-                child: OutlinedButton.icon(
+              child:          BounceIn(
+            delay: celebrationDelay + const Duration(milliseconds: 400),
+            child: OutlinedButton.icon(
                   onPressed: () => context.goNamed(RouteNames.home),
                   icon: const Icon(Icons.home_rounded),
                   label: const Text('Home'),
@@ -913,6 +884,28 @@ class _NoResultContent extends StatelessWidget {
             onTap: () => context.goNamed(RouteNames.home),
           ),
         ],
+      ),
+    );
+  }
+}  /// Wraps [child] so it fades in and slides up slightly as [slide] goes 0→1.
+  /// Used on Victory to stagger the header, stars, stats, reward, and buttons.
+  class _SlidingContent extends StatelessWidget {
+    const _SlidingContent({
+      required this.slide,
+      required this.child,
+    });
+  
+
+  final double slide;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final effectiveSlide = slide == 0.0 ? 0.0 : (slide - 0.12).clamp(0.0, 1.0);
+    return Opacity(
+      opacity: effectiveSlide.clamp(0.0, 1.0),
+      child: Transform.translate(
+        offset: Offset(0, 36 * (1 - effectiveSlide)),
+        child: child,
       ),
     );
   }

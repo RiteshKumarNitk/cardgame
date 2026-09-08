@@ -31,10 +31,18 @@ class _BounceInState extends State<BounceIn>
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration);
-    _scale = Tween<double>(begin: 0.7, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: AppAnimations.bounceCurve),
+    _scale = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(0.0, 1.0, curve: AppAnimations.popCurve),
+      ),
     );
-    _fade = CurvedAnimation(parent: _controller, curve: AppAnimations.fadeCurve);
+    _fade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(0.2, 1.0, curve: AppAnimations.fadeCurve),
+      ),
+    );
     Future.delayed(widget.delay, () {
       if (mounted) _controller.forward();
     });

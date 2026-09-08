@@ -3,10 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
-/// Text styles for the game: Baloo 2 (playful/rounded) for titles and
-/// headings, Nunito (clean/friendly) for body and labels. Screens should
-/// always read from `Theme.of(context).textTheme` rather than calling
-/// `GoogleFonts.*` directly, so every label shares one type system.
+/// Text styles for the game: Quicksand (rounded, friendly) for headings and
+/// display text, Roboto (clean, readable) for body and labels. Screens
+/// should always read from `Theme.of(context).textTheme` rather than
+/// calling `GoogleFonts.*` directly, so every label shares one type system.
 abstract final class AppTypography {
   static TextTheme textTheme([Color color = AppColors.textDark]) {
     final base = TextTheme(

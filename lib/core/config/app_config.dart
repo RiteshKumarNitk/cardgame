@@ -5,12 +5,16 @@
 abstract final class AppConfig {
   const AppConfig._();
 
-  /// Whether AdMob is wired up. `false` for the first Play Store release:
-  /// no banner widgets render, no rewarded/interstitial units load, and
-  /// `MobileAds` is never initialised. To enable ads in a later version,
-  /// set this to `true` **and** provide real ad unit IDs via
-  /// `--dart-define` (see `AdService`).
-  static const bool adsEnabled = false;
+  /// Whether AdMob is wired up. When `true`: `MobileAds` is initialised at
+  /// startup, banner widgets render, and rewarded/interstitial units load.
+  ///
+  /// Debug/profile builds always use Google's official **test** ad unit
+  /// IDs (safe, no account needed). Release builds use real ad unit IDs
+  /// only when they are injected via `--dart-define`, otherwise they fall
+  /// back to test IDs — see [AdConfig]. Before shipping *real* ads you
+  /// must also replace the sample AdMob **App ID** in
+  /// `AndroidManifest.xml` / iOS `Info.plist` and add a UMP consent form.
+  static const bool adsEnabled = true;
 
   /// Whether the experimental "Photo Puzzles" section is reachable.
   /// `false` for v1 — the bundled manifest only had placeholder entries

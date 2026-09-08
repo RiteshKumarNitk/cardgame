@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design_system/app_colors.dart';
-import '../../core/design_system/app_shadows.dart';
 import 'outlined_text.dart';
 
 /// The game's circular logo mark. Used on Splash and Home so both share a
@@ -11,8 +10,8 @@ class AppLogo extends StatelessWidget {
 
   final double size;
 
-  /// Shows the "Puzzle Cards" wordmark beneath the mark, chunky-outlined
-  /// to match the button/card restyle — used in Home's compact top bar.
+  /// Shows the "SuitClash" wordmark beneath the mark, outlined to match the
+  /// design system — used in Home's compact top bar.
   final bool wordmark;
 
   @override
@@ -27,14 +26,13 @@ class AppLogo extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [Colors.white, Color(0xFFE0E7FF)],
         ),
-        border: Border.all(color: AppColors.outline, width: 2.5),
+        border: Border.all(color: AppColors.outline, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.28),
-            blurRadius: size * 0.22,
-            offset: Offset(0, size * 0.1),
+            color: AppColors.primary.withValues(alpha: 0.22),
+            blurRadius: size * 0.18,
+            offset: Offset(0, size * 0.08),
           ),
-          ...AppShadows.bevel(Colors.white, depth: size * 0.05),
         ],
       ),
       child: Icon(
@@ -52,7 +50,7 @@ class AppLogo extends StatelessWidget {
         mark,
         const SizedBox(height: 2),
         OutlinedText(
-          'Puzzle Cards',
+          'SuitClash',
           outlineWidth: 1.5,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
             color: AppColors.primary,

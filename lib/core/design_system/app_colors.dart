@@ -4,17 +4,17 @@ import 'package:flutter/material.dart';
 /// never from raw hex literals or `Colors.*` sprinkled through widgets —
 /// so the whole app can be re-themed from this one file.
 abstract final class AppColors {
-  // SuitClash Colors (Casino Cards - Light Theme)
-  static const Color primary = Color(0xFFD32F2F); // Card Red (Hearts/Diamonds)
-  static const Color secondary = Color(0xFF1E1E1E); // Slate Black (Spades/Clubs)
-  static const Color accent = Color(0xFFFFC107); // Gold/Coin
-  static const Color success = Color(0xFF4CAF50); // Casino Green
-  static const Color warning = Color(0xFFFF9800); // Orange
-  static const Color danger = Color(0xFFD32F2F); // Red
+  // SuitClash Brand Colors
+  static const Color primary = Color(0xFFD32F2F); // Vibrant red — primary actions, accents
+  static const Color secondary = Color(0xFF1E1E1E); // Deep charcoal — secondary text, icons
+  static const Color accent = Color(0xFFFFC107); // Warm gold — coins, rewards, premium
+  static const Color success = Color(0xFF4CAF50); // Fresh green — completion, positive
+  static const Color warning = Color(0xFFFF9800); // Warm orange — caution states
+  static const Color danger = Color(0xFFD32F2F); // Red — error states
 
-  // Material 3 Light Surfaces
-  static const Color background = Color(0xFFF1F8F4); // Very light mint/green felt tint
-  static const Color card = Color(0xFFFFFFFF); // Pure White Cards
+  // Surfaces
+  static const Color background = Color(0xFFF1F8F4); // Soft mint-white — main background
+  static const Color card = Color(0xFFFFFFFF); // Pure white — cards and elevated surfaces
 
   // Crisp Text
   static const Color textDark = Color(0xFF263238); // Dark Grey
@@ -26,14 +26,14 @@ abstract final class AppColors {
   static const Color outline = Color(0x33FFFFFF); // 20% white gloss
 
   // Gradient stops
-  static const Color primaryGradientStart = Color(0xFFF44336); // Bright Red
-  static const Color primaryGradientEnd = Color(0xFFB71C1C); // Deep Red
+  static const Color primaryGradientStart = Color(0xFFF44336); // Bright red
+  static const Color primaryGradientEnd = Color(0xFFB71C1C); // Deep red
 
-  static const Color secondaryGradientStart = Color(0xFF607D8B); // Blue Grey
-  static const Color secondaryGradientEnd = Color(0xFF37474F); // Dark Blue Grey
+  static const Color secondaryGradientStart = Color(0xFF607D8B); // Blue grey
+  static const Color secondaryGradientEnd = Color(0xFF37474F); // Dark blue grey
 
-  static const Color premiumGradientStart = Color(0xFFFFE259); // Light Gold
-  static const Color premiumGradientEnd = Color(0xFFFFA751); // Soft Orange
+  static const Color premiumGradientStart = Color(0xFFFFE259); // Light gold
+  static const Color premiumGradientEnd = Color(0xFFFFA751); // Soft orange
 
   // Difficulty tiers (Level Selection).
   static const Color difficultyEasy = Color(0xFF81C784);

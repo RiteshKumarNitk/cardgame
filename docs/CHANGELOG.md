@@ -4,6 +4,49 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-09-08 (AdMob: Ads Re-Enabled + Full Integration Audit)
+
+Root cause of "ads never show": `AppConfig.adsEnabled` was `const false`, which
+compiled out the *entire* ad system — `MobileAds.instance.initialize()` was never
+called, `BannerAdWidget` returned `SizedBox.shrink()` from `initState`, and
+`AdService.load*()` early-returned. Nothing was broken in the load chain; it was
+switched off by design for the first release.
+
+### Changed
+- **`AppConfig.adsEnabled` → `true`.** Ads now initialise and render. Debug/profile
+  builds always use Google's official **test** ad unit IDs; release builds use real
+  IDs only when injected via `--dart-define`, else fall back to test IDs.
+- **New `lib/core/config/ad_config.dart`** — one place for every ad unit ID
+  (banner + interstitial + rewarded, per platform) and the documented sample
+  **App IDs**. `AdService` and `BannerAdWidget` now read from it instead of each
+  hardcoding IDs. `AdConfig.usingProductionIds` is a startup diagnostic.
+- **`BannerAdWidget` rewritten as the one real banner** (the fake
+  `AdBannerPlaceholder` "Advertisement" card is deleted; the Journey/Levels screen
+  now uses the real widget). It now: requests an **anchored adaptive** banner
+  sized to its parent width via `LayoutBuilder` (no overflow), loads exactly once
+  (no rebuild churn), **respects Remove Ads** (`BlocProvider<AdsCubit>` —
+  previously ignored entirely), disposes the native ad when the entitlement is
+  purchased while mounted, and collapses to zero height on failure.
+
+### Added
+- **`lib/services/ad_logger.dart`** — debug-only `[AdMob] …` logging around
+  initialise / adapter status / banner + interstitial + rewarded load / loaded /
+  failure. Failures print `code` / `domain` / `message` / `responseInfo`. Silent
+  in release.
+- **iOS `Info.plist`: `GADApplicationIdentifier`** (sample iOS App ID) +
+  `SKAdNetworkItems`. This was **missing** — google_mobile_ads crashes on launch
+  without it, so iOS was previously guaranteed to crash the moment ads init ran.
+- `test/shared/widgets/banner_ad_widget_test.dart` — verifies the Remove-Ads
+  collapse and the safe-degradation (no exception) path.
+
+### Still required before shipping real ads (external, not code)
+- Real AdMob account + real ad unit IDs via `--dart-define` (see `AdConfig`).
+- Replace the sample **App ID** in `AndroidManifest.xml` and iOS `Info.plist`.
+- A UMP (User Messaging Platform) consent form for EEA/UK users.
+- Real-device verification (blocked locally — see note in GAME_PROGRESS.md).
+
+---
+
 ## 2026-08-27 (QA Fix: Destination Groups Were Protected as Rigid, Unsplittable Blocks)
 
 `TileSwapEngine` only (`canMoveGroupByCells()`, `moveGroupByCells()`). No cubit, rendering, or drag-visual changes.
@@ -335,6 +378,77 @@ Presentation-only fixes in `puzzle_board.dart` — no change to `TileSwapEngine`
 - `PuzzleCubit` now generates groups for Hard+ levels on load
 - `PuzzleCubit._swapWithGroups()` — displacement-based group movement in swapPieces
 - `PuzzleCubit.useHint()` — group-aware hint (moves first unlocked group home)
+
+---
+
+## 2026-09-08 (Visual Refinement Pass)
+
+### Changed
+- **Design system cleanup:** Removed casino/card-game language from all color comments (`AppColors`). The palette is now documented as a casual puzzle game brand, not a casino theme.
+- **GameBackground:** Removed drifting card suit symbols (♠♥♦♣) from all screens — these were legacy decorative elements not part of the core visual identity. The background now uses warm gold/premium-toned glow circles instead of saturated red/green casino colors.
+- **Screen background gradient:** Updated to a softer, warmer off-white/cream palette that lets artwork and puzzle photos remain the visual focus.
+- **Visual noise reduction:** Reduced outline widths and shadow blur radii across all shared widgets (GameButton, GameCard, StatChip, CircleIconButton, CoinRewardChip, AppLogo, LevelNodeCircle). Removed all `AppShadows.bevel()` calls (which returned empty lists anyway).
+- **GameButton:** Softened the "3D bevel" toy-block look to a cleaner gradient button with subtle top gloss. Reduced border width from 1.5 to 1.
+- **GameCard:** Reduced the thick dark outline to a thinner glossy border.
+- **OutlinedText:** Replaced the heavy double-shadow bubble effect with a single soft outline shadow.
+- **Typography comments:** Updated `AppTypography` documentation to correctly describe the Quicksand + Roboto implementation (was incorrectly documenting Baloo 2 + Nunito).
+- **Home screen:** Made the collection artwork frame larger (300px → 340px) and repositioned the section label inside the card for cleaner hierarchy. Section banner now shows the chapter name instead of "Section N".
+- **Victory screen:** Fixed share text from "Puzzle Cards" to "SuitClash". Removed fake grid-line-fade simulation from the animated puzzle image reveal (the actual puzzle already communicates completion through border removal).
+- **Combo badge:** Updated to use the premium gold gradient instead of a flat accent color with heavy shadow.
+- **App branding:** Updated `AppConstants.appName` from "Puzzle Cards" to "SuitClash". Updated `AppLogo` wordmark to show "SuitClash". Updated shop purchase confirmation text.
+- **Level node styling:** Reduced glow opacity and border widths on Journey Map level nodes.
+
+### Why
+The app was shipping with casino/card-game visual language (card suit symbols, felt-tinted background, "Card Red" color comments) that contradicted the actual game identity: casual puzzle + artwork + collection. The visual design needed to feel like ONE cohesive game, not a collection of independently-designed screens. The changes establish a cleaner, more premium-polished casual game aesthetic while preserving all functionality.
+
+### Removed
+- Card suit floating decoration from `GameBackground` (legacy element)
+- `showClouds` parameter from `GameBackground` constructor (was only used to show suits)
+
+### Corrected
+- UI_UX_GUIDELINES.md: Background treatment section updated to reflect removal of card suits and new glow color strategy.
+- TODO.md: Home screen refinement and card suit removal marked complete.
+- GAME_PROGRESS.md: Visual polish item marked complete.
+
+---
+
+## 2026-09-08 (Level Design & Difficulty Audit)
+
+### Changed
+- **Chapter catalog:** Reduced the total number of levels from 720 to 120 by trimming excessive repetition:
+  - Chapter 1 ("The Beginning"): section count 3 → 1 (60 → 20 levels). The first chapter is now a focused 20-level introduction to swapping on a 3×4 board.
+  - Chapter 2 ("Nature"): section count 2 → 1 (40 → 20 levels). A single 20-level section on a 4×5 board.
+  - Chapters 3-4: Reduced board sizes to 5×6 and 6×7 respectively (were 7×8 and 9×10). These are now reasonable "Hard" and "Expert" introductions.
+  - Chapters 5-7 (Master tier): Capped at reasonable board sizes — 7×8, 8×9, 8×9. Removed chapters 8-16 entirely (they ranged from 14×15 to 22×23, which is 210-506 pieces — far too many for comfortable phone interaction).
+  - Total levels: 720 → 120.
+
+- **Within-section board size ramp:** Added `_boardColsForPosition()` to `ChapterCatalog` so board size grows across each section's 20-level arc. Early levels in a chapter use a slightly smaller board than the chapter's maximum, growing to full size by level 6. For example, Chapter 2 (max 4 cols) starts levels 1-5 at 3 cols (3×4 = 12 pieces) before ramping to 4 cols (4×5 = 20 pieces) from level 6 onward. This makes the `SectionProgressRole` actually meaningful — a "practice" level genuinely has fewer pieces than an "advanced" level.
+
+### Why
+1. **Board sizes were absurdly large.** Chapter 16 ("Legendary Realm") had a 22×23 board = 506 pieces. On a phone screen, each piece would be tiny and the puzzle becomes tedious pixel-pushing rather than engaging problem-solving. The practical maximum for a phone puzzle game is around 8×9 (72 pieces).
+2. **Chapter 1 had 60 levels on the same 3×4 board.** After the first 10-15 levels, the player has fully mastered 3×4. The remaining 45 levels were pure repetition.
+3. **The 20-level section arc wasn't meaningful.** Since board size and difficulty were fixed per chapter, every level in a section had identical gameplay properties. The progression role (introduce, practice, variation, etc.) was purely cosmetic.
+4. **Too many chapters with identical structure.** The original catalog had 16 chapters. After the audit, 7 chapters is sufficient for a complete casual puzzle game progression.
+
+### Removed
+- Chapters 8-16: "Winter Wonderland" through "Legendary Realm" (9 chapters, 480 levels removed)
+- Excess sections from Chapters 1-2
+
+### Explicitly unchanged
+- Shuffle algorithm (`TileSwapEngine.shuffledArrangement`)
+- Adjacency computation (`computeAdjacency`)
+- Group formation (`PuzzleGrouping.fromAdjacency`)
+- Group movement rules (`moveGroupByCells`, `canMoveGroupByCells`, `swapGroups`)
+- Star rating calculation
+- Hint system logic
+- Puzzle image pipeline
+- Puzzle board rendering
+- Victory/completion flow
+- Daily Challenge configuration (kept at Medium, 4×5, 60s)
+
+### Corrected
+- GAME_PROGRESS.md: Visual polish items marked complete, card suit known issue removed.
+- TODO.md: Level design audit and board size fixes marked complete.
 
 ---
 

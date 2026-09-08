@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/design_system/app_animations.dart';
 import '../../services/audio_service.dart';
@@ -42,6 +43,7 @@ class _PressScaleState extends State<PressScale> {
         onTapCancel: () => _setPressed(false),
         onTap: () {
           AudioService().playTap();
+          HapticFeedback.lightImpact();
           widget.onTap();
         },
         child: AnimatedScale(

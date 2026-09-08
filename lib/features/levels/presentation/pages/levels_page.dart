@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_spacing.dart';
-import '../../../../shared/widgets/ad_banner_placeholder.dart';
+import '../../../../shared/widgets/banner_ad_widget.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../data/datasources/levels_local_datasource.dart';
 import '../../data/repositories/levels_repository_impl.dart';
@@ -107,7 +107,7 @@ class _LevelsView extends StatelessWidget {
                       ),
                       const Padding(
                         padding: EdgeInsets.only(bottom: AppSpacing.md),
-                        child: AdBannerPlaceholder(),
+                        child: BannerAdWidget(),
                       ),
                     ],
                   ),

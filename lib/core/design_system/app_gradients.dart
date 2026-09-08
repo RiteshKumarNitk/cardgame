@@ -27,14 +27,16 @@ abstract final class AppGradients {
     colors: [AppColors.premiumGradientStart, AppColors.premiumGradientEnd],
   );
 
-  /// The soft, colorful backdrop behind every top-level screen.
+  /// The soft, warm backdrop behind every top-level screen.
+  /// Light, creamy, and neutral enough that artwork and puzzle photos
+  /// remain the visual focus.
   static const LinearGradient screenBackground = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFFEEF6FF),
-      Color(0xFFE0E7FF),
-      Color(0xFFE0F2FE),
+      Color(0xFFF7FAF5),
+      Color(0xFFF1F8F4),
+      Color(0xFFEDF4F1),
     ],
   );
 }

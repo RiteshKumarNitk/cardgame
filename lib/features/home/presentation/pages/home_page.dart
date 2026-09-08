@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../core/design_system/app_radius.dart';
-import '../../../../core/design_system/app_shadows.dart';
 import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/config/app_config.dart';
 import '../../../../core/design_system/color_utils.dart';
@@ -25,7 +24,6 @@ import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
-import '../../../../shared/widgets/outlined_text.dart';
 import '../../../../shared/widgets/press_scale.dart';
 import '../../../../shared/widgets/pulsing_glow.dart';
 import '../../../../shared/widgets/stat_chip.dart';
@@ -133,7 +131,7 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         body: GameBackground(
           showFloatingPieces: true,
-          showClouds: true,
+
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -141,10 +139,9 @@ class _HomePageState extends State<HomePage> {
                 AppSpacing.sm,
                 AppSpacing.lg,
                 AppSpacing.lg,
-              ),
-              child: Column(
+              ),                child: Column(
                 children: [
-                  // ── Top Bar: Profile — Settings — Coins — Hints ──
+                  // ── Top Bar: Profile — Settings — Coins — Logo ──
                   _HomeTopBar(),
 
                   // ── The Collection: current section's artwork ──
@@ -164,9 +161,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-
-                  // ── Secondary features: small, never in the way ──
-                  _QuickActionsRow(),
 
                   const SizedBox(height: AppSpacing.md),
                   const BannerAdWidget(),
@@ -203,22 +197,22 @@ class _HomeTopBar extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
 
-        // ── Row 2: Coins — Logo — Hints ──
+        // ── Row 2: Coins — Logo ──
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            BlocBuilder<WalletCubit, int>(
-              builder: (context, coins) => StatChip(
-                icon: Icons.monetization_on_rounded,
-                value: formatThousands(coins),
-                iconColor: AppColors.accent,
-              ),
-            ),
-            const Expanded(
-              child: Center(child: AppLogo(size: 44, wordmark: true)),
-            ),
-          ],
-        ),
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      BlocBuilder<WalletCubit, int>(
+                        builder: (context, coins) => StatChip(
+                          icon: Icons.monetization_on_rounded,
+                          value: formatThousands(coins),
+                          iconColor: AppColors.accent,
+                        ),
+                      ),
+                      const Expanded(
+                        child: Center(child: AppLogo(size: 40, wordmark: true)),
+                      ),
+                    ],
+                  ),
       ],
     );
   }
@@ -277,13 +271,13 @@ class _CollectionFrame extends StatelessWidget {
         children: [
           // ── Artwork frame: mosaic + collected-pieces progress ──
           Padding(
-            padding: const EdgeInsets.only(top: 22, bottom: 30),
+            padding: const EdgeInsets.only(top: 18, bottom: 24),
             child: SizedBox(
-              width: 300,
+              width: 340,
               child: GameCard(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md,
-                  AppSpacing.xl,
+                  AppSpacing.lg,
                   AppSpacing.md,
                   AppSpacing.md,
                 ),
@@ -291,6 +285,15 @@ class _CollectionFrame extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Section title: small label above mosaic
+                    Text(
+                      'Section ${section.index}',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: chapter.difficulty.color,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
                     SectionMosaic(
                       levels: sectionLevels,
                       accentColor: chapter.difficulty.color,
@@ -330,7 +333,7 @@ class _CollectionFrame extends StatelessWidget {
                 label: 'Level $levelId',
                 icon: Icons.play_arrow_rounded,
                 width: double.infinity,
-                height: 60,
+                height: 58,
                 onTap: () => context.goNamed(
                   RouteNames.puzzle,
                   pathParameters: {'levelId': '$levelId'},
@@ -344,8 +347,8 @@ class _CollectionFrame extends StatelessWidget {
   }
 }
 
-/// Chunky pill banner naming the current section — sits overlapping the
-/// collection frame's top edge, matching a "ribbon tab" look.
+/// Pill banner showing the chapter name — sits overlapping the
+/// collection frame's top edge.
 class _SectionBanner extends StatelessWidget {
   const _SectionBanner({required this.section, required this.color});
 
@@ -354,23 +357,29 @@ class _SectionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final chapter = ChapterCatalog.chapterForLevel(section.startLevelId);
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs + 2,
       ),
       decoration: BoxDecoration(
         color: color,
         borderRadius: AppRadius.pillRadius,
-        border: Border.all(color: AppColors.outline, width: 3),
-        boxShadow: AppShadows.bevel(color, depth: 4),
+        border: Border.all(color: AppColors.outline, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: OutlinedText(
-        'Section ${section.index}',
-        outlineWidth: 2,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+      child: Text(
+        chapter.name,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
           color: Colors.white,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -522,22 +531,21 @@ class _QuickAction extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 50,
-              height: 50,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: AppColors.card,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.outline, width: 2.5),
+                border: Border.all(color: AppColors.outline, width: 1.5),
                 boxShadow: [
                   const BoxShadow(
                     color: AppColors.shadow,
-                    blurRadius: 10,
-                    offset: Offset(0, 3),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
                   ),
-                  ...AppShadows.bevel(AppColors.card, depth: 3),
                 ],
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(

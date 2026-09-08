@@ -14,11 +14,15 @@
 ## P1 — Important
 
 - [ ] Wire artwork collection progression into core game loop (complete puzzle → collect piece → update collection)
-- [ ] Refine Home Screen to emphasize current collection artwork + large Play button as primary focus
-- [ ] Remove/replace legacy card suit symbols from background (not part of core visual identity)
+- [x] Refine Home Screen to emphasize current collection artwork + large Play button as primary focus
+- [x] Remove/replace legacy card suit symbols from background (not part of core visual identity)
 - [ ] Resolve font inconsistency: either use bundled Baloo2/Nunito or remove them from pubspec.yaml
 - [ ] Add GDPR consent flow for Firebase Analytics (`setConsent()` gate)
 - [ ] Integrate generated artwork from `content/artwork/` into the game (or remove if not intended)
+- [x] AdMob: re-enable ads (`AppConfig.adsEnabled = true`), centralize IDs in `AdConfig`, make `BannerAdWidget` the one real banner + respect Remove Ads, add `AdLogger`, fix missing iOS `GADApplicationIdentifier`
+- [ ] AdMob: add UMP (User Messaging Platform) consent form before `MobileAds.initialize()` for EEA/UK
+- [ ] AdMob: create real ad units + wire real unit IDs via release `--dart-define`; replace sample App ID in `AndroidManifest.xml` / iOS `Info.plist`
+- [ ] AdMob: real-device verification (blocked until `victory_page.dart` compiles again — stray `}` / missing `HapticFeedback` import / `BounceIn.slideUp` in the uncommitted WIP)
 
 ---
 
@@ -26,6 +30,8 @@
 
 - [x] Add haptic feedback to puzzle interactions (piece snap already had it; invalid group-move rejection now plays a haptic + soft error SFX via `AudioService().playError()`)
 - [ ] Add "skip level" option for stuck players (with appropriate cost/gating)
+- [x] Audit and fix level progression: reduce excessive board sizes (chapters 5+ were 11×12 to 22×23), introduce board size variety within sections
+- [x] Reduce Chapter 1 from 60 to 20 levels, Chapter 2 from 40 to 20 levels
 - [ ] Add puzzle piece entrance animation (staggered deal-in per piece)
 - [ ] Improve collections page — show individual level progress within sections
 - [ ] Add analytics events for cosmetics purchases and equip actions

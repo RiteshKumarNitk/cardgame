@@ -55,7 +55,7 @@ Core feature implementation is advanced, but visual polish and core gameplay ref
 - [x] Profile (display name editing, avatar display)
 - [x] Photo puzzles (manifest-driven photo puzzle mode)
 - [x] Wallet system (earn/spend coins)
-- [x] Ad integration (AdMob: rewarded, interstitial, banner)
+- [x] Ad integration (AdMob: rewarded, interstitial, banner) — **enabled** (`AppConfig.adsEnabled = true`); test ad IDs in debug, real IDs via `--dart-define` in release; see "AdMob / Ads" section below
 - [x] IAP integration (RevenueCat: coin packs, remove ads)
 - [x] Firebase integration (anonymous auth, Firestore cloud save, analytics, crashlytics)
 - [x] Audio system (manifest-driven, scene-based BGM, SFX pool, ducking)
@@ -76,8 +76,66 @@ Core feature implementation is advanced, but visual polish and core gameplay ref
 ## In Progress
 
 - [ ] Artwork collection progression (core gameplay loop: complete puzzle → collect artwork piece → update collection)
-- [ ] Home Screen refinement (focus on current collection artwork + large Play button)
-- [ ] Visual polish and refinement (removing legacy casino/card-game visual elements)
+- [x] Home Screen refinement (focus on current collection artwork + large Play button)
+- [x] Visual polish and refinement (removing legacy casino/card-game visual elements)
+
+---
+
+## AdMob / Ads
+
+**Status:** enabled and wired end-to-end; verified with Google **test** ad IDs at
+the unit-test level. Real-device verification is still outstanding (see Known
+Issues → "Ad runtime verification blocked").
+
+### Architecture
+| Piece | File |
+|---|---|
+| Master on/off switch | `AppConfig.adsEnabled` (`lib/core/config/app_config.dart`) — now `true` |
+| All ad unit IDs + sample App IDs | `AdConfig` (`lib/core/config/ad_config.dart`) |
+| SDK init + preload | `AppBootstrap.run()` → `MobileAds.instance.initialize()` (once, on splash, `AppConfig.adsEnabled`-gated) |
+| Banner placement (the one real widget) | `BannerAdWidget` (`lib/shared/widgets/banner_ad_widget.dart`) — Home, Gallery, Journey/Levels |
+| Interstitial | `AdService.showInterstitial()` — Victory "continue" (daily cap 4), skipped when Remove Ads owned |
+| Rewarded | `AdService.showRewardedAd()` — Puzzle out-of-time offer |
+| Remove Ads entitlement | `AdsCubit` / `AdsService` (Hive `adsRemoved`), mirrored from RevenueCat `remove_ads` |
+| Debug logging | `AdLogger` (`lib/services/ad_logger.dart`) — `[AdMob] …`, debug builds only |
+
+### Test vs production IDs
+- **Debug / profile:** always Google's official test unit IDs — no account needed, no invalid-traffic risk.
+- **Release:** real unit IDs are used **only** when injected at build time:
+  ```
+  flutter build appbundle --release \
+    --dart-define=BANNER_AD_UNIT_ID_ANDROID=ca-app-pub-xxx/xxx \
+    --dart-define=INTERSTITIAL_AD_UNIT_ID_ANDROID=ca-app-pub-xxx/xxx \
+    --dart-define=REWARDED_AD_UNIT_ID_ANDROID=ca-app-pub-xxx/xxx
+  ```
+  (`_IOS` variants exist too.) Without them a release build serves test ads (safe, earns nothing).
+
+### Banner placement rules
+- Shows on **Home**, **Gallery**, **Journey/Levels** (bottom of screen, inside `SafeArea`, adaptive width — never overlaps controls).
+- **Not** shown on Puzzle (gameplay), Victory, Splash, Settings, Shop, or any full-screen celebration.
+- Collapses to zero height when: ads compiled out, web, Remove Ads owned, or the load failed. The game is always fully playable without an ad.
+
+### Remove Ads behaviour
+- `BannerAdWidget` watches `AdsCubit`; a `true` state means no ad is even requested, and any live native ad is disposed.
+- `victory_page` interstitial and the Shop already checked the entitlement; unchanged.
+
+### Troubleshooting (real device, debug build)
+Filter logs for `[AdMob]`. Expected happy path:
+```
+[AdMob] Initializing… (productionIds=false)
+[AdMob] Adapter com.google.android.gms.ads.MobileAds: AdapterInitializationState.ready
+[AdMob] Initialized — preloading rewarded + interstitial
+[AdMob] Banner loading (360x50, unit=ca-app-pub-3940256099942544/6300978111)
+[AdMob] Banner loaded
+[AdMob] Banner impression
+```
+A failure prints `code` / `domain` / `message` (e.g. `code=3` = "no fill", `code=2` = network error). "No fill" on test IDs usually means no network or an emulator without Google Play services.
+
+### Still required (external — AdMob / Play Console, not code)
+1. Create the AdMob app + 3 ad units; put the real unit IDs in the release `--dart-define`s.
+2. Replace the sample **App ID** in `android/app/src/main/AndroidManifest.xml` (`~3347511713`) and `ios/Runner/Info.plist` (`GADApplicationIdentifier`, `~1458002511`) with the real one.
+3. Add a UMP consent form (EEA/UK) — `ConsentInformation` / `ConsentForm` flow before `MobileAds.initialize()`.
+4. Confirm `minSdkVersion >= 23` (google_mobile_ads 5.x requirement — currently inherited from Flutter's default, which is ≥ 24).
 
 ---
 
@@ -85,8 +143,9 @@ Core feature implementation is advanced, but visual polish and core gameplay ref
 
 ### Core Gameplay
 - Artwork collection progression is not fully wired into the game loop
-- Home Screen may not yet emphasize collection artwork and Play button as primary focus
-- Legacy card suit symbols (♠♥♦♣) appear in background — these are not part of the core visual identity
+
+### Ad runtime verification blocked
+- The uncommitted working-tree edit to `lib/features/victory/presentation/pages/victory_page.dart` does **not compile** (stray `}` after `initState`, missing `services.dart` import for `HapticFeedback`, `BounceIn.slideUp` does not exist). This is unrelated to ads but prevents building/running the full app, so on-device ad verification could not be performed. The banner widget's logic is covered by unit tests; the interstitial/rewarded/init paths need a device once the app compiles again.
 
 ### Font Inconsistency
 - `Baloo2.ttf` and `Nunito.ttf` are declared in `pubspec.yaml` and bundled in `assets/fonts/`
@@ -111,3 +170,9 @@ Core feature implementation is advanced, but visual polish and core gameplay ref
 ## Next Recommended Task
 
 **Wire artwork collection progression** into the core game loop (complete puzzle → collect artwork piece → update collection). This is the primary remaining feature to make the game feel complete.
+
+**Level progression refinement** — the current 7-chapter, 140-level structure is a solid foundation, but could benefit from:
+- More mechanical variety (different puzzle shapes, special constraints)
+- Better tutorialization in early levels (teach groups more gradually)
+- Daily challenge difficulty tuning (currently 60s for 20 pieces may be too tight)
+- Consider adding intermediate board sizes between chapters

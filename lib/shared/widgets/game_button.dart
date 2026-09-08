@@ -8,11 +8,10 @@ import 'press_scale.dart';
 
 enum GameButtonVariant { primary, secondary, premium }
 
-/// The one and only button surface in the app: gradient fill, pill
-/// corners, a thick dark outline, and a chunky "3D bevel" band beneath —
-/// a bold toy-block look with press-scale feedback (via [PressScale]).
-/// Every CTA — Play, menu tiles, dialogs — should use this instead of a
-/// bespoke `Container`/`ElevatedButton`.
+/// The app's primary button surface: gradient fill, pill corners, soft
+/// shadow, and a subtle top gloss — with press-scale feedback (via
+/// [PressScale]). Every CTA — Play, menu tiles, dialogs — should use this
+/// instead of a bespoke `Container`/`ElevatedButton`.
 class GameButton extends StatelessWidget {
   const GameButton({
     super.key,
@@ -53,14 +52,14 @@ class GameButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: _gradient(ext),
           borderRadius: AppRadius.pillRadius,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1),
           boxShadow: [
             ...ext.buttonShadow,
             BoxShadow(
-              color: Colors.white.withValues(alpha: 0.3),
-              offset: const Offset(0, 2),
-              blurRadius: 4,
-            ), // Inner top gloss effect (faked with drop shadow)
+              color: Colors.white.withValues(alpha: 0.18),
+              offset: const Offset(0, 1),
+              blurRadius: 3,
+            ), // Subtle top gloss
           ],
         ),
         child: Row(

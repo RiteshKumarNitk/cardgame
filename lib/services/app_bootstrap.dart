@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
+import '../core/config/ad_config.dart';
 import '../core/config/app_config.dart';
+import 'ad_logger.dart';
 import 'ad_service.dart';
 import 'analytics_service.dart';
 import 'cloud_save_service.dart';
@@ -91,11 +93,21 @@ class AppBootstrap {
       stage.value = BootstrapStage.loadingAds;
       if (AppConfig.adsEnabled) {
         try {
-          await MobileAds.instance.initialize();
+          AdLogger.log(
+            'Initializing… (productionIds=${AdConfig.usingProductionIds})',
+          );
+          final status = await MobileAds.instance.initialize();
+          for (final entry in status.adapterStatuses.entries) {
+            AdLogger.log(
+              'Adapter ${entry.key}: ${entry.value.state} '
+              '(${entry.value.description})',
+            );
+          }
+          AdLogger.log('Initialized — preloading rewarded + interstitial');
           AdService().loadRewardedAd();
           AdService().loadInterstitial();
         } catch (e) {
-          debugPrint('Ads init failed: $e');
+          AdLogger.log('Init failed: $e');
         }
       }
     }

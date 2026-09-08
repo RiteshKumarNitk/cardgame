@@ -10,7 +10,7 @@ class FloatingBob extends StatefulWidget {
     super.key,
     required this.child,
     this.range = 8,
-    this.duration = AppAnimations.idleFloat,
+    this.duration = AppAnimations.long,
   });
 
   final Widget child;

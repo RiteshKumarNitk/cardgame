@@ -61,10 +61,23 @@ abstract final class ChapterCatalog {
   ///
   /// This is the primary API for the puzzle engine. It resolves all
   /// puzzle parameters from the level's position in the catalog.
+  ///
+  /// Board size varies by position within the section to create a
+  /// natural difficulty ramp: early levels use smaller boards that
+  /// grow toward the chapter's full size.
   static LevelConfig levelConfigFor(int levelId) {
     final chapter = chapterForLevel(levelId);
     final section = sectionForLevel(levelId);
     final levelInSection = levelId - section.startLevelId + 1;
+
+    // Board size ramps up within each section: early levels get smaller
+    // boards, growing toward the chapter's full size by the section's end.
+    // This makes the progression role genuinely meaningful — a "practice"
+    // level has fewer pieces than an "advanced" level.
+    final cols = _boardColsForPosition(
+      chapterBoardCols: chapter.boardCols,
+      levelInSection: levelInSection,
+    );
 
     return LevelConfig(
       levelId: levelId,
@@ -73,11 +86,31 @@ abstract final class ChapterCatalog {
       sectionIndex: section.index,
       levelInSection: levelInSection,
       difficulty: chapter.difficulty,
-      cols: chapter.boardCols,
-      rows: chapter.boardCols + 1, // Always portrait
+      cols: cols,
+      rows: cols + 1, // Always portrait
       seed: levelId, // Deterministic from level ID
       progressRole: _progressRoleForPosition(levelInSection),
     );
+  }
+
+  /// Returns the effective column count for a level at [levelInSection]
+  /// within a chapter whose maximum board is [chapterBoardCols].
+  ///
+  /// The board grows across the section's 20-level arc:
+  /// - Levels 1-5: chapter max minus 1 (gentle intro)
+  /// - Levels 6-10: chapter max minus 0 (full board)
+  /// - Levels 11-20: chapter max (full board, more complex)
+  ///
+  /// The minimum is always 3 columns (the smallest board in the game).
+  static int _boardColsForPosition({
+    required int chapterBoardCols,
+    required int levelInSection,
+  }) {
+    final cols = switch (levelInSection) {
+      <= 5 => (chapterBoardCols - 1).clamp(3, chapterBoardCols),
+      _ => chapterBoardCols,
+    };
+    return cols;
   }
 
   /// Maps a 1-20 position within a section to its progression role.
@@ -118,100 +151,47 @@ abstract final class ChapterCatalog {
       name: 'The Beginning',
       difficulty: LevelDifficulty.easy,
       boardCols: 3,
-      sectionCount: 3, // 60 levels
+      sectionCount: 1, // 20 levels — intro to swapping
     ),
     _ChapterBlueprint(
       name: 'Nature',
       difficulty: LevelDifficulty.medium,
-      boardCols: 5,
-      sectionCount: 2, // 40 levels
+      boardCols: 4,
+      sectionCount: 1, // 20 levels — larger board, no groups
     ),
     _ChapterBlueprint(
       name: 'Cities',
       difficulty: LevelDifficulty.hard,
-      boardCols: 7,
-      sectionCount: 2, // 40 levels
+      boardCols: 5,
+      sectionCount: 1, // 20 levels — groups introduced
     ),
     _ChapterBlueprint(
       name: 'Animals',
       difficulty: LevelDifficulty.expert,
-      boardCols: 9,
-      sectionCount: 2, // 40 levels
+      boardCols: 6,
+      sectionCount: 1, // 20 levels — larger groups, displacement
     ),
 
-    // ── Continuation chapters (Master tier) ─────────────────────────
-    // Board size grows gradually. Section count varies for pacing.
+    // ── Master tier ─────────────────────────────────────────────────
+    // Reasonable board sizes for phone screens. 8×9 is the practical
+    // maximum — anything larger makes pieces too small to interact with.
     _ChapterBlueprint(
       name: 'Ocean Depths',
       difficulty: LevelDifficulty.master,
-      boardCols: 11,
-      sectionCount: 2,
+      boardCols: 7,
+      sectionCount: 1, // 20 levels — complex groups
     ),
     _ChapterBlueprint(
       name: 'Mountain Peaks',
       difficulty: LevelDifficulty.master,
-      boardCols: 12,
-      sectionCount: 3,
+      boardCols: 8,
+      sectionCount: 1, // 20 levels — near-max board
     ),
     _ChapterBlueprint(
       name: 'Desert Sands',
       difficulty: LevelDifficulty.master,
-      boardCols: 13,
-      sectionCount: 2,
-    ),
-    _ChapterBlueprint(
-      name: 'Winter Wonderland',
-      difficulty: LevelDifficulty.master,
-      boardCols: 14,
-      sectionCount: 3,
-    ),
-    _ChapterBlueprint(
-      name: 'Space Odyssey',
-      difficulty: LevelDifficulty.master,
-      boardCols: 15,
-      sectionCount: 2,
-    ),
-    _ChapterBlueprint(
-      name: 'Ancient Ruins',
-      difficulty: LevelDifficulty.master,
-      boardCols: 16,
-      sectionCount: 3,
-    ),
-    _ChapterBlueprint(
-      name: 'Enchanted Forest',
-      difficulty: LevelDifficulty.master,
-      boardCols: 17,
-      sectionCount: 2,
-    ),
-    _ChapterBlueprint(
-      name: 'Neon Nights',
-      difficulty: LevelDifficulty.master,
-      boardCols: 18,
-      sectionCount: 3,
-    ),
-    _ChapterBlueprint(
-      name: 'Candy Kingdom',
-      difficulty: LevelDifficulty.master,
-      boardCols: 19,
-      sectionCount: 2,
-    ),
-    _ChapterBlueprint(
-      name: 'Sky Islands',
-      difficulty: LevelDifficulty.master,
-      boardCols: 20,
-      sectionCount: 3,
-    ),
-    _ChapterBlueprint(
-      name: 'Crystal Caves',
-      difficulty: LevelDifficulty.master,
-      boardCols: 21,
-      sectionCount: 2,
-    ),
-    _ChapterBlueprint(
-      name: 'Legendary Realm',
-      difficulty: LevelDifficulty.master,
-      boardCols: 22,
-      sectionCount: 3,
+      boardCols: 8,
+      sectionCount: 1, // 20 levels — final challenge
     ),
   ];
 

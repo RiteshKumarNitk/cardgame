@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/design_system/app_typography.dart';
 
 /// A soft, semi-transparent playing card suit that drifts slowly across the
-/// screen — for the premium casino-game atmosphere. Multiple instances at
+/// screen — for decorative atmosphere. Multiple instances at
 /// different sizes, speeds, and vertical positions create a layered
 /// parallax-like effect.
 class FloatingSuit extends StatefulWidget {

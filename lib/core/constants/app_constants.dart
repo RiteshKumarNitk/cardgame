@@ -1,6 +1,6 @@
 /// App-wide constants shared across features.
 abstract final class AppConstants {
-  static const String appName = 'Puzzle Cards';
+  static const String appName = 'SuitClash';
 
   // Hive box names — kept here so every feature reads/writes the same
   // box identifiers instead of re-typing string literals.

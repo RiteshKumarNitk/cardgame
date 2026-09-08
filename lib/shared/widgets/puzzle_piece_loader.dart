@@ -14,7 +14,7 @@ class PuzzlePieceLoader extends StatefulWidget {
     super.key,
     this.pieceSize = 30,
     this.gap = 8,
-    this.duration = AppAnimations.idleFloat,
+    this.duration = AppAnimations.long,
   });
 
   final double pieceSize;

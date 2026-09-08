@@ -34,7 +34,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
             
-        <!-- Sample AdMob App ID -->
+        <!-- AdMob *App ID* (identifier, not a secret; note the '~' — an ad
+             UNIT id uses '/'). This is Google's public SAMPLE App ID, which
+             is correct for development/test ads. Replace it with the real
+             App ID from the AdMob console before shipping real ads.
+             Must stay in sync with iOS Info.plist GADApplicationIdentifier. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713"/>

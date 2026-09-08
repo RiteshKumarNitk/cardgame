@@ -26,7 +26,7 @@ class ChapterBanner extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             chapter.difficulty.color,
-            chapter.difficulty.color.withValues(alpha: 0.75),
+            chapter.difficulty.color.withValues(alpha: 0.7),
           ],
         ),
         padding: const EdgeInsets.symmetric(

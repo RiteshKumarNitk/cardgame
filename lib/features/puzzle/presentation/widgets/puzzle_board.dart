@@ -801,14 +801,13 @@ class _PlaceholderTile extends StatelessWidget {
       child: ColoredBox(color: AppColors.border),
     );
   }
-}
-
-/// Plays once per shuffle: the cell scales + fades in with a stagger based
-/// on [delay] (derived from the cell's board position), so pieces appear to
-/// cascade onto the board instead of snapping in. The delay is an
-/// [Interval] on the controller — no timers — so widget tests never see a
-/// leaked pending timer. Replays when the parent remounts the board (the
-/// page keys the board by the shuffle generation).
+}  /// Plays once per shuffle: the cell fades in with a gentle slide-up,
+  /// staggered by [delay] (derived from the cell's board position), so
+  /// pieces appear to cascade onto the board in a soft wave instead of
+  /// snapping in instantly. Uses a fixed-duration controller with an
+  /// [Interval] — no timers — so widget tests never see a leaked pending
+  /// timer. Replays when the parent remounts the board (the page keys the
+  /// board by the shuffle generation).
 class _DealIn extends StatefulWidget {
   const _DealIn({required this.delay, required this.child});
 
@@ -821,11 +820,11 @@ class _DealIn extends StatefulWidget {
 
 class _DealInState extends State<_DealIn>
     with SingleTickerProviderStateMixin {
-  static const Duration _duration = Duration(milliseconds: 420);
+  static const Duration _duration = Duration(milliseconds: 460);
 
   late final AnimationController _controller;
-  late final Animation<double> _scale;
-  late final Animation<double> _opacity;
+  late final Animation<double> _fade;
+  late final Animation<double> _slide;
 
   @override
   void initState() {
@@ -834,16 +833,16 @@ class _DealInState extends State<_DealIn>
     _controller =
         AnimationController(vsync: this, duration: total)..forward();
     final start = widget.delay.inMilliseconds / total.inMilliseconds;
-    _scale = Tween<double>(begin: 0.7, end: 1.0).animate(
+    _fade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Interval(start, 1.0, curve: Curves.easeOutBack),
+        curve: Interval(start, 1.0, curve: AppAnimations.fadeCurve),
       ),
     );
-    _opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _slide = Tween<double>(begin: 14.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Interval(start, 1.0, curve: Curves.easeOut),
+        curve: Interval(start, 1.0, curve: AppAnimations.slideUpCurve),
       ),
     );
   }
@@ -857,8 +856,11 @@ class _DealInState extends State<_DealIn>
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
-      opacity: _opacity,
-      child: ScaleTransition(scale: _scale, child: widget.child),
+      opacity: _fade,
+      child: Transform.translate(
+        offset: Offset(0, _slide.value),
+        child: widget.child,
+      ),
     );
   }
 }

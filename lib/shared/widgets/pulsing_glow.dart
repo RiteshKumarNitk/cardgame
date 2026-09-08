@@ -39,9 +39,7 @@ class _PulsingGlowState extends State<PulsingGlow>
         AnimationController(vsync: this, duration: AppAnimations.glowPulse)
           ..repeat(reverse: true);
     _opacity = Tween<double>(begin: widget.minOpacity, end: widget.maxOpacity)
-        .animate(
-          CurvedAnimation(parent: _controller, curve: AppAnimations.idleCurve),
-        );
+        .animate(CurvedAnimation(parent: _controller, curve: AppAnimations.idleCurve));
   }
 
   @override
@@ -55,19 +53,20 @@ class _PulsingGlowState extends State<PulsingGlow>
     return AnimatedBuilder(
       animation: _opacity,
       child: widget.child,
-      builder: (context, child) => DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: widget.borderRadius ?? AppRadius.pillRadius,
-          boxShadow: [
-            BoxShadow(
-              color: widget.color.withValues(alpha: _opacity.value),
-              blurRadius: widget.blurRadius,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: child,
-      ),
+      builder: (context, child) {
+        final glow = BoxShadow(
+          color: widget.color.withValues(alpha: _opacity.value),
+          blurRadius: widget.blurRadius,
+          spreadRadius: 0,
+        );
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: widget.borderRadius ?? AppRadius.pillRadius,
+            boxShadow: [glow],
+          ),
+          child: child,
+        );
+      },
     );
   }
 }

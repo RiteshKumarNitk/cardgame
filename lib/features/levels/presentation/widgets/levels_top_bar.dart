@@ -38,14 +38,15 @@ class LevelsTopBar extends StatelessWidget {
               child: Container(
                 width: 40,
                 height: 40,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.card,
                   shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.outline, width: 1.5),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.shadow,
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
                     ),
                   ],
                 ),

@@ -334,7 +334,7 @@ class _ShopPageState extends State<ShopPage> {
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          'Added to your wallet — thanks for supporting\nPuzzle Cards!',
+                          'Added to your wallet — thanks for supporting\nSuitClash!',
                           textAlign: TextAlign.center,
                           style: textTheme.bodySmall?.copyWith(
                             color: AppColors.textSecondary,

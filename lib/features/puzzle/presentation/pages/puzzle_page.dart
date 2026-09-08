@@ -879,14 +879,16 @@ class _ComboBadge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
         decoration: BoxDecoration(
-          color: AppColors.accent,
+          gradient: const LinearGradient(
+            colors: [AppColors.premiumGradientStart, AppColors.premiumGradientEnd],
+          ),
           borderRadius: AppRadius.pillRadius,
-          border: Border.all(color: Colors.white, width: 2),
+          border: Border.all(color: AppColors.outline, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: AppColors.accent.withOpacity(0.5),
-              blurRadius: 10,
-              spreadRadius: 2,
+              color: AppColors.accent.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -897,10 +899,10 @@ class _ComboBadge extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               'COMBO x$combo!',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.danger,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.secondary,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.5,
               ),
             ),
           ],

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design_system/app_colors.dart';
-import '../../core/design_system/app_shadows.dart';
 import 'press_scale.dart';
 
 /// A small circular icon button on a white card surface with a soft
@@ -38,7 +37,6 @@ class CircleIconButton extends StatelessWidget {
               blurRadius: 12,
               offset: Offset(0, 4),
             ),
-            ...AppShadows.bevel(AppColors.card, depth: 3.5),
           ],
         ),
         child: Icon(icon, color: iconColor, size: size * 0.45),

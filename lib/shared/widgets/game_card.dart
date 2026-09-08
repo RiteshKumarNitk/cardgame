@@ -7,12 +7,11 @@ import '../../core/design_system/app_radius.dart';
 import '../../core/design_system/app_spacing.dart';
 import '../../core/design_system/app_theme_extension.dart';
 
-/// The app's single card surface: rounded corners, a thick dark outline,
-/// and a chunky "3D bevel" band beneath — the same toy-block look as
-/// [GameButton] — with an optional frosted-glass look for content sitting
+/// The app's card surface: rounded corners, a thin glossy outline, and a
+/// soft shadow — with an optional frosted-glass look for content sitting
 /// on top of a colorful background (used on Home/Levels; the glass
-/// variant skips the outline/bevel since a visible dark line would fight
-/// the translucency).
+/// variant skips the outline since a visible dark line would fight the
+/// translucency).
 class GameCard extends StatelessWidget {
   const GameCard({
     super.key,
@@ -47,8 +46,8 @@ class GameCard extends StatelessWidget {
         gradient: gradient,
         borderRadius: radius,
         border: glass
-            ? Border.all(color: Colors.white.withValues(alpha: 0.32), width: 1)
-            : Border.all(color: AppColors.outline, width: 1), // Thin glossy outline
+            ? Border.all(color: Colors.white.withValues(alpha: 0.28), width: 1)
+            : Border.all(color: AppColors.outline, width: 1),
         boxShadow: glass ? null : ext.cardShadow,
       ),
       child: child,

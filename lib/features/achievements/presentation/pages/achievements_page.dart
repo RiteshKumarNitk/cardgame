@@ -31,7 +31,7 @@ class AchievementsPage extends StatelessWidget {
     return Scaffold(
       body: GameBackground(
         showFloatingPieces: false,
-        showClouds: true,
+
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
