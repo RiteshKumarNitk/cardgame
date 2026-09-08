@@ -22,7 +22,8 @@
 - [x] AdMob: re-enable ads (`AppConfig.adsEnabled = true`), centralize IDs in `AdConfig`, make `BannerAdWidget` the one real banner + respect Remove Ads, add `AdLogger`, fix missing iOS `GADApplicationIdentifier`
 - [ ] AdMob: add UMP (User Messaging Platform) consent form before `MobileAds.initialize()` for EEA/UK
 - [ ] AdMob: create real ad units + wire real unit IDs via release `--dart-define`; replace sample App ID in `AndroidManifest.xml` / iOS `Info.plist`
-- [ ] AdMob: real-device verification (blocked until `victory_page.dart` compiles again — stray `}` / missing `HapticFeedback` import / `BounceIn.slideUp` in the uncommitted WIP)
+- [ ] AdMob: real-device verification of the runtime chain (SDK init → test banner → `onAdLoaded` → visible `AdWidget` → navigation → dispose) — debug build + `adb logcat | grep '[AdMob]'`
+- [x] Fix `victory_page.dart` build break (stray `}` after `initState`, missing `flutter/services.dart` import, non-existent `BounceIn.slideUp`) — was failing every `flutter build`
 
 ---
 

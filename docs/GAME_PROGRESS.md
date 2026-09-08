@@ -144,8 +144,9 @@ A failure prints `code` / `domain` / `message` (e.g. `code=3` = "no fill", `code
 ### Core Gameplay
 - Artwork collection progression is not fully wired into the game loop
 
-### Ad runtime verification blocked
-- The uncommitted working-tree edit to `lib/features/victory/presentation/pages/victory_page.dart` does **not compile** (stray `}` after `initState`, missing `services.dart` import for `HapticFeedback`, `BounceIn.slideUp` does not exist). This is unrelated to ads but prevents building/running the full app, so on-device ad verification could not be performed. The banner widget's logic is covered by unit tests; the interstitial/rewarded/init paths need a device once the app compiles again.
+### Ad runtime verification still pending
+- The app now compiles (`flutter analyze`: 0 errors; `flutter build appbundle --release` succeeds). A broken uncommitted WIP in `victory_page.dart` — stray `}` after `initState`, missing `flutter/services.dart` import for `HapticFeedback`, and `BounceIn.slideUp` (which does not exist) — was blocking every build; all three were fixed (`BounceIn.slideUp` reverted to the plain `BounceIn(delay:, child:)` it replaced).
+- Banner widget logic is covered by unit tests. **The full runtime chain (SDK init → test banner request → `onAdLoaded` → visible `AdWidget` → navigation → dispose) has not yet been checked on a real device / emulator** — do this with a debug build and `adb logcat | grep '\[AdMob\]'`.
 
 ### Font Inconsistency
 - `Baloo2.ttf` and `Nunito.ttf` are declared in `pubspec.yaml` and bundled in `assets/fonts/`

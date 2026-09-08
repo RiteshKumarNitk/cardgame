@@ -31,15 +31,19 @@ const _level = Level(
   isUnlocked: true,
 );
 
-/// Advances past all staggered BounceIn delays (max ~2050ms) plus the
-/// VictoryPage's own Future.delayed(400ms) so no pending Timers remain.
+/// Advances past all staggered BounceIn delays plus the VictoryPage's own
+/// Future.delayed(350ms) AND the full 3000ms reveal controller, so no
+/// pending Timers remain and the action buttons are fully faded/slid in
+/// (they sit under `Opacity(opacity: contentSlide)` + a translate, so a
+/// half-done animation leaves them un-tappable).
 Future<void> _flushTimers(WidgetTester tester) async {
   // Pump frame to trigger initState delays
   await tester.pump();
-  await tester.pump(const Duration(milliseconds: 500)); // past VictoryPage's 400ms
+  await tester.pump(const Duration(milliseconds: 500)); // past VictoryPage's 350ms
   await tester.pump(const Duration(milliseconds: 500)); // past BounceIn 600-1100ms
   await tester.pump(const Duration(milliseconds: 500)); // past BounceIn 1600ms
   await tester.pump(const Duration(milliseconds: 600)); // past longest BounceIn 2050ms
+  await tester.pump(const Duration(milliseconds: 2000)); // past the 3000ms reveal controller
 }
 
 GoRouter _victoryRouter() {

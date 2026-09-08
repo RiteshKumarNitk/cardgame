@@ -39,11 +39,18 @@ switched off by design for the first release.
 - `test/shared/widgets/banner_ad_widget_test.dart` — verifies the Remove-Ads
   collapse and the safe-degradation (no exception) path.
 
+### Fixed (unblocks the build)
+- `victory_page.dart` did not compile — a broken uncommitted WIP (stray `}` after
+  `initState`, missing `flutter/services.dart` import for `HapticFeedback`,
+  `BounceIn.slideUp` which doesn't exist). Fixed the brace, added the import,
+  reverted `BounceIn.slideUp(...)` to `BounceIn(delay:, child:)`. Unrelated to
+  ads but every `flutter build` failed until this was resolved.
+
 ### Still required before shipping real ads (external, not code)
 - Real AdMob account + real ad unit IDs via `--dart-define` (see `AdConfig`).
 - Replace the sample **App ID** in `AndroidManifest.xml` and iOS `Info.plist`.
 - A UMP (User Messaging Platform) consent form for EEA/UK users.
-- Real-device verification (blocked locally — see note in GAME_PROGRESS.md).
+- Real-device verification of the runtime ad chain (not yet performed).
 
 ---
 

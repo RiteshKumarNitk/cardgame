@@ -3,12 +3,12 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:confetti/confetti.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
 import '../../../../services/audio_service.dart';
 import '../../../../core/design_system/app_radius.dart';
@@ -122,7 +122,6 @@ class _VictoryPageState extends State<VictoryPage>
       setState(() => _showCelebration = true);
       AudioService().playVictory();
     });
-  }
   }
 
   /// Reads the reduced-motion preference here (not initState — MediaQuery
@@ -441,7 +440,7 @@ class _VictoryContent extends StatelessWidget {
                     opacity: contentSlide,
                     child: Transform.translate(
                       offset: Offset(0, 80 * (1 - contentSlide)),
-                child: BounceIn.slideUp(
+                child: BounceIn(
                   delay: celebrationDelay,
                   child: CoinRewardChip(coins: result.coinsEarned),
                 ),
