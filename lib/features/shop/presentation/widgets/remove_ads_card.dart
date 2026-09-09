@@ -23,23 +23,23 @@ class RemoveAdsCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return GameCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       child: Row(
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.14),
-              borderRadius: AppRadius.mdRadius,
+              borderRadius: AppRadius.smRadius,
             ),
             child: const Icon(
               Icons.block_rounded,
               color: AppColors.primary,
-              size: 28,
+              size: 26,
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,12 +47,16 @@ class RemoveAdsCard extends StatelessWidget {
               children: [
                 Text(
                   'Remove Ads',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: textTheme.titleMedium?.copyWith(
                     color: AppColors.textDark,
                   ),
                 ),
                 Text(
                   'Enjoy uninterrupted play, forever',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -63,10 +67,9 @@ class RemoveAdsCard extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           if (owned)
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
+              width: 96,
+              height: 40,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: AppColors.success.withValues(alpha: 0.14),
                 borderRadius: AppRadius.pillRadius,
@@ -83,7 +86,7 @@ class RemoveAdsCard extends StatelessWidget {
               label: r'$2.99',
               variant: GameButtonVariant.premium,
               width: 96,
-              height: 44,
+              height: 40,
               onTap: onPurchase,
             ),
         ],

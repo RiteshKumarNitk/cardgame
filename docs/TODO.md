@@ -25,7 +25,9 @@
 - [x] AdMob: re-enable ads (`AppConfig.adsEnabled = true`), centralize IDs in `AdConfig`, make `BannerAdWidget` the one real banner + respect Remove Ads, add `AdLogger`, fix missing iOS `GADApplicationIdentifier`
 - [ ] AdMob: add UMP (User Messaging Platform) consent form before `MobileAds.initialize()` for EEA/UK
 - [ ] AdMob: create real ad units + wire real unit IDs via release `--dart-define`; replace sample App ID in `AndroidManifest.xml` / iOS `Info.plist`
-- [ ] AdMob: real-device verification of the runtime chain (SDK init → test banner → `onAdLoaded` → visible `AdWidget` → navigation → dispose) — debug build + `adb logcat | grep '[AdMob]'`
+- [ ] AdMob: real-device verification of the runtime chain (SDK init → test banner → `onAdLoaded` → visible `AdWidget` → navigation → dispose; **Shop → Watch Ad → real rewarded test ad → `onUserEarnedReward` → +25 coins → Shop & Home balance update**) — debug build + `adb logcat | grep '[AdMob]'`
+- [x] Shop: "Free Coins" now uses the real `AdService` rewarded ad (was a fake timer); coin packs cleaned to a plain uniform list, "BEST VALUE" removed
+- [ ] AdMob: production rewarded unit ID via `--dart-define=REWARDED_AD_UNIT_ID_ANDROID` / `_IOS` (debug uses Google's test rewarded ID from `AdConfig`)
 - [x] Fix `victory_page.dart` build break (stray `}` after `initState`, missing `flutter/services.dart` import, non-existent `BounceIn.slideUp`) — was failing every `flutter build`
 
 ---

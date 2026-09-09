@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:hive/hive.dart';
@@ -119,6 +121,20 @@ class AdService {
   RewardedAd? _rewardedAd;
   bool _isLoading = false;
 
+  /// True while a rewarded ad is actually on screen — blocks a second
+  /// [watchRewardedAd] from firing a duplicate request.
+  bool _rewardedShowInFlight = false;
+
+  /// One-shot "load then show" handlers. Set by [watchRewardedAd] when no
+  /// ad is preloaded; consumed by the next load result.
+  VoidCallback? _pendingReward;
+  VoidCallback? _pendingUnavailable;
+  VoidCallback? _pendingClosed;
+  Timer? _rewardedLoadTimeout;
+
+  /// Whether a rewarded ad is preloaded and can be shown immediately.
+  bool get isRewardedAdReady => _rewardedAd != null && !_rewardedShowInFlight;
+
   void loadRewardedAd() {
     // Ads disabled for this build, or web (no rewarded-ad support) — no-op.
     if (!AppConfig.adsEnabled || kIsWeb) return;
@@ -126,61 +142,152 @@ class AdService {
     _isLoading = true;
     AdLogger.log('Rewarded loading (unit=$_rewardedAdUnitId)');
 
-    RewardedAd.load(
-      adUnitId: _rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          AdLogger.log('Rewarded loaded');
-          _rewardedAd = ad;
-          _isLoading = false;
-          AnalyticsService().logEvent(AnalyticsService.rewardedAdLoaded);
-        },
-        onAdFailedToLoad: (error) {
-          AdLogger.logLoadError('Rewarded', error);
-          _isLoading = false;
-          AnalyticsService().logEvent(
-            AnalyticsService.rewardedAdFailed,
-            parameters: {'code': error.code, 'reason': error.domain},
-          );
-        },
-      ),
-    );
+    try {
+      RewardedAd.load(
+        adUnitId: _rewardedAdUnitId,
+        request: const AdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            AdLogger.log('Rewarded loaded');
+            _rewardedAd = ad;
+            _isLoading = false;
+            AnalyticsService().logEvent(AnalyticsService.rewardedAdLoaded);
+            // A caller is waiting to watch it right now — show immediately.
+            if (_pendingReward != null) {
+              final onReward = _pendingReward!;
+              final onClosed = _pendingClosed!;
+              _consumePending();
+              _presentRewarded(onReward, onClosed);
+            }
+          },
+          onAdFailedToLoad: (error) {
+            AdLogger.logLoadError('Rewarded', error);
+            _isLoading = false;
+            AnalyticsService().logEvent(
+              AnalyticsService.rewardedAdFailed,
+              parameters: {'code': error.code, 'reason': error.domain},
+            );
+            final onUnavailable = _pendingUnavailable;
+            _consumePending();
+            onUnavailable?.call();
+          },
+        ),
+      );
+    } catch (e) {
+      AdLogger.log('Rewarded load threw: $e');
+      _isLoading = false;
+      final onUnavailable = _pendingUnavailable;
+      _consumePending();
+      onUnavailable?.call();
+    }
   }
 
-  /// Shows the loaded rewarded ad. If not loaded, returns false immediately.
-  /// The [onReward] callback is invoked if the user fully watches the ad.
-  void showRewardedAd({required VoidCallback onReward, required VoidCallback onAdDismissed}) {
-    if (kIsWeb || _rewardedAd == null) {
-      onAdDismissed();
+  void _consumePending() {
+    _pendingReward = null;
+    _pendingUnavailable = null;
+    _pendingClosed = null;
+    _rewardedLoadTimeout?.cancel();
+    _rewardedLoadTimeout = null;
+  }
+
+  /// Attaches the full-screen lifecycle callbacks and shows [_rewardedAd].
+  /// [onReward] fires ONLY from `onUserEarnedReward`; [onClosed] fires once
+  /// the ad is dismissed or fails to show. The next ad is preloaded after.
+  void _presentRewarded(VoidCallback onReward, VoidCallback onClosed) {
+    final ad = _rewardedAd;
+    if (ad == null) {
+      onClosed();
       return;
     }
-
+    _rewardedShowInFlight = true;
     AnalyticsService().logEvent(AnalyticsService.rewardedAdShown);
 
-    _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (_) => AdLogger.log('Rewarded shown'),
       onAdDismissedFullScreenContent: (ad) {
+        AdLogger.log('Rewarded dismissed');
         ad.dispose();
         _rewardedAd = null;
-        loadRewardedAd(); // Load the next one
-        onAdDismissed();
+        _rewardedShowInFlight = false;
+        loadRewardedAd(); // Preload the next one.
+        onClosed();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
+        AdLogger.log(
+          'Rewarded failed to show: code=${error.code} '
+          'domain=${error.domain} message=${error.message}',
+        );
         ad.dispose();
         _rewardedAd = null;
+        _rewardedShowInFlight = false;
         loadRewardedAd();
-        onAdDismissed();
+        onClosed();
       },
     );
 
-    _rewardedAd!.show(
+    ad.show(
       onUserEarnedReward: (ad, reward) {
+        AdLogger.log('Rewarded earned (${reward.amount} ${reward.type})');
         AnalyticsService().logEvent(
           AnalyticsService.rewardedAdWatched,
-          parameters: {'reward_amount': reward.amount, 'reward_type': reward.type},
+          parameters: {
+            'reward_amount': reward.amount,
+            'reward_type': reward.type,
+          },
         );
         onReward();
       },
     );
+  }
+
+  /// Legacy entry point (used by the Puzzle out-of-coins offer): shows a
+  /// preloaded rewarded ad, or calls [onAdDismissed] straight away if none
+  /// is ready.
+  void showRewardedAd({
+    required VoidCallback onReward,
+    required VoidCallback onAdDismissed,
+  }) {
+    if (kIsWeb || _rewardedAd == null || _rewardedShowInFlight) {
+      onAdDismissed();
+      return;
+    }
+    _presentRewarded(onReward, onAdDismissed);
+  }
+
+  /// Shop "Free Coins" entry point. Shows a preloaded rewarded ad
+  /// immediately; if none is ready it kicks a load and shows it the moment
+  /// it arrives. Exactly one of these happens:
+  ///  * [onReward] then [onClosed]  — the user earned the reward
+  ///  * [onClosed] alone            — the user dismissed without a reward
+  ///  * [onUnavailable]             — no ad could be loaded/shown
+  void watchRewardedAd({
+    required VoidCallback onReward,
+    required VoidCallback onUnavailable,
+    required VoidCallback onClosed,
+  }) {
+    if (!AppConfig.adsEnabled || kIsWeb) {
+      onUnavailable();
+      return;
+    }
+    // Already showing, or already waiting on a load — don't stack requests.
+    if (_rewardedShowInFlight || _pendingReward != null) {
+      onUnavailable();
+      return;
+    }
+    if (isRewardedAdReady) {
+      _presentRewarded(onReward, onClosed);
+      return;
+    }
+    // Not ready — load, then show on arrival (with a safety timeout so the
+    // caller's button can never stick in "loading" forever).
+    _pendingReward = onReward;
+    _pendingUnavailable = onUnavailable;
+    _pendingClosed = onClosed;
+    _rewardedLoadTimeout = Timer(const Duration(seconds: 15), () {
+      final onUnavailable = _pendingUnavailable;
+      _consumePending();
+      onUnavailable?.call();
+    });
+    loadRewardedAd();
   }
 }

@@ -4,6 +4,53 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-09-09 (Shop: real rewarded ad for "Free Coins" + coin-pack list cleanup)
+
+### Fixed
+- **"Free Coins — Watch Ad" now shows a real Google rewarded ad.**
+  `WatchAdCard` was a 2-second `Future.delayed` placeholder that never
+  touched the ad SDK — it just credited coins after a fake timer. It now
+  drives the app's existing `AdService` rewarded pipeline: tap → loading
+  state → a preloaded rewarded ad shows (or is loaded on demand, with a
+  15 s safety timeout so the button can't stick) → coins are granted
+  **only** from `onUserEarnedReward` → brief success state → back to
+  ready. The next ad preloads after each show.
+
+### Changed — `AdService` (rewarded section)
+- Added `isRewardedAdReady`, `watchRewardedAd({onReward, onUnavailable,
+  onClosed})` (load-then-show with a one-shot pending handler), and
+  full lifecycle logging (`onAdShowedFullScreenContent`,
+  `onAdFailedToShowFullScreenContent` with code/domain/message).
+  `showRewardedAd` (Puzzle out-of-coins offer) is unchanged in behaviour,
+  refactored onto the shared `_presentRewarded`. `_rewardedShowInFlight`
+  guards against stacked requests. Banner / interstitial paths untouched.
+- New `RewardedAdPresenter` interface (`AdServiceRewardedAdPresenter`
+  impl) so the Shop is testable without the Google SDK; injectable via
+  `ShopPage(rewardedAdPresenter:)`.
+- Reward amount: the existing **25** coins, credited through the existing
+  `WalletCubit` (persisted + cloud-backed) — same source of truth the
+  Shop / Home / Puzzle / Victory coin chips read. Payout plays the same
+  coin-flight + sound + toast as a coin-pack purchase.
+
+### Changed — coin pack list
+- **Removed the "BEST VALUE" badge** (and the `CoinPack.bestValue` field).
+  Coin packs are now a plain, uniform vertical list — no promotional
+  ranking.
+- `CoinPackCard`, `RemoveAdsCard`, `WatchAdCard` rebuilt to one shared row
+  spec (44 px icon tile · 12 px padding · single-line text · 96×40 price
+  pill), translated from the Stitch "Artisan Shop" screen, so every
+  card in the section is the same height with aligned amounts and
+  buttons on small / standard / large phone widths.
+- Existing RevenueCat / `PurchaseService` purchase flow unchanged.
+
+### Verification
+`flutter analyze` — 0 errors. Shop tests updated + focused
+`watch_ad_card_test.dart` added (loading state, reward-once, duplicated
+callback, unavailable, state machine). Real rewarded test ad display
+needs an on-device run (no emulator here).
+
+---
+
 ## 2026-09-09 (Bug fixes: Home sync · Victory/drag · cosmetics cleanup · coin economy)
 
 Targeted fixes — **no grid/engine/gesture-math changes**; the puzzle

@@ -17,12 +17,14 @@ import 'package:puzzle_cards/services/purchase_service.dart';
 
 import '../../helpers/fake_ads_service.dart';
 import '../../helpers/fake_purchase_service.dart';
+import '../../helpers/fake_rewarded_ad_presenter.dart';
 import '../../helpers/fake_wallet_service.dart';
 
 Widget _wrap({
   WalletCubit? walletCubit,
   AdsCubit? adsCubit,
   PurchaseService? purchaseService,
+  FakeRewardedAdPresenter? rewardedAdPresenter,
 }) {
   return MultiBlocProvider(
     providers: [
@@ -35,7 +37,11 @@ Widget _wrap({
     ],
     child: MaterialApp(
       theme: AppTheme.game,
-      home: ShopPage(purchaseService: purchaseService),
+      home: ShopPage(
+        purchaseService: purchaseService,
+        rewardedAdPresenter:
+            rewardedAdPresenter ?? FakeRewardedAdPresenter(),
+      ),
     ),
   );
 }
@@ -57,7 +63,8 @@ void main() {
     expect(find.text('Coin Packs'), findsOneWidget);
     expect(find.text('Remove Ads'), findsNWidgets(2));
     expect(find.text('100 Coins'), findsOneWidget);
-    expect(find.text('BEST VALUE'), findsOneWidget);
+    // No promotional badges on coin packs.
+    expect(find.text('BEST VALUE'), findsNothing);
     expect(find.text(r'$2.99'), findsOneWidget);
   });
 
@@ -237,22 +244,64 @@ void main() {
     expect(find.text('Could not complete purchase — try again'), findsOneWidget);
   });
 
-  testWidgets('watching an ad awards coins after the simulated delay', (
+  testWidgets('watching a rewarded ad awards coins via the wallet', (
     tester,
   ) async {
     final walletCubit = WalletCubit(FakeWalletService());
+    final ads = FakeRewardedAdPresenter(outcome: FakeAdOutcome.reward);
     await tester.pumpWidget(
-      _wrap(walletCubit: walletCubit),
+      _wrap(walletCubit: walletCubit, rewardedAdPresenter: ads),
+    );
+    await tester.pump();
+
+    expect(ads.preloadCalls, 1); // preloaded on mount, not on every build
+
+    await tester.tap(find.text('Watch Ad'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Reward callback fired → the real wallet was credited once.
+    expect(walletCubit.state, 25);
+    expect(find.text('+25 coins!'), findsOneWidget);
+
+    // Success state, then back to a usable button.
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(find.text('Watch Ad'), findsOneWidget);
+  });
+
+  testWidgets('rewarded ad unavailable: no coins, button returns to ready', (
+    tester,
+  ) async {
+    final walletCubit = WalletCubit(FakeWalletService());
+    final ads = FakeRewardedAdPresenter(outcome: FakeAdOutcome.unavailable);
+    await tester.pumpWidget(
+      _wrap(walletCubit: walletCubit, rewardedAdPresenter: ads),
     );
     await tester.pump();
 
     await tester.tap(find.text('Watch Ad'));
     await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 100));
 
-    await tester.pump(const Duration(seconds: 2));
+    expect(walletCubit.state, 0);
+    expect(find.text('Ad not available right now — try again'), findsOneWidget);
+    expect(find.text('Watch Ad'), findsOneWidget);
+  });
+
+  testWidgets('dismissing without a reward grants nothing', (tester) async {
+    final walletCubit = WalletCubit(FakeWalletService());
+    final ads = FakeRewardedAdPresenter(outcome: FakeAdOutcome.dismissed);
+    await tester.pumpWidget(
+      _wrap(walletCubit: walletCubit, rewardedAdPresenter: ads),
+    );
     await tester.pump();
 
-    expect(walletCubit.state, 25);
+    await tester.tap(find.text('Watch Ad'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(walletCubit.state, 0);
+    expect(find.text('Watch Ad'), findsOneWidget);
   });
 }

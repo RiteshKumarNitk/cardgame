@@ -50,7 +50,7 @@ Core feature implementation is advanced, but visual polish and core gameplay ref
 - [x] Daily reward (7-day streak system, 20-300 coins)
 - [x] Achievements (9 achievements with counter-based progress)
 - [x] Cosmetics (4 frames — Classic + Ivory/Sage/Slate, 1 piece style — Classic seamless, 11 avatars). Trimmed to a clean "Classics" range 2026-09-09; prices raised to a 0 / 1,500 / 3,000 / 5,000 / 7,500 / 10,000 progression.
-- [x] Shop (3 coin packs, watch-ad-for-coins, remove ads)
+- [x] Shop (3 coin packs — plain uniform list, no promo badges; **real Google rewarded ad** for Free Coins via `AdService`/`RewardedAdPresenter`, +25 coins on `onUserEarnedReward` only; remove ads)
 - [x] Settings (audio toggles, volume sliders, reset progress, restore purchases)
 - [x] Profile (display name editing, avatar display)
 - [x] Photo puzzles (manifest-driven photo puzzle mode)

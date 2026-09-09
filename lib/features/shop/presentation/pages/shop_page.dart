@@ -21,23 +21,35 @@ import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
 import '../../../../shared/widgets/stat_chip.dart';
 import '../../domain/coin_pack.dart';
+import '../../domain/rewarded_ad_presenter.dart';
 import '../widgets/coin_pack_card.dart';
 import '../widgets/remove_ads_card.dart';
 import '../widgets/watch_ad_card.dart';
 
-/// Shop screen: watch a (simulated) rewarded ad for free coins, buy coin
-/// packs, or remove ads.
+/// Coins granted for completing one rewarded ad — the existing Shop value.
+const int _watchAdRewardCoins = 25;
+
+/// Shop screen: watch a real rewarded ad for free coins, buy coin packs,
+/// or remove ads.
 ///
 /// Coin packs and Remove Ads go through [PurchaseService]. When RevenueCat
 /// is configured (production), purchases are real store transactions; when
 /// it isn't (dev/web/tests), the page degrades to the old local simulation
-/// so the game stays fully playable without credentials.
+/// so the game stays fully playable without credentials. "Free Coins" uses
+/// the real Google rewarded ad via [RewardedAdPresenter] / `AdService`.
 class ShopPage extends StatefulWidget {
-  const ShopPage({super.key, PurchaseService? purchaseService})
-    : _purchaseService = purchaseService;
+  const ShopPage({
+    super.key,
+    PurchaseService? purchaseService,
+    RewardedAdPresenter? rewardedAdPresenter,
+  }) : _purchaseService = purchaseService,
+       _rewardedAdPresenter = rewardedAdPresenter;
 
   /// Defaults to the real RevenueCat-backed service; tests inject fakes.
   final PurchaseService? _purchaseService;
+
+  /// Defaults to the real `AdService`-backed presenter; tests inject fakes.
+  final RewardedAdPresenter? _rewardedAdPresenter;
 
   @override
   State<ShopPage> createState() => _ShopPageState();
@@ -47,6 +59,10 @@ class _ShopPageState extends State<ShopPage> {
   /// Landmark for the coin flight animation's target: the wallet chip.
   final GlobalKey _walletKey = GlobalKey();
 
+  /// Landmark for the "Free Coins" card, so the rewarded-ad payout bursts
+  /// from it into the wallet chip.
+  final GlobalKey _watchAdKey = GlobalKey();
+
   /// One landmark per pack card, so coins burst from the card the player
   /// actually tapped.
   final Map<String, GlobalKey> _packKeys = {
@@ -55,6 +71,9 @@ class _ShopPageState extends State<ShopPage> {
 
   PurchaseService get _service =>
       widget._purchaseService ?? RevenueCatPurchaseService();
+
+  RewardedAdPresenter get _rewardedAds =>
+      widget._rewardedAdPresenter ?? const AdServiceRewardedAdPresenter();
 
   @override
   Widget build(BuildContext context) {
@@ -83,12 +102,14 @@ class _ShopPageState extends State<ShopPage> {
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         WatchAdCard(
-                          rewardCoins: 25,
-                          onRewardEarned: () {
-                            context.read<WalletCubit>().addCoins(25);
-                            AudioService().playCoinReward();
-                            _showEarnedSnackBar(context, 25);
-                          },
+                          key: _watchAdKey,
+                          rewardCoins: _watchAdRewardCoins,
+                          presenter: _rewardedAds,
+                          onRewardEarned: _grantWatchAdReward,
+                          onUnavailable: () => _showMessage(
+                            context,
+                            'Ad not available right now — try again',
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         Text(
@@ -261,8 +282,21 @@ class _ShopPageState extends State<ShopPage> {
     _showMessage(context, 'Remove Ads activated!');
   }
 
-  void _showEarnedSnackBar(BuildContext context, int coins) {
-    _showMessage(context, '+$coins coins!');
+  /// Credits the rewarded-ad payout into the real wallet (persisted +
+  /// cloud-backed by [WalletCubit]) and plays the same coin-flight +
+  /// sound + toast as a coin-pack purchase. Called only from
+  /// `WatchAdCard`'s reward callback, i.e. after `onUserEarnedReward`.
+  void _grantWatchAdReward() {
+    if (!mounted) return;
+    context.read<WalletCubit>().addCoins(_watchAdRewardCoins);
+    AudioService().playCoinReward();
+    CoinFlightOverlay.show(
+      context: context,
+      startKey: _watchAdKey,
+      endKey: _walletKey,
+      count: 12,
+    );
+    _showMessage(context, '+$_watchAdRewardCoins coins!');
   }
 
   void _showMessage(BuildContext context, String message) {

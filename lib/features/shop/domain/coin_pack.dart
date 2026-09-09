@@ -9,22 +9,15 @@ class CoinPack {
     required this.id,
     required this.coins,
     required this.priceLabel,
-    this.bestValue = false,
   });
 
   final String id;
   final int coins;
   final String priceLabel;
-  final bool bestValue;
 }
 
 const List<CoinPack> coinPacks = [
   CoinPack(id: 'pack_small', coins: 100, priceLabel: r'$0.99'),
-  CoinPack(
-    id: 'pack_medium',
-    coins: 550,
-    priceLabel: r'$3.99',
-    bestValue: true,
-  ),
+  CoinPack(id: 'pack_medium', coins: 550, priceLabel: r'$3.99'),
   CoinPack(id: 'pack_large', coins: 1200, priceLabel: r'$7.99'),
 ];

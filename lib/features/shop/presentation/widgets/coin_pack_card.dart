@@ -8,9 +8,13 @@ import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
 import '../../domain/coin_pack.dart';
 
-/// One coin bundle in the Shop. Tapping the price "purchases" it — there's
-/// no real store integration, so it just credits the wallet directly (see
-/// [CoinPack]'s doc comment).
+/// One coin bundle in the Shop — a clean, uniform row: a coin-icon tile,
+/// the coin amount, and a price button. Every card is the same height with
+/// the same internal spacing, so the amounts and price buttons line up
+/// down the list. No promotional badges — packs are just listed clearly.
+///
+/// Purchases go through the Shop's existing `PurchaseService` flow via
+/// [onPurchase]; this widget is presentation only.
 class CoinPackCard extends StatelessWidget {
   const CoinPackCard({super.key, required this.pack, required this.onPurchase});
 
@@ -22,55 +26,29 @@ class CoinPackCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return GameCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       child: Row(
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: AppColors.accent.withValues(alpha: 0.14),
-              borderRadius: AppRadius.mdRadius,
+              borderRadius: AppRadius.smRadius,
             ),
             child: const Icon(
               Icons.monetization_on_rounded,
               color: AppColors.accent,
-              size: 28,
+              size: 26,
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    '${formatThousands(pack.coins)} Coins',
-                    style: textTheme.titleMedium?.copyWith(
-                      color: AppColors.textDark,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (pack.bestValue) ...[
-                  const SizedBox(width: AppSpacing.sm),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.success,
-                      borderRadius: AppRadius.pillRadius,
-                    ),
-                    child: Text(
-                      'BEST VALUE',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+            child: Text(
+              '${formatThousands(pack.coins)} Coins',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.titleMedium?.copyWith(color: AppColors.textDark),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -78,7 +56,7 @@ class CoinPackCard extends StatelessWidget {
             label: pack.priceLabel,
             variant: GameButtonVariant.secondary,
             width: 96,
-            height: 44,
+            height: 40,
             onTap: onPurchase,
           ),
         ],
