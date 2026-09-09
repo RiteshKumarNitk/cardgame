@@ -4,6 +4,95 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-09-09 (Visual Retheme → "Warm Tactile Serenity", Stitch design as source of truth)
+
+The Stitch project **"SuitClash UI/UX Redesign System"** is now the visual
+source of truth. This is a **visual-only** pass: no business logic, no
+navigation behavior, and **no puzzle/grid functionality** changed — only
+centralized design tokens and presentation widgets. Stitch HTML/Tailwind
+was reference only; nothing was copied into the app.
+
+### Changed — design tokens (`lib/core/design_system/`)
+- **`app_colors.dart`** — palette swapped from vibrant red / gold / blue to
+  Soft Sage (`primary #316342`, `primaryContainer #4A7C59`), Warm Honey
+  Gold (`accent/honey #FDBA45`), Dusty Rose `attention`, on a **warm ivory
+  cream** canvas (`background #FCF9F2`). Deep-moss text (`#1C1C18`), warm
+  hairline borders (`#C1C9BF`), warm-brown shadow ink. New tokens:
+  `primaryContainer`, `primaryFixed(Dim)`, `honey`/`honeyText`/`honeySoft`,
+  `attention`, `cardWell`, `cardWellHigh`, `surfaceLow`, `textMeta`. All
+  existing token names kept (repointed) so call sites are unchanged.
+  Difficulty ramp is now warm (sage → honey → terracotta → rose).
+- **`app_typography.dart`** — **Plus Jakarta Sans** everywhere (was
+  Quicksand + Roboto), Stitch scale (display 40/32, tighter headline
+  tracking), new `AppTypography.tabular()` helper for in-place numbers.
+- **`app_spacing.dart`** — aligned to the Stitch 4/8 scale
+  (`xxs 4 · xs 8 · sm 12 · md 16 · lg 20 · xl 24 · xxl 32 · xxxl 40 ·
+  huge 48`), `screenMargin` + `gridGutter` added.
+- **`app_radius.dart`** — smaller Stitch radii (`sm 8 · md 12 · lg 16 ·
+  xl 24`), `xs 4` added.
+- **`app_shadows.dart`** — rewritten warm/layered: `card` (L2 dual),
+  `pill`, `lifted` (L3), `floating` (L4), new `tactile(cushion)` for the
+  hard-bottom CTA cushion. `bevel()` kept as a no-op.
+- **`app_gradients.dart`** — flattened (buttons are solid fills + a tactile
+  cushion, not vivid gradients); `screenBackground` → near-flat ivory.
+- **`app_animations.dart`** — `pressedScale 0.95 → 0.97`, `glowPulse
+  2200 → 2800`, `tactilePress` added.
+- **`app_theme.dart` / `app_theme_extension.dart`** — `ColorScheme` remap;
+  extension gains `pillShadow` + `liftedShadow`.
+
+### Changed — shared widgets (`lib/shared/widgets/`)
+`GameButton` (solid pill + tactile cushion, 3 variants), `GameCard` (warm
+L2 + feather outline, warm-paper `glass`), `StatChip` (stadium + icon
+bubble + tabular number), `CircleIconButton` (hairline + pill shadow),
+`GameBackground` (flat ivory + faint sage dot texture + retinted Flame
+pieces, saturated glow blobs removed), `DifficultyBadge`,
+`CoinRewardChip`, `OutlinedText` (softer default outline), `AppLogo`
+(warm disc).
+
+### Changed — screens
+- **Home** (`home_page.dart`) rebuilt as "Home & Artwork Journey":
+  profile header, framed artwork hero with a progress scrim + section
+  status chip + stars, solid sage tactile "Continue Puzzle" CTA, an inline
+  dashed-sage journey preview strip, a "Daily Discovery" bento (Daily
+  Challenge + Collections), and a compact secondary shortcut row. All
+  existing routes and `GameProgressManager` / `LevelService` wiring
+  preserved. `/home` and `/levels` remain **separate routes** (no merge,
+  no bottom nav).
+- **Journey / Levels** — dashed sage winding path, sage completed nodes +
+  honey stars, ivory pulsing current node, sand locked nodes; top-bar
+  back button now uses `CircleIconButton`.
+- **Puzzle board** — rounded recessed cream tray well (clipped corners —
+  cosmetic only; the GridView still gets full constraints, so cell
+  geometry and `ImageLayout` are byte-for-byte identical); warm hairline
+  unconnected-edge borders; **seamless** connected-edge join preserved;
+  2.5px sage halo + warm `lifted` shadow on the picked-up tile /
+  drop-target; connected-group drag shows a soft sage outline + lift (a
+  "joined" cue, **not** a lock — groups stay fully draggable). Puzzle page
+  chrome: `_ModalScrim` (blur + moss) for pause/tutorial overlays, combo
+  badge retinted honey.
+- Victory, Shop, Settings, Achievements, Collections, Daily Challenge,
+  Gallery, Leaderboard, Section/Chapter Complete, Splash — carried by the
+  token + shared-widget updates (they consume `AppColors.*` / `GameCard` /
+  `GameButton` / `StatChip` etc.), no per-file edits needed.
+- Cosmetics screen + `cosmetics_catalog.dart` swatches + `avatar_badge.dart`
+  — intentionally left for a follow-up pass (some cosmetic colors are
+  deliberately vivid for unlockable variety).
+
+### Not changed
+Puzzle/grid logic (`puzzle_cubit`, `puzzle_state`, `tile_swap_engine`,
+`puzzle_adjacency`, `puzzle_group`, `puzzle_board_size`,
+`puzzle_image_tile` / `ImageLayout`), drag/drop, snapping, hint, shuffle,
+solve detection, timer, scoring, routing behavior, business logic.
+
+### Verification
+`flutter analyze` — 0 errors (5 pre-existing infos/warnings). Test suite —
+181 pass / 16 fail, the **same 16 pre-existing failures** as before the
+retheme (branding rename, chapter-catalog WIP, stale "locked cell" tests,
+`PuzzleImageTile` not rendering in the headless harness). No new failures.
+On-device visual verification still pending.
+
+---
+
 ## 2026-09-08 (AdMob: Ads Re-Enabled + Full Integration Audit)
 
 Root cause of "ads never show": `AppConfig.adsEnabled` was `const false`, which

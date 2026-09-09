@@ -8,7 +8,7 @@ import '../../../../core/design_system/app_spacing.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../game/wallet_cubit.dart';
 import '../../../../shared/utils/number_format.dart';
-import '../../../../shared/widgets/press_scale.dart';
+import '../../../../shared/widgets/circle_icon_button.dart';
 import '../../../../shared/widgets/stat_chip.dart';
 
 /// Top bar for Level Selection: back button, coins, hints, and overall
@@ -27,7 +27,8 @@ class LevelsTopBar extends StatelessWidget {
       children: [
         Row(
           children: [
-            PressScale(
+            CircleIconButton(
+              icon: Icons.arrow_back_rounded,
               onTap: () {
                 if (context.canPop()) {
                   context.pop();
@@ -35,27 +36,6 @@ class LevelsTopBar extends StatelessWidget {
                   context.goNamed(RouteNames.home);
                 }
               },
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.outline, width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.shadow,
-                      blurRadius: 8,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.arrow_back_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
             ),
             const Spacer(),
             BlocBuilder<WalletCubit, int>(

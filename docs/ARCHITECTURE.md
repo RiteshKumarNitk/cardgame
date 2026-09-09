@@ -366,21 +366,26 @@ Master × Sfx/Music channel mixing with music ducking for impactful sounds.
 
 ---
 
-## Design System
+## Design System — "Warm Tactile Serenity"
 
-All visual tokens live in `lib/core/design_system/`:
+The Stitch project **"SuitClash UI/UX Redesign System"** is the visual
+source of truth (see `docs/UI_UX_GUIDELINES.md`). All visual tokens live
+in `lib/core/design_system/`:
 
 | File | Purpose |
 |------|---------|
-| `app_colors.dart` | 60+ color constants |
-| `app_typography.dart` | Text styles via GoogleFonts |
-| `app_gradients.dart` | Gradient presets |
-| `app_spacing.dart` | 8px spacing scale |
-| `app_shadows.dart` | Shadow presets |
-| `app_radius.dart` | Border radius tokens |
-| `app_theme_extension.dart` | ThemeExtension for custom tokens |
-| `app_animations.dart` | Duration and curve constants |
+| `app_colors.dart` | Soft-sage brand + honey-gold prestige + dusty-rose attention on warm ivory; semantic + surface + text tokens; warm difficulty ramp |
+| `app_typography.dart` | Plus Jakarta Sans text theme (Stitch scale) + `tabular()` helper |
+| `app_gradients.dart` | Near-flat button / background gradients (buttons are solid + a tactile cushion) |
+| `app_spacing.dart` | 4/8 scale: `xxs 4 · xs 8 · sm 12 · md 16 · lg 20 · xl 24 · xxl 32 · xxxl 40 · huge 48` |
+| `app_shadows.dart` | Warm layered elevation: `card` (L2) · `pill` · `lifted` (L3) · `floating` (L4) · `tactile(cushion)` |
+| `app_radius.dart` | `xs 4 · sm 8 · md 12 · lg 16 · xl 24 · pill` |
+| `app_theme_extension.dart` | ThemeExtension: gradients + `card/button/floating/pill/lifted` shadow presets |
+| `app_animations.dart` | Duration + curve constants (`pressedScale 0.97`, `glowPulse 2800`) |
 | `color_utils.dart` | HSL darken/lighten extensions |
+
+The retheme (2026-09-09) is visual only — no changes to state management,
+routing behavior, or the puzzle/grid engine.
 
 ---
 

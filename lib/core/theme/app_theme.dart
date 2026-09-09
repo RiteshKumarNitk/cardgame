@@ -5,23 +5,29 @@ import '../design_system/app_radius.dart';
 import '../design_system/app_theme_extension.dart';
 import '../design_system/app_typography.dart';
 
-/// The game's single, fixed Material 3 theme.
+/// The game's single, fixed Material 3 theme — "Warm Tactile Serenity".
 ///
-/// Deliberately not split into light/dark: premium casual games (Royal
-/// Match, Candy Crush, Toon Blast, ...) ship one consistent, colorful
-/// brand look regardless of the device's system theme, rather than
-/// adapting to OS dark mode.
+/// Deliberately not split into light/dark: premium casual games ship one
+/// consistent, calm brand look regardless of the device's system theme.
+/// SuitClash is light-mode only (permanent design constraint).
 abstract final class AppTheme {
   static ThemeData get game {
     final colorScheme = const ColorScheme.light().copyWith(
       primary: AppColors.primary,
-      secondary: AppColors.secondary,
-      tertiary: AppColors.accent,
+      onPrimary: AppColors.onPrimary,
+      primaryContainer: AppColors.primaryContainer,
+      onPrimaryContainer: AppColors.onPrimary,
+      secondary: AppColors.accent, // warm honey gold
+      onSecondary: AppColors.textDark,
+      tertiary: AppColors.attention, // dusty rose — sparing
+      onTertiary: AppColors.onPrimary,
       error: AppColors.danger,
+      onError: Colors.white,
       surface: AppColors.card,
-      onPrimary: Colors.white,
-      onSecondary: Colors.white,
       onSurface: AppColors.textDark,
+      surfaceContainerHighest: AppColors.cardWellHigh,
+      outline: AppColors.textMeta,
+      outlineVariant: AppColors.border,
     );
 
     return ThemeData(

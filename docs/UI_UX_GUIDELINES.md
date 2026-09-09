@@ -1,324 +1,270 @@
 # UI_UX_GUIDELINES.md — SuitClash Visual Language
 
-## Design Direction
+## Design Direction — "Warm Tactile Serenity"
 
-SuitClash should feel like a **polished casual mobile puzzle game** — colorful, playful, premium, and family-friendly. The UI should look like a real mobile game, not a standard Flutter application.
+The **Stitch project "SuitClash UI/UX Redesign System"** is the visual
+source of truth. SuitClash should feel like a **calm, tactile, artwork-first
+casual puzzle game** — the sensory warmth of premium stationery, smooth
+river stones, and museum exhibition prints. Playful through proportion and
+soft corners, balanced with deliberate typography and generous negative
+space.
 
-**Target feel:**
-- Colorful
-- Playful
-- Premium
-- Casual
-- Family-friendly
-- Puzzle-focused
-- Attractive like modern casual mobile games
-- Highly polished
-- Animation-driven
-- Simple to understand
+**Target feel:** warm · reassuring · organic · tactile · artwork-first ·
+premium · family-friendly · animation-driven · simple.
 
 **Avoid:**
-- Casino or card-game aesthetics
+- Casino / gambling / betting cues — no neon flashes, skeuomorphic gold
+  bevels, slot counters, spinning wheels, hyper-saturated toy outlines
 - Dark, moody, or overly serious aesthetics
-- Generic Flutter/Material-looking interfaces
-- Cluttered screens
-- Unnecessary complexity
+- Generic Flutter / Material-looking interfaces
+- Cluttered screens, unnecessary complexity
+- Cold blue-greys and sterile paper-whites — everything sits on **warm
+  ivory cream**
+
+> Stitch HTML/Tailwind is **reference only**. It is never copied into the
+> app — every screen is native Flutter, driven by the centralized tokens
+> in `lib/core/design_system/`.
 
 ---
 
 ## Permanent Design Constraint: Light Mode Only
 
-SuitClash is **LIGHT MODE ONLY**.
-
-- Do **NOT** implement dark mode.
-- Do **NOT** add a dark mode toggle in Settings.
-- Do **NOT** create dark theme colors.
-- Do **NOT** automatically follow the device/system dark-mode preference.
-
-The game must always use the SuitClash light, colorful, playful theme regardless of the user's device theme. This is a permanent design constraint — not subject to change.
-
-**Legacy elements:** Card suit symbols (♠♥♦♣) currently appear as background decorative elements. These are legacy elements from an earlier prototype and may be replaced or removed during visual refinement. They are not part of the core visual identity.
+SuitClash is **LIGHT MODE ONLY**. Do not implement dark mode, a dark-mode
+toggle, dark theme colors, or system-theme following. Permanent, not
+subject to change.
 
 ---
 
-## Color Palette
+## Colors — `lib/core/design_system/app_colors.dart`
 
-All colors are defined in `lib/core/design_system/app_colors.dart`.
+Palette: gentle natural pigmentations — botanical gardens, honey,
+sun-baked clay, unbleached cotton. Every color comes from `AppColors`;
+never a raw hex or `Colors.*` in a widget.
 
-### Primary Colors
+### Brand — Soft Sage
+| Token | Hex | Usage |
+|---|---|---|
+| `primary` | `#316342` | text, icons, active states on light surfaces |
+| `primaryContainer` | `#4A7C59` | **primary button fills, CTAs, active trail, completed milestones** |
+| `primaryFixed` | `#B9EFC5` | icon bubbles, soft chips |
+| `primaryFixedDim` | `#9DD3AA` | progress-bar fills, mint accents |
 
-| Name | Hex | Usage |
-|------|-----|-------|
-| Primary | `#D32F2F` | Primary actions, accents, puzzle top bar |
-| Secondary | `#1E1E1E` | Secondary text, icons, charcoal elements |
-| Accent (Gold/Coin) | `#FFC107` | Coins, rewards, premium elements |
-| Success | `#4CAF50` | Completion states, positive feedback |
-| Warning | `#FF9800` | Caution states |
-| Danger | `#D32F2F` | Error states |
+### Prestige — Warm Honey Gold
+| Token | Hex | Usage |
+|---|---|---|
+| `honey` / `accent` | `#FDBA45` | coins, collected stars, currency badges, victory accents |
+| `honeyText` | `#7F5700` | text/icon on honey surfaces |
+| `honeySoft` | `#FFDEAE` | pale honey backgrounds |
 
-### Surface Colors
+### Attention — Dusty Rose (sparing)
+| Token | Hex | Usage |
+|---|---|---|
+| `attention` | `#B85248` | streak alerts, urgent counters, "time low" — **never** primary actions |
+| `attentionStrong` | `#993A32` | |
 
-| Name | Hex | Usage |
-|------|-----|-------|
-| Background | `#F1F8F4` | Soft mint-white — main screen background |
-| Card | `#FFFFFF` | Pure white for cards and elevated surfaces |
+### Semantic / surfaces / text
+| Token | Hex | Usage |
+|---|---|---|
+| `secondary` | `#1C1C18` | deep-moss dark icons & text |
+| `success` | `#3F7D4E` | positive / completion (sage-family) |
+| `warning` | `#D99B26` | caution — amber honey |
+| `danger` | `#BA1A1A` | error states |
+| `background` | `#FCF9F2` | warm ivory canvas |
+| `card` | `#FFFFFF` | lifted cards & playing tiles |
+| `cardWell` | `#F0EEE7` | recessed well / puzzle-board tray base |
+| `cardWellHigh` | `#E5E2DB` | chips, locked journey nodes |
+| `surfaceLow` | `#F6F3EC` | low container (journey strip) |
+| `textDark` | `#1C1C18` | primary text, headings (Deep Moss Bark, not jet) |
+| `textSecondary` | `#414942` | secondary labels |
+| `textMeta` | `#717971` | muted captions / meta |
+| `border` | `#C1C9BF` | hairline borders, dividers |
+| `outline` | `#142D312E` (8% moss) | 1px feather outline on lifted cards |
+| `shadow` | `#14413220` (8% warm brown) | soft shadow ink |
 
-### Text Colors
+### Difficulty ramp — warm (sage → honey → terracotta → rose)
+`easy #4A7C59 · medium #7FA08A · hard #D99B26 · expert #C9743F · master #993A32`
 
-| Name | Hex | Usage |
-|------|-----|-------|
-| Text Dark | `#263238` | Primary text, headings |
-| Text Secondary | `#78909C` | Secondary labels, descriptions |
-| Border | `#CFD8DC` | Dividers, borders |
-| Shadow | `#1F000000` | 12% black for soft shadows |
-
-### Gradient Stops
-
-| Name | Hex | Usage |
-|------|-----|-------|
-| Primary Gradient Start | `#F44336` | Bright red |
-| Primary Gradient End | `#B71C1C` | Deep red |
-| Secondary Gradient Start | `#607D8B` | Blue grey |
-| Secondary Gradient End | `#37474F` | Dark blue grey |
-| Premium Gradient Start | `#FFE259` | Light gold |
-| Premium Gradient End | `#FFA751` | Soft orange |
-
-### Difficulty Tier Colors
-
-| Difficulty | Hex |
-|------------|-----|
-| Easy | `#81C784` |
-| Medium | `#4FC3F7` |
-| Hard | `#FFB74D` |
-| Expert | `#E57373` |
-| Master | `#BA68C8` |
-
-### Cosmetic Colors
-
-| Name | Hex | Usage |
-|------|-----|-------|
-| Frame Gold | `#D4AF37` | Golden frame border |
-| Frame Gold Glow | `#FFD700` | Golden frame glow |
-| Frame Royal | `#7B1FA2` | Royal purple frame |
-| Frame Emerald | `#2E7D32` | Emerald green frame |
-| Frame Midnight | `#1A237E` | Midnight blue frame |
-| Frame Ruby | `#B71C1C` | Ruby red frame |
-| Piece Neon | `#00E5FF` | Neon piece accent |
-| Piece Pastel Border | `#F06292` | Pastel piece border |
-| Piece Pastel | `#FCE4EC` | Pastel piece fill |
+### Cosmetics
+Cosmetic frame / piece / avatar colors are **unchanged** in this pass —
+some are deliberately vivid for unlockable variety. Revisit when the
+Cosmetics screen is restyled.
 
 ---
 
-## Typography
+## Typography — `lib/core/design_system/app_typography.dart`
 
-Defined in `lib/core/design_system/app_typography.dart` via Google Fonts.
+**Plus Jakarta Sans** throughout (via `GoogleFonts.plusJakartaSans`),
+weights 500 / 600 / 700 / 800. Screens read from
+`Theme.of(context).textTheme`, never `GoogleFonts.*` directly.
 
-### Font Families
+| Role | Size / line / weight / tracking |
+|---|---|
+| displayLarge / displayMedium | 40 / 48 / 800 / −0.8 · 32 / 40 / 800 / −0.6 |
+| displaySmall / headlineLarge | 28 / 36 / 700 / −0.3 |
+| headlineMedium | 22 / 28 / 700 / −0.2 |
+| headlineSmall / titleLarge | 18 / 24 / 600–700 |
+| titleMedium / titleSmall | 16 / 22 / 600 · 14 / 20 / 600 |
+| bodyLarge / bodyMedium / bodySmall | 16 / 24 / 500 · 14 / 20 / 500 · 12 / 16 / 500 |
+| labelLarge / labelMedium / labelSmall | 14 / 18 / 700 / 0.3 · 12 / 16 / 700 / 0.4 · 11 / 14 / 700 / 0.5 |
 
-- **Quicksand** (via GoogleFonts) — Headings, display text, titles
-  - Weights: w700 (bold), w800 (extra bold)
-- **Roboto** (via GoogleFonts) — Body text, labels, UI text
-  - Weights: w500 (medium), w700 (bold)
-
-### Type Scale
-
-| Role | Font | Size | Weight |
-|------|------|------|--------|
-| displayLarge | Quicksand | 57px | w800 |
-| displayMedium | Quicksand | 45px | w800 |
-| displaySmall | Quicksand | 36px | w700 |
-| headlineLarge | Quicksand | 32px | w700 |
-| headlineMedium | Quicksand | 28px | w700 |
-| headlineSmall | Quicksand | 24px | w700 |
-| titleLarge | Quicksand | 22px | w700 |
-| titleMedium | Roboto | 16px | w700 |
-| titleSmall | Roboto | 14px | w700 |
-| bodyLarge | Roboto | 16px | w500 |
-| bodyMedium | Roboto | 14px | w500 |
-| bodySmall | Roboto | 12px | w500 |
-| labelLarge | Roboto | 14px | w700 |
-| labelMedium | Roboto | 12px | w700 |
-| labelSmall | Roboto | 11px | w700 |
-
-**Note:** Baloo2.ttf and Nunito.ttf are bundled in `assets/fonts/` and declared in `pubspec.yaml`, but the design system currently uses Quicksand/Roboto via Google Fonts instead. This is an inconsistency — the bundled fonts are unused.
+Use **`AppTypography.tabular(style)`** for numbers that update in place —
+move counts, coin balances, timers — so digits don't jitter.
 
 ---
 
-## Spacing System
+## Spacing — `lib/core/design_system/app_spacing.dart`
 
-Defined in `lib/core/design_system/app_spacing.dart` using an 8px grid.
+4 / 8 base unit, aligned to Stitch:
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| xs | 4px | Tight padding, icon gaps |
-| sm | 8px | Small padding, inline spacing |
-| md | 12px | Default padding |
-| lg | 16px | Card padding, section spacing |
-| xl | 24px | Section gaps |
-| xxl | 48px | Screen-level spacing |
+| Token | px |
+|---|---|
+| xxs | 4 |
+| xs | 8 |
+| sm | 12 |
+| md | 16 |
+| lg | 20 |
+| xl | 24 |
+| xxl | 32 |
+| xxxl | 40 |
+| huge | 48 |
 
----
-
-## Border Radius
-
-Defined in `lib/core/design_system/app_radius.dart`.
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| sm | 12px | Small cards, buttons |
-| md | 16px | Standard cards |
-| lg | 20px | Large cards, dialogs |
-| xl | 28px | Feature cards |
-| pill | 999px | Fully rounded pills |
+`screenMargin = 16` (screen body horizontal margin), `gridGutter = 12`.
 
 ---
 
-## Shadows
+## Border Radius — `lib/core/design_system/app_radius.dart`
 
-Defined in `lib/core/design_system/app_shadows.dart`.
+| Token | px | Usage |
+|---|---|---|
+| xs | 4 | tiny chips |
+| sm | 8 | puzzle tiles, badges, small chips |
+| md | 12 | non-pill buttons, inputs |
+| lg | 16 | standard cards, dialogs, the puzzle-board tray |
+| xl | 24 | feature / hero cards, chapter cards |
+| pill | 999 | buttons, currency meters, journey nodes |
+
+---
+
+## Elevation & Shadows — `lib/core/design_system/app_shadows.dart`
+
+Warm, layered — brown/moss tints, never flat grey.
 
 | Preset | Usage |
-|--------|-------|
-| `card` | Elevated cards, tiles |
-| `button` | Interactive buttons |
-| `floating` | Floating elements, modals |
-| `glow(color)` | Custom glow effects (frames, solved tiles) |
+|---|---|
+| `card` | L2 resting card / tile — dual warm shadow (pair with a 1px `AppColors.outline` feather border) |
+| `pill` | stat chips, currency meters, small pills |
+| `button` | ambient shadow under a button |
+| `lifted` | L3 — a picked-up tile or card, "rises off the tray" |
+| `floating` | L4 — sheets, modals, dialogs |
+| `tactile(cushion)` | primary CTA: hard `0 4px 0` resting cushion + soft ambient — the button feels physically pressable |
+| `glow(color)` | soft warm halo — completed frames, solved-tile bloom, active node |
+
+Modal scrim: translucent moss (`textDark @ ~0.38`) over a **6px backdrop
+blur** — the board reads as "set aside", not hidden.
 
 ---
 
-## Animations
+## Animations — `lib/core/design_system/app_animations.dart`
 
-Defined in `lib/core/design_system/app_animations.dart`.
-
-| Animation | Duration | Curve |
-|-----------|----------|-------|
-| Page transition | 320ms | easeOut |
-| Button tap | 100ms | easeOut |
-| Card entrance | 400ms | elasticOut |
-| Puzzle snap | 200ms | bounceOut |
-
----
-
-## Background Treatment
-
-Every screen uses `GameBackground` widget:
-1. Gradient fill (screen background gradient from theme extension)
-2. Glowing blurred circles at strategic positions (warm gold/premium tones, not saturated reds/greens)
-3. Optional Flame floating puzzle pieces (decorative, non-interactive)
-
-Card suit symbols (♠♥♦♣) are legacy decorative elements that have been removed from the background. The visual identity is puzzle + artwork + collection, not casino/card-game.
+| Animation | Duration / curve |
+|---|---|
+| micro / fast / medium / slow | 90 / 130 / 280 / 520 ms |
+| page transition | 300 ms · easeOutCubic (fade + 0.97→1.0 scale) |
+| glow pulse (CTA, active node ring) | 2800 ms · easeInOut |
+| tactile press | 120 ms |
+| pressed scale | 0.97 (restrained) |
 
 ---
 
-## Buttons
+## Components
 
-### GameButton
+### GameButton — `shared/widgets/game_button.dart`
+Solid pill fill with a **tactile bottom cushion** ([AppShadows.tactile]),
+press-scale feedback.
+- **primary** — Soft Sage `#4A7C59` fill, white label. Main CTAs.
+- **secondary** — warm cream fill, 1.5px hairline stroke, dark label.
+- **premium** — Honey Gold `#FDBA45` fill, dark label. Coin / boost.
 
-Primary action button: pill-shaped with gradient fill, soft shadow, subtle top gloss, and press-scale animation. Cleaner and more premium than the earlier toy-block style.
+### GameCard — `shared/widgets/game_card.dart`
+16px radius, 1px warm feather outline, warm L2 shadow. `glass` variant =
+warm paper-translucent (82% ivory + light blur) for content on the
+background.
 
-**Variants:**
-- Primary (red gradient) — main CTAs like Play, Continue, Next Level
-- Secondary (grey gradient) — secondary actions like Replay, Back
-- Premium (gold/orange gradient) — special actions like coin purchases
+### StatChip — `shared/widgets/stat_chip.dart`
+Stadium capsule, 90% ivory fill, a tinted **icon bubble** on the left,
+**tabular** bold number on the right.
 
-### CircleIconButton
+### CircleIconButton — `shared/widgets/circle_icon_button.dart`
+White disc, 1.5px hairline, pill shadow. Utility actions (back, settings,
+hint).
 
-Circular icon-only button for navigation (back, settings, etc.)
+### GameBackground — `shared/widgets/game_background.dart`
+Near-flat warm-ivory wash + a faint sage dot texture (16px pitch, ~4%) +
+optional Flame floating pieces (retinted sage / honey / mint, low
+presence). No saturated glow blobs.
 
----
+### Journey nodes — `features/levels/presentation/journey/`
+Dashed sage winding path (`primaryContainer @ 0.35`). Completed = sage
+fill + white check + honey stars below. Current = larger ivory disc with a
+pulsing sage ring. Locked = sand (`cardWellHigh`) + lock icon.
 
-## Cards
+### Puzzle board — `features/puzzle/presentation/widgets/puzzle_board.dart`
+A rounded, recessed **cream tray well** (`cardWell`, radius `lg`, clipped
+corners, warm border + shadow). Pieces stay **seamless** — connected edges
+still remove the shared border so a solved board reads as one photo.
+Lifted / drop-target tile = 2.5px sage halo + warm `lifted` shadow.
+A connected group, while dragged, gets a soft sage outline + lift — a
+**"joined" cue, never a lock**: groups stay fully draggable at all times
+(`CONNECTED ≠ LOCKED`, see AGENTS.md / ARCHITECTURE.md).
 
-### GameCard
-
-Rounded rectangle container with white background, soft shadow, thin glossy outline. Used for level cards, achievement cards, collection cards, bottom sheets, and content cards across all screens.
-
----
-
-## Reusable Widgets
-
-| Widget | Location | Purpose |
-|--------|----------|---------|
-| `GameButton` | `shared/widgets/game_button.dart` | Primary/secondary/premium buttons |
-| `GameCard` | `shared/widgets/game_card.dart` | Rounded card container |
-| `GameBackground` | `shared/widgets/game_background.dart` | Gradient + glow + floating pieces |
-| `AppImage` | `shared/widgets/app_image.dart` | Network-or-asset image with error handling |
-| `StatChip` | `shared/widgets/stat_chip.dart` | Icon + value pill (coins, timer, moves) |
-| `DifficultyBadge` | `shared/widgets/difficulty_badge.dart` | Difficulty-colored pill badge |
-| `CircleIconButton` | `shared/widgets/circle_icon_button.dart` | Circular icon button |
-| `PressScale` | `shared/widgets/press_scale.dart` | Tap-to-scale animation wrapper |
-| `BounceIn` | `shared/widgets/bounce_in.dart` | Entrance bounce animation |
-| `PulsingGlow` | `shared/widgets/pulsing_glow.dart` | Animated glow effect |
-| `SparkleParticles` | `shared/widgets/sparkle_particles.dart` | Particle sparkle overlay |
-| `ConfettiBurst` | `shared/widgets/confetti_burst.dart` | Confetti animation |
-| `FireworksBurst` | `shared/widgets/fireworks_burst.dart` | Fireworks animation |
-| `CoinRewardChip` | `shared/widgets/coin_reward_chip.dart` | Animated coin reward display |
-| `CoinFlightAnimation` | `shared/widgets/coin_flight_animation.dart` | Coins flying from board to wallet |
-| `OutlinedText` | `shared/widgets/outlined_text.dart` | Text with outline stroke |
-| `FloatingBob` | `shared/widgets/floating_bob.dart` | Floating bob animation |
-| `FloatingCloud` | `shared/widgets/floating_cloud.dart` | Drifting cloud |
-| `FloatingSuit` | `shared/widgets/floating_suit.dart` | Legacy drifting card suit (may be replaced) |
-| `PuzzlePieceLoader` | `shared/widgets/puzzle_piece_loader.dart` | 6-tile assembly animation (splash) |
-| `ActionCard` | `shared/widgets/action_card.dart` | Action card widget |
+**The puzzle grid's logic, dimensions, drag/drop, snapping, adjacency,
+grouping, displacement, hint, shuffle, solve detection, timer, scoring and
+the cover-scale `ImageLayout` pipeline are unchanged by the retheme — only
+decoration/color/radius/shadow.**
 
 ---
 
 ## Screen Layout Patterns
 
-### Home Screen Structure
-
+### Home ("Home & Artwork Journey")
 ```
-Scaffold
-  └── GameBackground
-       └── SafeArea
-            └── Column
-                 ├── Top Bar (settings, coins, logo)
-                 ├── Collection Artwork Display (progress + artwork)
-                 ├── Current Level Indicator
-                 └── Large Green Play Button (bottom center)
-```
-
-### Puzzle Screen Structure
-
-```
-Scaffold
-  └── GameBackground
-       └── SafeArea
-            └── Column
-                 ├── Top Bar (difficulty, coins, timer, moves, hint, pause)
-                 └── PuzzleBoard (fills remaining space)
+Scaffold › GameBackground › SafeArea › Column
+  ├ _HomeHeader        (profile group | coins pill | settings)
+  ├ Expanded › scroll › Column
+  │    ├ brand row     (logo · "SuitClash" · chapter/section)
+  │    ├ _ArtworkHero  (framed section mosaic + progress scrim + status chip + stars)
+  │    ├ Continue CTA  (solid sage, tactile, pulsing)
+  │    ├ _JourneyStrip (dashed sage node preview → opens /levels)
+  │    ├ _DailyDiscovery (Daily Challenge · Collections bento)
+  │    └ _ShortcutRow  (Journey · Gallery · Awards · Shop)
+  └ BannerAdWidget
 ```
 
-### Standard Screen Structure
-
+### Puzzle
 ```
-Scaffold
-  └── GameBackground
-       └── SafeArea
-            └── Column
-                 ├── Top Bar (back button, title, actions)
-                 └── Content (scrollable body)
+Scaffold › GameBackground(no pieces) › SafeArea › Column
+  ├ _PuzzleTopBar   (back/pause · difficulty · coins/timer/moves chips · 3★ target · hint · preview · pause)
+  └ PuzzleBoard     (cream tray, fills remaining space)
 ```
 
-### Modal/Bottom Sheet Pattern
+### Standard screen
+```
+Scaffold › GameBackground › SafeArea › Column
+  ├ Top Bar (CircleIconButton back · title · actions)
+  └ Content (scrollable)
+```
 
-```
-DraggableScrollableSheet
-  └── GameCard
-       └── Content
-```
+### Modal / bottom sheet
+`showModalBottomSheet` (transparent bg) › `GameCard`, over the L4 blur
+scrim.
 
 ---
 
 ## Iconography
+Material rounded icons for UI. Emoji for achievement icons / effects. No
+card-suit symbols. Identity = puzzle + artwork + collection.
 
-- Material Icons for standard UI elements (back, settings, play, etc.)
-- Emoji for achievement icons and special effects
-- Card suit symbols (♠♥♦♣) were legacy background decorations and have been removed. The visual identity is puzzle + artwork + collection.
-
----
-
-## Screen Reader / Accessibility
-
-- All interactive elements have semantic labels
-- Puzzle board has full semantics support for screen readers
-- Minimum touch targets follow platform guidelines
+## Accessibility
+Semantic labels on all interactive elements; full puzzle-board semantics;
+platform-minimum touch targets; `MediaQuery.disableAnimations` respected
+for celebration effects.

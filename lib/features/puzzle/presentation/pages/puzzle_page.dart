@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -408,12 +410,12 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.premiumGradientStart
-                                  .withOpacity(0.4),
+                                  .withValues(alpha: 0.4),
                               blurRadius: 50,
                               spreadRadius: 15,
                             ),
                             BoxShadow(
-                              color: AppColors.primary.withOpacity(0.25),
+                              color: AppColors.primary.withValues(alpha: 0.25),
                               blurRadius: 30,
                               spreadRadius: 8,
                             ),
@@ -795,8 +797,7 @@ class _PauseOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return ColoredBox(
-      color: AppColors.background.withValues(alpha: 0.92),
+    return _ModalScrim(
       child: Center(
         child: BounceIn(
           child: Padding(
@@ -867,6 +868,26 @@ class _PauseOverlay extends StatelessWidget {
   }
 }
 
+/// Full-screen modal backdrop (Warm Tactile Serenity, L4): an
+/// ivory-tinted translucent scrim over a gentle blur, so the board reads
+/// as "set aside" without fully hiding it.
+class _ModalScrim extends StatelessWidget {
+  const _ModalScrim({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+      child: ColoredBox(
+        color: AppColors.textDark.withValues(alpha: 0.38),
+        child: child,
+      ),
+    );
+  }
+}
+
 class _ComboBadge extends StatelessWidget {
   const _ComboBadge({super.key, required this.combo});
 
@@ -883,7 +904,10 @@ class _ComboBadge extends StatelessWidget {
             colors: [AppColors.premiumGradientStart, AppColors.premiumGradientEnd],
           ),
           borderRadius: AppRadius.pillRadius,
-          border: Border.all(color: AppColors.outline, width: 1.5),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.5),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
               color: AppColors.accent.withValues(alpha: 0.3),
@@ -895,7 +919,7 @@ class _ComboBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.local_fire_department_rounded, color: AppColors.danger, size: 24),
+            const Icon(Icons.local_fire_department_rounded, color: AppColors.honeyText, size: 24),
             const SizedBox(width: 4),
             Text(
               'COMBO x$combo!',
@@ -947,8 +971,7 @@ class _TutorialOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return ColoredBox(
-      color: AppColors.background.withValues(alpha: 0.94),
+    return _ModalScrim(
       child: Center(
         child: BounceIn(
           child: Padding(

@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../../core/design_system/app_colors.dart';
 import '../../core/design_system/app_radius.dart';
+import '../../core/design_system/app_shadows.dart';
 import '../../core/design_system/app_spacing.dart';
-import '../../core/design_system/app_theme_extension.dart';
 import 'press_scale.dart';
 
 enum GameButtonVariant { primary, secondary, premium }
 
-/// The app's primary button surface: gradient fill, pill corners, soft
-/// shadow, and a subtle top gloss — with press-scale feedback (via
-/// [PressScale]). Every CTA — Play, menu tiles, dialogs — should use this
-/// instead of a bespoke `Container`/`ElevatedButton`.
+/// The app's primary button surface — "Warm Tactile Serenity": a **solid**
+/// pill fill with a hard resting "cushion" edge beneath it (via
+/// [AppShadows.tactile]) so it feels physically pressable, plus press-scale
+/// feedback (via [PressScale]). Every CTA — Play, menu tiles, dialogs —
+/// should use this instead of a bespoke `Container`/`ElevatedButton`.
+///
+/// * primary   — Soft Sage fill, white label. Main CTAs.
+/// * secondary — Warm cream fill, hairline stroke, dark label.
+/// * premium   — Honey Gold fill, dark label. Coin / boost actions.
 class GameButton extends StatelessWidget {
   const GameButton({
     super.key,
@@ -30,18 +35,35 @@ class GameButton extends StatelessWidget {
   final double? width;
   final double height;
 
-  Gradient _gradient(AppThemeExtension ext) => switch (variant) {
-    GameButtonVariant.primary => ext.primaryButtonGradient,
-    GameButtonVariant.secondary => ext.secondaryButtonGradient,
-    GameButtonVariant.premium => ext.premiumButtonGradient,
-  };
+  ({Color fill, Color fg, Color cushion, Color? stroke}) _palette() =>
+      switch (variant) {
+        GameButtonVariant.primary => (
+          fill: AppColors.primaryContainer,
+          fg: AppColors.onPrimary,
+          cushion: AppColors.primaryButtonCushion,
+          stroke: null,
+        ),
+        GameButtonVariant.secondary => (
+          fill: AppColors.card,
+          fg: AppColors.textDark,
+          cushion: AppColors.border,
+          stroke: AppColors.border,
+        ),
+        GameButtonVariant.premium => (
+          fill: AppColors.honey,
+          fg: AppColors.textDark,
+          cushion: AppColors.premiumGradientEnd,
+          stroke: null,
+        ),
+      };
 
   @override
   Widget build(BuildContext context) {
-    final ext = Theme.of(context).extension<AppThemeExtension>()!;
-    final textStyle = Theme.of(
-      context,
-    ).textTheme.titleMedium?.copyWith(color: Colors.white);
+    final p = _palette();
+    final textStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+      color: p.fg,
+      letterSpacing: 0.4,
+    );
 
     return PressScale(
       onTap: onTap,
@@ -50,35 +72,22 @@ class GameButton extends StatelessWidget {
         height: height,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         decoration: BoxDecoration(
-          gradient: _gradient(ext),
+          color: p.fill,
           borderRadius: AppRadius.pillRadius,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1),
-          boxShadow: [
-            ...ext.buttonShadow,
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.18),
-              offset: const Offset(0, 1),
-              blurRadius: 3,
-            ), // Subtle top gloss
-          ],
+          border: p.stroke == null
+              ? null
+              : Border.all(color: p.stroke!, width: 1.5),
+          boxShadow: variant == GameButtonVariant.secondary
+              ? AppShadows.pill
+              : AppShadows.tactile(p.cushion),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(
-                icon,
-                color: Colors.white,
-                size: 22,
-                shadows: [
-                  Shadow(
-                    color: AppColors.outline.withValues(alpha: 0.5),
-                    offset: const Offset(0, 1.5),
-                  ),
-                ],
-              ),
-              const SizedBox(width: AppSpacing.sm),
+              Icon(icon, color: p.fg, size: 20),
+              const SizedBox(width: AppSpacing.xs),
             ],
             Flexible(
               child: Text(

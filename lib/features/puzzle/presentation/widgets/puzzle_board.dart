@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
+import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_shadows.dart';
 import '../../../../services/audio_service.dart';
 import '../../../cosmetics/domain/entities/cosmetic_items.dart';
@@ -179,11 +180,18 @@ class _PuzzleBoardState extends State<PuzzleBoard> {
         final effectiveLayout = layout ?? _layout;
 
         return Container(
+          // Rounded, recessed "tray well" (Warm Tactile Serenity). The
+          // corners are clipped for a soft silhouette; this is purely
+          // cosmetic — the GridView still receives the full [constraints],
+          // so every cell dimension and the shared [ImageLayout] are
+          // computed exactly as before.
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color:
                 widget.frame?.backgroundColor ??
                 widget.pieceStyle?.tileBackground ??
-                AppColors.card,
+                AppColors.cardWell,
+            borderRadius: AppRadius.lgRadius,
             border: widget.solvedProgress < widget.borderFadeFraction
                 ? Border.all(
                     color: widget.frame?.borderColor ?? AppColors.border,
@@ -567,15 +575,19 @@ class _BoardCellState extends State<_BoardCell>
 
           return Draggable<int>(
             data: widget.cellIndex,
-            // The lifted piece: the exact same physical size and
-            // appearance it has on the board — no scale-up, no shadow.
-            // Only the pointer-following motion signals "picked up."
+            // The lifted piece: the exact same physical size as on the
+            // board (no scale-up — that would break drop alignment), with
+            // a soft warm lift shadow so it reads as "picked up off the
+            // tray" per the Warm Tactile Serenity spec.
             feedback: SizedBox(
               width: widget.cellWidth,
               height: widget.cellHeight,
               child: Material(
                 color: Colors.transparent,
-                child: decorated,
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(boxShadow: AppShadows.lifted),
+                  child: decorated,
+                ),
               ),
             ),
             childWhenDragging: Opacity(
@@ -637,25 +649,22 @@ class _BoardCellState extends State<_BoardCell>
     }
   }
 
-  /// Neutral "this is a valid drop target" affordance: a slight lift and
-  /// a soft dark shadow. Deliberately colorless — correctness is never
-  /// communicated through target color.
+  /// "This is a valid drop target" affordance (Warm Tactile Serenity): a
+  /// slight lift, a soft warm shadow, and a gentle sage halo outline.
+  /// The halo is a placement cue, never a correct/incorrect signal —
+  /// correctness is still communicated only by image continuity and edge
+  /// connections.
   Widget _neutralHoverLift(Widget child, PieceStyle? style) {
+    final radius = BorderRadius.circular(style?.cornerRadius ?? 0);
     return Transform.scale(
       scale: 1.03,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(style?.cornerRadius ?? 0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 16,
-              spreadRadius: 1,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          borderRadius: radius,
+          border: Border.all(color: AppColors.primaryContainer, width: 2.5),
+          boxShadow: AppShadows.lifted,
         ),
-        child: child,
+        child: ClipRRect(borderRadius: radius, child: child),
       ),
     );
   }
@@ -760,16 +769,26 @@ class _BoardCellState extends State<_BoardCell>
       );
     }
 
-    // Exactly the group's on-board footprint — no scale, no shadow. Empty
-    // cells inside the bounding box (an irregular group shape) stay
-    // transparent since only the group's actual cells add a Positioned
-    // child to the Stack.
+    // Exactly the group's on-board footprint (no scale). A soft sage
+    // outline + warm lift shadow read the connected group as one lifted
+    // physical object per Warm Tactile Serenity — this is a "joined"
+    // cue, not a lock: the group stays fully draggable at all times.
     return SizedBox(
       width: groupWidth,
       height: groupHeight,
       child: Material(
         color: Colors.transparent,
-        child: Stack(children: groupCells),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: AppColors.primaryContainer.withValues(alpha: 0.7),
+              width: 2,
+            ),
+            boxShadow: AppShadows.lifted,
+          ),
+          child: Stack(children: groupCells),
+        ),
       ),
     );
   }

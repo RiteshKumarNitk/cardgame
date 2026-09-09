@@ -4,8 +4,8 @@ import 'app_gradients.dart';
 import 'app_shadows.dart';
 
 /// Design tokens that don't fit [ColorScheme]/[TextTheme] — gradients and
-/// shadow presets — exposed via `Theme.of(context).extension<...>()` so
-/// widgets pull them from the theme rather than importing the static
+/// warm elevation presets — exposed via `Theme.of(context).extension<...>()`
+/// so widgets pull them from the theme rather than importing the static
 /// token classes directly.
 class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   const AppThemeExtension({
@@ -16,6 +16,8 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
     required this.cardShadow,
     required this.buttonShadow,
     required this.floatingShadow,
+    required this.pillShadow,
+    required this.liftedShadow,
   });
 
   static const AppThemeExtension standard = AppThemeExtension(
@@ -26,6 +28,8 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
     cardShadow: AppShadows.card,
     buttonShadow: AppShadows.button,
     floatingShadow: AppShadows.floating,
+    pillShadow: AppShadows.pill,
+    liftedShadow: AppShadows.lifted,
   );
 
   final Gradient primaryButtonGradient;
@@ -35,6 +39,8 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   final List<BoxShadow> cardShadow;
   final List<BoxShadow> buttonShadow;
   final List<BoxShadow> floatingShadow;
+  final List<BoxShadow> pillShadow;
+  final List<BoxShadow> liftedShadow;
 
   @override
   AppThemeExtension copyWith({
@@ -45,6 +51,8 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
     List<BoxShadow>? cardShadow,
     List<BoxShadow>? buttonShadow,
     List<BoxShadow>? floatingShadow,
+    List<BoxShadow>? pillShadow,
+    List<BoxShadow>? liftedShadow,
   }) {
     return AppThemeExtension(
       primaryButtonGradient: primaryButtonGradient ?? this.primaryButtonGradient,
@@ -56,6 +64,8 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
       cardShadow: cardShadow ?? this.cardShadow,
       buttonShadow: buttonShadow ?? this.buttonShadow,
       floatingShadow: floatingShadow ?? this.floatingShadow,
+      pillShadow: pillShadow ?? this.pillShadow,
+      liftedShadow: liftedShadow ?? this.liftedShadow,
     );
   }
 

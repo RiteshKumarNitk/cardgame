@@ -159,7 +159,7 @@ class _DayCard extends StatelessWidget {
       width: 65,
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: highlighted ? AppColors.accent : (claimed ? AppColors.success.withOpacity(0.15) : AppColors.background),
+        color: highlighted ? AppColors.accent : (claimed ? AppColors.success.withValues(alpha: 0.15) : AppColors.background),
         borderRadius: AppRadius.mdRadius,
         border: Border.all(
           color: highlighted ? Colors.white : (claimed ? AppColors.success : AppColors.border),

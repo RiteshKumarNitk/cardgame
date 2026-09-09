@@ -11,7 +11,7 @@ class OutlinedText extends StatelessWidget {
     this.data, {
     super.key,
     this.style,
-    this.outlineColor = const Color(0x40000000),
+    this.outlineColor = const Color(0x1A2D312E),
     this.outlineWidth = 2.5,
     this.textAlign,
   });

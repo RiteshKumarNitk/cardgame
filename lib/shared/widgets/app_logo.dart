@@ -24,12 +24,12 @@ class AppLogo extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.white, Color(0xFFE0E7FF)],
+          colors: [Colors.white, AppColors.surfaceLow],
         ),
-        border: Border.all(color: AppColors.outline, width: 1.5),
+        border: Border.all(color: AppColors.border, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.22),
+            color: AppColors.primary.withValues(alpha: 0.18),
             blurRadius: size * 0.18,
             offset: Offset(0, size * 0.08),
           ),

@@ -12,9 +12,14 @@ abstract final class AppAnimations {
   static const Duration pageTransition = Duration(milliseconds: 300);
   static const Duration long = Duration(milliseconds: 800);
 
-  /// Continuous idle loops (CTA glow) — slower and gentler than any
-  /// interaction animation so they read as "alive", not distracting.
-  static const Duration glowPulse = Duration(milliseconds: 2200);
+  /// Continuous idle loops (CTA glow, active journey-node ring) — slower
+  /// and gentler than any interaction animation so they read as "alive",
+  /// not distracting. Matches the Stitch pulse-ring cadence (~2.8s).
+  static const Duration glowPulse = Duration(milliseconds: 2800);
+
+  /// Tactile button depress — the quick `translateY` dip on press that
+  /// makes a solid button feel physically pushable.
+  static const Duration tactilePress = Duration(milliseconds: 120);
 
   /// For button presses and scale-down feedback — quick and decisive.
   static const Curve pressCurve = Curves.easeOut;
@@ -41,6 +46,8 @@ abstract final class AppAnimations {
   /// For continuous loops (glow, idle float).
   static const Curve idleCurve = Curves.easeInOut;
 
-  /// How much a button/card compresses while pressed.
-  static const double pressedScale = 0.95;
+  /// How much a button/card compresses while pressed. Gentle — the Stitch
+  /// system uses a restrained `active:scale-[0.98]`; 0.97 keeps a little
+  /// more feedback for large CTAs without a cartoonish bounce.
+  static const double pressedScale = 0.97;
 }

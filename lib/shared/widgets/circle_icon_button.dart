@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design_system/app_colors.dart';
+import '../../core/design_system/app_shadows.dart';
 import 'press_scale.dart';
 
-/// A small circular icon button on a white card surface with a soft
-/// shadow — the app's standard "utility" button (settings, back, shop, ...)
-/// wherever a full [GameButton] would be too heavy.
+/// A small circular icon button on a white card surface with a warm
+/// hairline outline and a soft pill shadow — the app's standard "utility"
+/// button (settings, back, hint, ...) wherever a full [GameButton] would
+/// be too heavy.
 class CircleIconButton extends StatelessWidget {
   const CircleIconButton({
     super.key,
@@ -30,16 +32,10 @@ class CircleIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.card,
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.outline, width: 2.5),
-          boxShadow: [
-            const BoxShadow(
-              color: AppColors.shadow,
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
+          border: Border.all(color: AppColors.border, width: 1.5),
+          boxShadow: AppShadows.pill,
         ),
-        child: Icon(icon, color: iconColor, size: size * 0.45),
+        child: Icon(icon, color: iconColor, size: size * 0.48),
       ),
     );
   }

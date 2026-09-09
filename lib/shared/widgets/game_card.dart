@@ -7,11 +7,11 @@ import '../../core/design_system/app_radius.dart';
 import '../../core/design_system/app_spacing.dart';
 import '../../core/design_system/app_theme_extension.dart';
 
-/// The app's card surface: rounded corners, a thin glossy outline, and a
-/// soft shadow — with an optional frosted-glass look for content sitting
-/// on top of a colorful background (used on Home/Levels; the glass
-/// variant skips the outline since a visible dark line would fight the
-/// translucency).
+/// The app's card surface — "Warm Tactile Serenity": rounded corners, a
+/// 1px warm feather outline, and a soft warm dual-layer shadow (L2). An
+/// optional translucent "glass" variant for content sitting directly on
+/// the ivory background (Home / Levels) — warm paper-translucent rather
+/// than cold frosted glass.
 class GameCard extends StatelessWidget {
   const GameCard({
     super.key,
@@ -39,16 +39,16 @@ class GameCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: glass
-            ? Colors.white.withValues(alpha: 0.16)
+            ? AppColors.background.withValues(alpha: 0.82)
             : gradient == null
             ? (color ?? AppColors.card)
             : null,
         gradient: gradient,
         borderRadius: radius,
-        border: glass
-            ? Border.all(color: Colors.white.withValues(alpha: 0.28), width: 1)
-            : Border.all(color: AppColors.outline, width: 1),
-        boxShadow: glass ? null : ext.cardShadow,
+        border: Border.all(color: AppColors.border, width: 1),
+        // Glass cards take the lighter pill shadow so they don't read as
+        // heavily elevated while translucent.
+        boxShadow: glass ? ext.pillShadow : ext.cardShadow,
       ),
       child: child,
     );
@@ -58,7 +58,7 @@ class GameCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: radius,
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: surface,
       ),
     );

@@ -18,7 +18,6 @@ import '../journey/journey_level_node.dart';
 import '../journey/journey_path_segment.dart';
 import '../journey/level_card_sheet.dart';
 import '../journey/section_complete_banner.dart';
-import '../widgets/level_difficulty_style.dart';
 import '../widgets/levels_top_bar.dart';
 
 /// Level Selection screen: a winding Journey Map (chapters -> sections ->
@@ -196,7 +195,7 @@ class _JourneyMapState extends State<_JourneyMap> {
                   fromLevelId: level.id - 1,
                   toLevelId: level.id,
                   color: level.isUnlocked
-                      ? level.difficulty.color
+                      ? AppColors.primaryContainer.withValues(alpha: 0.35)
                       : AppColors.border,
                 ),
               Align(

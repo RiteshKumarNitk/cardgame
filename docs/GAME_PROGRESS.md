@@ -9,7 +9,7 @@ Core feature implementation is advanced, but visual polish and core gameplay ref
 - [x] Flutter project created (package: `puzzle_cards`, product: SuitClash)
 - [x] Flame integrated (background floating pieces only)
 - [x] GoRouter routing (19 routes with consistent transitions)
-- [x] Design system (colors, typography, spacing, shadows, gradients, animations)
+- [x] Design system (colors, typography, spacing, shadows, gradients, animations) — **"Warm Tactile Serenity"** (2026-09-09): Stitch project *"SuitClash UI/UX Redesign System"* is the visual source of truth. Soft-sage + honey-gold on warm ivory, Plus Jakarta Sans, warm layered elevation, tactile solid buttons. Visual-only retheme — no logic/navigation/grid changes. See `docs/UI_UX_GUIDELINES.md`. Cosmetics screen restyle still pending.
 - [x] Single light theme (bright, colorful casual game aesthetic)
 - [x] Hive local storage (10 boxes, LevelModel adapter)
 - [x] Splash screen (animated logo, bootstrap progress, puzzle piece loader)

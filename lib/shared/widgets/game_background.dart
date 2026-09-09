@@ -5,8 +5,10 @@ import '../../core/design_system/app_colors.dart';
 import '../../core/design_system/app_theme_extension.dart';
 import '../../game/floating_pieces_game.dart';
 
-/// The app's single background treatment: soft gradient, a few glowing
-/// blurred circles, optionally the Flame floating-pieces layer.
+/// The app's single background treatment — "Warm Tactile Serenity": a
+/// near-flat warm ivory wash with a faint sage dot texture, and
+/// (optionally) the Flame floating-pieces layer drifting gently behind the
+/// content. Deliberately calm so artwork and puzzle photos stay the focus.
 class GameBackground extends StatelessWidget {
   const GameBackground({
     super.key,
@@ -16,8 +18,6 @@ class GameBackground extends StatelessWidget {
 
   final Widget? child;
   final bool showFloatingPieces;
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -29,29 +29,17 @@ class GameBackground extends StatelessWidget {
         DecoratedBox(
           decoration: BoxDecoration(gradient: ext.screenBackgroundGradient),
         ),
-        const Positioned(
-          top: -70,
-          left: -50,
-          child: _GlowCircle(size: 220, color: AppColors.accent),
-        ),
-        const Positioned(
-          bottom: -90,
-          right: -70,
-          child: _GlowCircle(size: 260, color: AppColors.premiumGradientEnd),
-        ),
-        const Positioned(
-          top: 180,
-          right: -60,
-          child: _GlowCircle(size: 160, color: AppColors.premiumGradientStart),
+        const Positioned.fill(
+          child: IgnorePointer(child: CustomPaint(painter: _DotTexture())),
         ),
         if (showFloatingPieces)
           Positioned.fill(
             child: GameWidget(
               game: FloatingPiecesGame(
                 pieceColors: const [
-                  AppColors.primary,
-                  AppColors.secondary,
-                  AppColors.accent,
+                  AppColors.primaryFixedDim,
+                  AppColors.honey,
+                  AppColors.primaryContainer,
                 ],
               ),
             ),
@@ -62,32 +50,23 @@ class GameBackground extends StatelessWidget {
   }
 }
 
-/// A soft-edged glow blob built from a [RadialGradient] rather than a real
-/// blur filter — visually reads as "blurred circle" decoration without the
-/// per-frame cost of `ImageFilter.blur` sitting above a continuously
-/// animating Flame canvas.
-class _GlowCircle extends StatelessWidget {
-  const _GlowCircle({required this.size, required this.color});
-
-  final double size;
-  final Color color;
+/// A faint sage dot grid — the calm ambient watermark from the Stitch
+/// design (16px pitch, ~4% sage). Cheap: a handful of tiny circles per
+/// frame, painted once (no animation).
+class _DotTexture extends CustomPainter {
+  const _DotTexture();
 
   @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [
-              color.withOpacity(0.08),
-              color.withOpacity(0),
-            ],
-          ),
-        ),
-      ),
-    );
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = AppColors.primary.withValues(alpha: 0.04);
+    const pitch = 16.0;
+    for (var y = pitch / 2; y < size.height; y += pitch) {
+      for (var x = pitch / 2; x < size.width; x += pitch) {
+        canvas.drawCircle(Offset(x, y), 0.9, paint);
+      }
+    }
   }
+
+  @override
+  bool shouldRepaint(covariant _DotTexture oldDelegate) => false;
 }

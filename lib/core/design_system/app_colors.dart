@@ -1,44 +1,98 @@
 import 'package:flutter/material.dart';
 
-/// The game's fixed color palette. Every screen pulls colors from here —
-/// never from raw hex literals or `Colors.*` sprinkled through widgets —
-/// so the whole app can be re-themed from this one file.
+/// The game's fixed color palette — "Warm Tactile Serenity" (the SuitClash
+/// Stitch design system is the visual source of truth). Every screen pulls
+/// colors from here — never from raw hex literals or `Colors.*` sprinkled
+/// through widgets — so the whole app can be re-themed from this one file.
+///
+/// Personality: calm, tactile, artwork-first. Rich cream/ivory foundations,
+/// soft sage as the brand anchor, warm honey-gold for prestige/currency,
+/// dusty rose used sparingly for urgency. No casino/gambling cues, no neon,
+/// no hyper-saturated toy outlines. Light mode only.
 abstract final class AppColors {
-  // SuitClash Brand Colors
-  static const Color primary = Color(0xFFD32F2F); // Vibrant red — primary actions, accents
-  static const Color secondary = Color(0xFF1E1E1E); // Deep charcoal — secondary text, icons
-  static const Color accent = Color(0xFFFFC107); // Warm gold — coins, rewards, premium
-  static const Color success = Color(0xFF4CAF50); // Fresh green — completion, positive
-  static const Color warning = Color(0xFFFF9800); // Warm orange — caution states
-  static const Color danger = Color(0xFFD32F2F); // Red — error states
+  // ── Brand: Soft Sage ──
+  /// Deep sage — text, icons, active states on light surfaces.
+  static const Color primary = Color(0xFF316342);
 
-  // Surfaces
-  static const Color background = Color(0xFFF1F8F4); // Soft mint-white — main background
-  static const Color card = Color(0xFFFFFFFF); // Pure white — cards and elevated surfaces
+  /// Soft sage — primary button fills, CTAs, active trail path, completed
+  /// milestones. This is the "brand fill" color.
+  static const Color primaryContainer = Color(0xFF4A7C59);
+  static const Color onPrimary = Color(0xFFFFFFFF);
 
-  // Crisp Text
-  static const Color textDark = Color(0xFF263238); // Dark Grey
-  static const Color textSecondary = Color(0xFF78909C); // Light Grey
-  static const Color border = Color(0xFFCFD8DC); // Grey Border
-  static const Color shadow = Color(0x1F000000); // 12% black for soft shadows
+  /// Pale mint — icon bubbles, soft chips, gentle fills.
+  static const Color primaryFixed = Color(0xFFB9EFC5);
 
-  /// Soft translucent outline used for bubble effects
-  static const Color outline = Color(0x33FFFFFF); // 20% white gloss
+  /// Mint — progress-bar fills, subtle accents, inverse primary.
+  static const Color primaryFixedDim = Color(0xFF9DD3AA);
 
-  // Gradient stops
-  static const Color primaryGradientStart = Color(0xFFF44336); // Bright red
-  static const Color primaryGradientEnd = Color(0xFFB71C1C); // Deep red
+  // ── Prestige: Warm Honey Gold ──
+  /// Honey text / bronze — labels on honey surfaces.
+  static const Color honeyText = Color(0xFF7F5700);
 
-  static const Color secondaryGradientStart = Color(0xFF607D8B); // Blue grey
-  static const Color secondaryGradientEnd = Color(0xFF37474F); // Dark blue grey
+  /// Warm honey gold — coins, collected stars, currency badges,
+  /// celebratory victory accents. (Alias: [accent].)
+  static const Color honey = Color(0xFFFDBA45);
 
-  static const Color premiumGradientStart = Color(0xFFFFE259); // Light gold
-  static const Color premiumGradientEnd = Color(0xFFFFA751); // Soft orange
+  /// Pale honey — soft badge backgrounds.
+  static const Color honeySoft = Color(0xFFFFDEAE);
 
-  // Difficulty tiers (Level Selection).
-  static const Color difficultyEasy = Color(0xFF81C784);
+  // ── Attention: Dusty Rose (used sparingly) ──
+  /// Muted coral / dusty rose — streak alerts, urgent counter badges,
+  /// "time running low". Never for primary actions.
+  static const Color attention = Color(0xFFB85248);
+  static const Color attentionStrong = Color(0xFF993A32);
 
-  // Cosmetic catalog colors (board frames, piece styles, avatars).
+  // ── Semantic aliases (names kept stable for existing call sites) ──
+  static const Color secondary = Color(0xFF1C1C18); // deep moss — dark icons/text
+  static const Color accent = honey; // coins, rewards, premium
+  static const Color success = Color(0xFF3F7D4E); // positive / completion (sage-family)
+  static const Color warning = Color(0xFFD99B26); // caution — amber honey
+  static const Color danger = Color(0xFFBA1A1A); // error states
+
+  // ── Surfaces (warm ivory / layered cream) ──
+  static const Color background = Color(0xFFFCF9F2); // warm ivory cream — app canvas
+  static const Color card = Color(0xFFFFFFFF); // lifted cards & playing tiles
+  static const Color cardWell = Color(0xFFF0EEE7); // recessed well / tray base
+  static const Color cardWellHigh = Color(0xFFE5E2DB); // chips, highest container
+  static const Color surfaceLow = Color(0xFFF6F3EC); // low container
+  static const Color surfaceDim = Color(0xFFDCDAD3); // dim container
+
+  // ── Text (Deep Moss Bark, not jet black) ──
+  static const Color textDark = Color(0xFF1C1C18); // primary text, headings
+  static const Color textSecondary = Color(0xFF414942); // secondary labels
+  static const Color textMeta = Color(0xFF717971); // muted meta / captions
+
+  // ── Lines & shadow (warm) ──
+  static const Color border = Color(0xFFC1C9BF); // hairline borders, dividers
+  static const Color shadow = Color(0x14413220); // ~8% warm brown — soft shadows
+
+  /// Feather outline for lifted cards — a 1px warm hairline replacing the
+  /// old white gloss. Kept named `outline` for existing call sites.
+  static const Color outline = Color(0x142D312E); // ~8% deep moss
+
+  // ── Gradient stops (flattened — SuitClash surfaces are near-flat) ──
+  static const Color primaryGradientStart = Color(0xFF4A7C59);
+  static const Color primaryGradientEnd = Color(0xFF3F6E4D);
+
+  /// Hard "resting cushion" edge under a tactile primary button.
+  static const Color primaryButtonCushion = Color(0xFF365D42);
+
+  static const Color secondaryGradientStart = Color(0xFFFFFFFF);
+  static const Color secondaryGradientEnd = Color(0xFFF3EFE6);
+
+  static const Color premiumGradientStart = Color(0xFFFDBA45);
+  static const Color premiumGradientEnd = Color(0xFFEBA62E);
+
+  // ── Difficulty tiers — warm ramp (sage → honey → terracotta → rose) ──
+  static const Color difficultyEasy = Color(0xFF4A7C59); // sage
+  static const Color difficultyMedium = Color(0xFF7FA08A); // sage-grey
+  static const Color difficultyHard = Color(0xFFD99B26); // honey amber
+  static const Color difficultyExpert = Color(0xFFC9743F); // terracotta
+  static const Color difficultyMaster = Color(0xFF993A32); // rose
+
+  // ── Cosmetic catalog colors (board frames, piece styles, avatars) ──
+  // Left unchanged in this pass; revisited when the Cosmetics screen is
+  // restyled (some are intentionally vivid for unlockable variety).
   static const Color frameGold = Color(0xFFD4AF37);
   static const Color frameGoldGlow = Color(0xFFFFD700);
   static const Color frameRoyal = Color(0xFF7B1FA2);
@@ -53,8 +107,4 @@ abstract final class AppColors {
   static const Color avatarPink = Color(0xFFEC407A);
   static const Color avatarOrange = Color(0xFFFB8C00);
   static const Color avatarLime = Color(0xFF9E9D24);
-  static const Color difficultyMedium = Color(0xFF4FC3F7);
-  static const Color difficultyHard = Color(0xFFFFB74D);
-  static const Color difficultyExpert = Color(0xFFE57373);
-  static const Color difficultyMaster = Color(0xFFBA68C8);
 }

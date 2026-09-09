@@ -26,12 +26,15 @@ class CoinRewardChip extends StatelessWidget {
           ],
         ),
         borderRadius: AppRadius.pillRadius,
-        border: Border.all(color: AppColors.outline, width: 2.5),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.5),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.accent.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),

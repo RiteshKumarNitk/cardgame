@@ -16,10 +16,11 @@ import '../widgets/level_difficulty_style.dart';
 /// sharing state.
 double journeyWavePosition(int levelId) => math.sin(levelId * 0.9);
 
-/// One level's node on the Journey Map: locked (grey, lock icon),
-/// completed (green ring, checkmark, stars), or unlocked-not-yet-completed
-/// (difficulty-colored, level number). The current level additionally gets
-/// a [PulsingGlow] and a larger size to draw the eye.
+/// One level's node on the Journey Map — "Warm Tactile Serenity":
+///  * locked   — soft sand disc + lock icon
+///  * completed — soft-sage fill + white check + honey stars below
+///  * unlocked  — difficulty-tinted disc + level number
+///  * current   — larger ivory disc with a pulsing sage ring
 ///
 /// Named `LevelNodeCircle` (not `JourneyLevelNode`) to avoid colliding with
 /// the `JourneyLevelNode` data item in `journey_item.dart`.
@@ -39,36 +40,38 @@ class LevelNodeCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     final unlocked = level.isUnlocked;
     final completed = level.isCompleted;
-    final diameter = isCurrent ? 76.0 : 64.0;
+    final diameter = isCurrent ? 76.0 : 62.0;
+    final tint = level.difficulty.color;
+
+    final Color fill;
+    final Color borderColor;
+    final double borderWidth;
+    if (isCurrent) {
+      fill = AppColors.background;
+      borderColor = AppColors.primary;
+      borderWidth = 2.5;
+    } else if (completed) {
+      fill = AppColors.primaryContainer;
+      borderColor = Colors.white.withValues(alpha: 0.5);
+      borderWidth = 1.5;
+    } else if (unlocked) {
+      fill = tint.withValues(alpha: 0.16);
+      borderColor = tint;
+      borderWidth = 1.5;
+    } else {
+      fill = AppColors.cardWellHigh;
+      borderColor = AppColors.border;
+      borderWidth = 1.5;
+    }
+
     final circle = Container(
       width: diameter,
       height: diameter,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: unlocked
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  level.difficulty.color,
-                  level.difficulty.color.withValues(alpha: 0.65),
-                ],
-              )
-            : null,
-        color: unlocked ? null : AppColors.card,
-        border: Border.all(
-          color: completed ? AppColors.success : AppColors.outline,
-          width: isCurrent ? 3 : 2,
-        ),
-        boxShadow: unlocked
-            ? [
-                BoxShadow(
-                  color: level.difficulty.color.withValues(alpha: 0.25),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ]
-            : AppShadows.card,
+        color: fill,
+        border: Border.all(color: borderColor, width: borderWidth),
+        boxShadow: isCurrent ? null : AppShadows.pill,
       ),
       child: Center(
         child: completed
@@ -77,14 +80,14 @@ class LevelNodeCircle extends StatelessWidget {
             ? Text(
                 '${level.id}',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
+                  color: isCurrent ? AppColors.primary : tint,
                   fontWeight: FontWeight.w800,
                 ),
               )
-            : const Icon(
+            : Icon(
                 Icons.lock_rounded,
-                color: AppColors.textSecondary,
-                size: 26,
+                color: AppColors.textMeta,
+                size: 24,
               ),
       ),
     );
@@ -92,8 +95,8 @@ class LevelNodeCircle extends StatelessWidget {
     final glowed = isCurrent
         ? PulsingGlow(
             color: AppColors.primary,
-            minOpacity: 0.18,
-            maxOpacity: 0.55,
+            minOpacity: 0.16,
+            maxOpacity: 0.5,
             blurRadius: 22,
             borderRadius: BorderRadius.circular(diameter / 2),
             child: circle,
@@ -105,7 +108,7 @@ class LevelNodeCircle extends StatelessWidget {
       children: [
         glowed,
         if (completed) ...[
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.xxs),
           _StarsRow(stars: level.stars),
         ],
       ],
@@ -132,7 +135,7 @@ class _StarsRow extends StatelessWidget {
         return Icon(
           filled ? Icons.star_rounded : Icons.star_border_rounded,
           size: 12,
-          color: filled ? AppColors.accent : AppColors.textSecondary,
+          color: filled ? AppColors.honey : AppColors.textMeta,
         );
       }),
     );
