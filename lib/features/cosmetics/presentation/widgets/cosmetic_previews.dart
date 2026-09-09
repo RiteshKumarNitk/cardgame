@@ -23,27 +23,21 @@ class FramePreview extends StatelessWidget {
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: frame.backgroundColor,
-        border: Border.all(color: frame.borderColor, width: frame.borderWidth.clamp(2, 8)),
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: frame.glowColor.withValues(alpha: 0.45),
-            blurRadius: 12,
-            spreadRadius: 2,
-          ),
-        ],
+        border: Border.all(
+          color: frame.borderColor,
+          width: frame.borderWidth.clamp(1, 4),
+        ),
       ),
+      // Seamless mini "photo" — pieces sit flush, like a solved puzzle.
       child: Column(
-        children: List.generate(3, (_) {
+        children: List.generate(3, (r) {
           return Expanded(
             child: Row(
-              children: List.generate(2, (_) {
+              children: List.generate(2, (c) {
                 return Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.all(1.5),
-                    decoration: BoxDecoration(
-                      color: AppColors.border.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(2),
+                  child: ColoredBox(
+                    color: AppColors.border.withValues(
+                      alpha: (r + c).isEven ? 0.5 : 0.35,
                     ),
                   ),
                 );
@@ -56,8 +50,8 @@ class FramePreview extends StatelessWidget {
   }
 }
 
-/// A mini grid of tiles styled exactly like the real piece style: gap,
-/// corner radius, borders, and the color that appears when correct.
+/// A mini seamless "photo" showing how the pieces sit — flush, no gaps,
+/// no rounded corners (the Classic look).
 class PieceStylePreview extends StatelessWidget {
   const PieceStylePreview({super.key, required this.style});
 
@@ -71,8 +65,7 @@ class PieceStylePreview extends StatelessWidget {
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         color: style.tileBackground,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.outline, width: 1.5),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Column(
         children: List.generate(3, (row) {
@@ -81,18 +74,12 @@ class PieceStylePreview extends StatelessWidget {
               children: List.generate(2, (col) {
                 final isCorrect = row == 1 && col == 0;
                 return Expanded(
-                  child: Container(
-                    margin: EdgeInsets.all(style.gap / 2),
-                    decoration: BoxDecoration(
-                      color: isCorrect
-                          ? AppColors.success.withValues(alpha: 0.35)
-                          : AppColors.border.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(style.cornerRadius),
-                      border: Border.all(
-                        color: isCorrect ? style.correctColor : style.borderColor,
-                        width: 1.5,
-                      ),
-                    ),
+                  child: ColoredBox(
+                    color: isCorrect
+                        ? AppColors.primaryContainer.withValues(alpha: 0.3)
+                        : AppColors.border.withValues(
+                            alpha: (row + col).isEven ? 0.5 : 0.35,
+                          ),
                   ),
                 );
               }),
@@ -104,7 +91,7 @@ class PieceStylePreview extends StatelessWidget {
   }
 }
 
-/// The avatar preview — the badge itself plus a soft color halo.
+/// The avatar preview — just the badge on a clean neutral card.
 class AvatarPreview extends StatelessWidget {
   const AvatarPreview({super.key, required this.avatar});
 
@@ -117,9 +104,8 @@ class AvatarPreview extends StatelessWidget {
       height: 96,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: avatar.color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.outline, width: 1.5),
+        color: AppColors.surfaceLow,
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: AvatarBadge(avatar: avatar, size: 56),
     );

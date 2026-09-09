@@ -17,7 +17,8 @@
 - [x] Refine Home Screen to emphasize current collection artwork + large Play button as primary focus
 - [x] Remove/replace legacy card suit symbols from background (not part of core visual identity)
 - [x] "Warm Tactile Serenity" visual retheme — Stitch design as source of truth (tokens + shared widgets + Home / Journey / Puzzle-board visual layer). Visual only; grid logic untouched.
-- [ ] Retheme follow-ups: restyle the Cosmetics screen (+ `cosmetics_catalog.dart` swatches, `avatar_badge.dart`) to the warm palette; on-device visual QA of every screen; consider bundling Plus Jakarta Sans instead of `google_fonts` runtime fetch
+- [x] Bug fixes (2026-09-09): Home level-completion sync (stale Hive keys → reseed loop), Victory/last-piece drag freeze, cosmetics trimmed to Classics + flat avatars + raised coin prices, golden glow removed, moving-piece feedback cleaned, Daily Challenge Home lock indicator.
+- [ ] Retheme follow-ups: on-device visual QA of every screen; consider bundling Plus Jakarta Sans instead of `google_fonts` runtime fetch. The 16 pre-existing test failures (chapter-catalog WIP, "SuitClash" rename in splash/widget tests, `PuzzleImageTile` headless, stale "locked cell" tests) still stand.
 - [ ] Resolve font inconsistency: Baloo2/Nunito are declared in pubspec.yaml but unused (typography now uses Plus Jakarta Sans via GoogleFonts) — remove them or bundle Jakarta
 - [ ] Add GDPR consent flow for Firebase Analytics (`setConsent()` gate)
 - [ ] Integrate generated artwork from `content/artwork/` into the game (or remove if not intended)

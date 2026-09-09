@@ -6,226 +6,171 @@ import '../entities/player_cosmetics.dart';
 
 /// The single source of truth for every buyable cosmetic, plus lookups.
 ///
-/// Prices are the coin sinks that give the wallet a long-term purpose:
-/// frame = biggest visual change (400-750), piece style = mid (300-500),
-/// avatars = cheap impulse buys (150-400). Owning everything costs
-/// roughly 4,700 coins — a stretch goal earned over dozens of levels
-/// and daily challenges, not a day-one purchase.
+/// The cosmetics set is deliberately small, clean and premium — a
+/// restrained "Classics" range, not a wall of decorative themes. No glow,
+/// no gradients, no casino/neon colours, no artificial piece gaps.
+///
+/// Prices form a real progression so the wallet has long-term purpose:
+///   Classic (free) · 1,500 · 3,000 · 5,000 · 7,500 · 10,000
+/// Only the [id] is ever persisted, so changing prices or trimming the
+/// catalogue never re-locks an item the player already owns.
 abstract final class CosmeticsCatalog {
-  // ── Board Frames ──
-  // `final` (not `const`) because several colors are derived with
-  // `withValues` at catalog build time.
+  // Price tiers.
+  static const int _free = 0;
+  static const int _common = 1500;
+  static const int _premium = 3000;
+  static const int _higher = 5000;
+  static const int _rare = 7500;
+  static const int _highest = 10000;
+
+  // ── Board Frames — clean hairline borders, no glow ──
   static final List<BoardFrame> frames = [
-    BoardFrame(
-      id: PlayerCosmetics.defaultFrameId,
+    const BoardFrame(
+      id: PlayerCosmetics.defaultFrameId, // 'classic'
       name: 'Classic',
-      description: 'The clean, timeless frame',
-      price: 0,
+      description: 'A clean hairline edge — the artwork does the talking',
+      price: _free,
       borderColor: AppColors.border,
-      borderWidth: 2,
-      glowColor: AppColors.shadow,
-      backgroundColor: AppColors.card,
+      borderWidth: 1.5,
+      glowColor: Colors.transparent,
+      backgroundColor: AppColors.cardWell,
     ),
-    BoardFrame(
-      id: 'golden',
-      name: 'Golden',
-      description: 'A rich gold frame with a warm glow',
-      price: 450,
-      borderColor: AppColors.frameGold,
-      borderWidth: 7,
-      glowColor: AppColors.frameGoldGlow,
-      backgroundColor: Color(0xFFFFF8E1),
+    const BoardFrame(
+      id: 'ivory',
+      name: 'Ivory',
+      description: 'A soft warm-white border',
+      price: _common,
+      borderColor: Color(0xFFE6E0D2),
+      borderWidth: 3,
+      glowColor: Colors.transparent,
+      backgroundColor: AppColors.surfaceLow,
     ),
-    BoardFrame(
-      id: 'royal',
-      name: 'Royal Purple',
-      description: 'Deep purple for the royalty in you',
-      price: 650,
-      borderColor: AppColors.frameRoyal,
-      borderWidth: 7,
-      glowColor: AppColors.frameRoyal,
-      backgroundColor: Color(0xFFF3E5F5),
+    const BoardFrame(
+      id: 'sage',
+      name: 'Sage',
+      description: 'A quiet sage-green edge',
+      price: _premium,
+      borderColor: AppColors.primaryContainer,
+      borderWidth: 3,
+      glowColor: Colors.transparent,
+      backgroundColor: AppColors.cardWell,
     ),
-    BoardFrame(
-      id: 'emerald',
-      name: 'Emerald',
-      description: 'Casino-green elegance',
-      price: 550,
-      borderColor: AppColors.frameEmerald,
-      borderWidth: 6,
-      glowColor: AppColors.frameEmerald,
-      backgroundColor: Color(0xFFE8F5E9),
-    ),
-    BoardFrame(
-      id: 'midnight',
-      name: 'Midnight',
-      description: 'Sleek dark navy for night owls',
-      price: 500,
-      borderColor: AppColors.frameMidnight,
-      borderWidth: 6,
-      glowColor: AppColors.frameMidnight,
-      backgroundColor: Color(0xFFE8EAF6),
-    ),
-    BoardFrame(
-      id: 'ruby',
-      name: 'Ruby',
-      description: 'A fiery red frame that pops',
-      price: 750,
-      borderColor: AppColors.frameRuby,
-      borderWidth: 8,
-      glowColor: AppColors.frameRuby,
-      backgroundColor: Color(0xFFFFEBEE),
+    const BoardFrame(
+      id: 'slate',
+      name: 'Slate',
+      description: 'A deep moss border for a bold, minimal look',
+      price: _higher,
+      borderColor: AppColors.textDark,
+      borderWidth: 3,
+      glowColor: Colors.transparent,
+      backgroundColor: AppColors.cardWell,
     ),
   ];
 
-  // ── Piece Styles ──
+  // ── Piece Styles — seamless only ──
   static final List<PieceStyle> pieceStyles = [
-    PieceStyle(
-      id: PlayerCosmetics.defaultPieceStyleId,
+    const PieceStyle(
+      id: PlayerCosmetics.defaultPieceStyleId, // 'classic'
       name: 'Classic',
       description: 'Seamless pieces — the photo looks whole',
-      price: 0,
+      price: _free,
       gap: 0,
       cornerRadius: 0,
       borderColor: AppColors.border,
       correctColor: AppColors.success,
       tileBackground: AppColors.card,
     ),
-    PieceStyle(
-      id: 'chips',
-      name: 'Rounded Chips',
-      description: 'Soft rounded pieces with visible seams',
-      price: 350,
-      gap: 4,
-      cornerRadius: 12,
-      borderColor: AppColors.border,
-      correctColor: AppColors.success,
-      tileBackground: AppColors.card,
-    ),
-    PieceStyle(
-      id: 'golden_glow',
-      name: 'Golden Glow',
-      description: 'Gold-tinted borders; correct pieces shine gold',
-      price: 450,
-      gap: 2,
-      cornerRadius: 8,
-      borderColor: AppColors.frameGold.withValues(alpha: 0.55),
-      correctColor: AppColors.frameGoldGlow,
-      tileBackground: Color(0xFFFFF8E1),
-    ),
-    PieceStyle(
-      id: 'neon',
-      name: 'Neon Nights',
-      description: 'Electric cyan edges for a late-night vibe',
-      price: 500,
-      gap: 1,
-      cornerRadius: 6,
-      borderColor: AppColors.pieceNeon.withValues(alpha: 0.6),
-      correctColor: AppColors.pieceNeon,
-      tileBackground: Color(0xFFE0F7FA),
-    ),
-    PieceStyle(
-      id: 'pastel',
-      name: 'Soft Pastel',
-      description: 'Gentle pink corners on every piece',
-      price: 300,
-      gap: 4,
-      cornerRadius: 14,
-      borderColor: AppColors.piecePastelBorder.withValues(alpha: 0.5),
-      correctColor: AppColors.piecePastelBorder,
-      tileBackground: AppColors.piecePastel,
-    ),
   ];
 
-  // ── Avatars ──
+  // ── Avatars — flat, on-brand, distinctive silhouettes ──
   static final List<Avatar> avatars = [
-    Avatar(
-      id: PlayerCosmetics.defaultAvatarId,
+    const Avatar(
+      id: PlayerCosmetics.defaultAvatarId, // 'default'
       name: 'Player',
       description: 'The classic profile',
-      price: 0,
+      price: _free,
       icon: Icons.person_rounded,
       color: AppColors.primary,
     ),
-    Avatar(
+    const Avatar(
       id: 'paw',
       name: 'Paw',
       description: 'For animal lovers',
-      price: 150,
+      price: _common,
       icon: Icons.pets_rounded,
-      color: AppColors.avatarBrown,
+      color: AppColors.honeyText,
     ),
-    Avatar(
+    const Avatar(
+      id: 'leaf',
+      name: 'Leaf',
+      description: 'Calm and growing',
+      price: _common,
+      icon: Icons.eco_rounded,
+      color: AppColors.primaryContainer,
+    ),
+    const Avatar(
       id: 'heart',
       name: 'Heart',
       description: 'Spread the love',
-      price: 150,
+      price: _premium,
       icon: Icons.favorite_rounded,
-      color: AppColors.avatarPink,
+      color: AppColors.attention,
     ),
-    Avatar(
+    const Avatar(
       id: 'rocket',
       name: 'Rocket',
       description: 'Blast off',
-      price: 200,
+      price: _premium,
       icon: Icons.rocket_launch_rounded,
-      color: AppColors.secondary,
+      color: AppColors.textSecondary,
     ),
-    Avatar(
+    const Avatar(
       id: 'music',
       name: 'Music',
       description: 'Play it loud',
-      price: 200,
+      price: _higher,
       icon: Icons.music_note_rounded,
-      color: AppColors.avatarPink,
+      color: AppColors.attentionStrong,
     ),
-    Avatar(
-      id: 'star',
-      name: 'Star',
-      description: 'A natural superstar',
-      price: 250,
-      icon: Icons.star_rounded,
-      color: AppColors.frameGoldGlow,
-    ),
-    Avatar(
+    const Avatar(
       id: 'smiley',
       name: 'Smiley',
       description: 'Always smiling',
-      price: 250,
-      icon: Icons.emoji_emotions_rounded,
-      color: AppColors.avatarOrange,
+      price: _higher,
+      icon: Icons.mood_rounded,
+      color: AppColors.honeyText,
     ),
-    Avatar(
+    const Avatar(
       id: 'bolt',
       name: 'Bolt',
       description: 'Speed runner',
-      price: 300,
+      price: _rare,
       icon: Icons.bolt_rounded,
       color: AppColors.warning,
     ),
-    Avatar(
-      id: 'sparkle',
-      name: 'Sparkle',
-      description: 'All that glitters',
-      price: 300,
-      icon: Icons.auto_awesome_rounded,
-      color: AppColors.frameRoyal,
+    const Avatar(
+      id: 'star',
+      name: 'Star',
+      description: 'A natural superstar',
+      price: _rare,
+      icon: Icons.star_rounded,
+      color: AppColors.honey,
     ),
-    Avatar(
+    const Avatar(
       id: 'gamer',
       name: 'Gamer',
       description: 'Game on',
-      price: 350,
+      price: _highest,
       icon: Icons.sports_esports_rounded,
-      color: AppColors.avatarTeal,
+      color: AppColors.primary,
     ),
-    Avatar(
+    const Avatar(
       id: 'gem',
       name: 'Gem',
       description: 'The rarest of the rare',
-      price: 400,
+      price: _highest,
       icon: Icons.diamond_rounded,
-      color: AppColors.pieceNeon,
+      color: AppColors.textDark,
     ),
   ];
 

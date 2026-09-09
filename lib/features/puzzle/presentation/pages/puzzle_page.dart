@@ -94,8 +94,10 @@ class PuzzlePage extends StatelessWidget {
   }
 }
 
-/// How long the completed board celebration lingers before Victory.
-const _celebrationDelay = Duration(milliseconds: 2800);
+/// How long the completed board celebration lingers before Victory. Kept
+/// short so the (now fully frozen, pointer-blocked) board isn't held on
+/// screen — Victory should feel immediate.
+const _celebrationDelay = Duration(milliseconds: 1600);
 
 /// Fraction of [_celebrationDelay] dedicated to the piece-snap animation.
 const _snapFraction = 0.18;
@@ -313,23 +315,34 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
         Expanded(
           child: Stack(
             children: [
-              PuzzleBoard(
-                // Remounts on every (re)shuffle so the deal-in entrance
-                // animation replays instead of only playing once.
-                key: ValueKey(state.shuffleGeneration),
-                dimensions: boardDimensionsFromConfig(state.config),
-                imageUrl: imageUrl,
-                arrangement: state.arrangement,
-                solvedProgress: solvedProgress,
-                snapFraction: _snapFraction,
-                borderFadeFraction: _borderFadeFraction,
-                frame: frame,
-                pieceStyle: pieceStyle,
-                adjacency: state.adjacency,
-                grouping: state.grouping,
-                onSwap: (fromCell, toCell) => context
-                    .read<PuzzleCubit>()
-                    .swapPieces(fromCell, toCell),
+              // The instant the puzzle is solved the board stops receiving
+              // ANY pointer events — this cancels a drag the player may
+              // still be holding and guarantees nothing on the board can
+              // move while (or after) Victory takes over.
+              IgnorePointer(
+                ignoring: state.isSolved,
+                child: PuzzleBoard(
+                  // Remounts on every (re)shuffle so the deal-in entrance
+                  // animation replays instead of only playing once.
+                  key: ValueKey(state.shuffleGeneration),
+                  dimensions: boardDimensionsFromConfig(state.config),
+                  imageUrl: imageUrl,
+                  arrangement: state.arrangement,
+                  solvedProgress: solvedProgress,
+                  snapFraction: _snapFraction,
+                  borderFadeFraction: _borderFadeFraction,
+                  // Drops every cell's Draggable on the same frame the
+                  // solved state arrives, so an in-flight drag's gesture
+                  // recognizer is disposed and cancelled immediately.
+                  frozen: state.isSolved,
+                  frame: frame,
+                  pieceStyle: pieceStyle,
+                  adjacency: state.adjacency,
+                  grouping: state.grouping,
+                  onSwap: (fromCell, toCell) => context
+                      .read<PuzzleCubit>()
+                      .swapPieces(fromCell, toCell),
+                ),
               ),
 
               // Combo Listener
@@ -398,7 +411,8 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
 
               // Solved celebration overlay
               if (state.isSolved) ...[
-                // Premium glow behind the completed board
+                // A gentle sage bloom behind the completed board — small
+                // and understated, not a big golden flare.
                 Positioned.fill(
                   child: IgnorePointer(
                     child: AnimatedOpacity(
@@ -406,18 +420,11 @@ class _LoadedPuzzleState extends State<_LoadedPuzzle>
                       duration: const Duration(milliseconds: 600),
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: AppRadius.lgRadius,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.premiumGradientStart
-                                  .withValues(alpha: 0.4),
-                              blurRadius: 50,
-                              spreadRadius: 15,
-                            ),
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.25),
-                              blurRadius: 30,
-                              spreadRadius: 8,
+                              color: AppColors.primary.withValues(alpha: 0.16),
+                              blurRadius: 24,
+                              spreadRadius: 4,
                             ),
                           ],
                         ),

@@ -4,6 +4,71 @@ All notable changes to SuitClash are recorded here. Format follows [Keep a Chang
 
 ---
 
+## 2026-09-09 (Bug fixes: Home sync · Victory/drag · cosmetics cleanup · coin economy)
+
+Targeted fixes — **no grid/engine/gesture-math changes**; the puzzle
+implementation is untouched apart from completion/interaction *state*
+gating.
+
+### Fixed
+- **Level completion not reflecting on Home.** `HiveLevelsLocalDataSource.saveLevels`
+  used `putAll` (a merge that never deleted stale keys). A `levels_box`
+  seeded under an earlier, larger `ChapterCatalog` kept > `totalLevelCount`
+  entries forever, so `LevelService.loadLevels` re-seeded a fresh catalog
+  on **every** load and wiped the completion just saved. `saveLevels` now
+  deletes keys not in the new catalog before writing (authoritative
+  write); over-sized boxes self-heal on first save. Completions now
+  persist across navigation and app restart.
+- **Critical Victory / last-piece drag bug.** On solve the board was not
+  pointer-blocked for the `_celebrationDelay`, and cells only dropped
+  their `Draggable` once `solvedProgress > 0` (a frame late), so an
+  in-flight drag was never force-cancelled and its `_DragAvatar` could
+  linger in the root `Overlay` above the Victory route. Now: `PuzzleBoard`
+  takes a `frozen` flag (= `state.isSolved`) that removes every cell's
+  `Draggable`/`DragTarget` on the **same frame** the solved state arrives
+  (disposing the recognizer, cancelling the held drag); the board is
+  wrapped in `IgnorePointer(ignoring: state.isSolved)`; and
+  `_celebrationDelay` is trimmed 2800 → 1600 ms so Victory feels
+  immediate. `go('/victory')` already replaces the route stack.
+
+### Changed
+- **Moving-piece feedback is now clean.** Removed the sage halo border +
+  lift shadow from the drop-target hint, the shadow from the dragged
+  piece, and the outline + shadow from group-drag feedback (all added in
+  the retheme). The lifted piece is just the clipped artwork; the
+  drop-target hint is a 1.02 scale only. Idle board hairlines unchanged.
+- **Cosmetics trimmed to a clean "Classics" range.** Piece styles →
+  **Classic only** (seamless, no gaps, no rounded chips). Board frames →
+  Classic + **Ivory / Sage / Slate** (thin borders, no glow, no
+  gradients, no casino colours); removed Golden / Royal Purple /
+  Emerald / Midnight / Ruby and the Golden-Glow / Neon Nights / Soft
+  Pastel piece styles. `PlayerCosmetics.normalized()` keeps remaining
+  ownership intact.
+- **Avatars re-skinned.** `AvatarBadge` is now a flat disc — solid
+  on-brand fill, hairline ring, crisp icon; no gradient, no coloured
+  glow. Avatar colours remapped to the warm palette; ids / selection /
+  persistence unchanged.
+- **Coin economy.** Cosmetic prices raised to a real progression —
+  `0 / 1,500 / 3,000 / 5,000 / 7,500 / 10,000`. Source data only;
+  purchase logic already reads `item.price` live and owned items stay
+  owned (price is not persisted).
+- **Golden glow removed** from the solved-board celebration (now a small
+  sage bloom), the Home "Continue" CTA (dropped the `PulsingGlow`), and
+  the board-frame render. Cosmetic-preview glow `BoxShadow`s removed.
+- **Puzzle board** reverted to square corners so the artwork fills edge
+  to edge and a solved board reads as one photo.
+- **Daily Challenge — Home lock indicator.** The one-per-day rule already
+  worked at the page (`alreadyCompletedToday` → completed card, no
+  replay); the Home "Daily Challenge" card now reflects it (lock icon,
+  "Done — back tomorrow", dimmed) and unlocks on the next local day.
+
+### Verification
+`flutter analyze` — 0 errors. Test suite — 181 pass / 16 fail (the same
+16 pre-existing failures; cosmetics tests updated for the trimmed
+catalogue). Release AAB builds.
+
+---
+
 ## 2026-09-09 (Visual Retheme → "Warm Tactile Serenity", Stitch design as source of truth)
 
 The Stitch project **"SuitClash UI/UX Redesign System"** is now the visual

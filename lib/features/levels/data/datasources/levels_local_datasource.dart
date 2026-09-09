@@ -20,6 +20,16 @@ class HiveLevelsLocalDataSource implements LevelsLocalDataSource {
 
   @override
   Future<void> saveLevels(List<LevelModel> levels) async {
+    // Authoritative write: [levels] is always the COMPLETE catalog, so
+    // any key not in it is stale (e.g. left over from a previously larger
+    // ChapterCatalog). Merging with putAll alone would leave those stale
+    // entries in the box forever, making `_box.values.length` permanently
+    // disagree with `ChapterCatalog.totalLevelCount` — which drives
+    // `LevelService.loadLevels()` to reseed on every load and wipe
+    // progress. Delete the stale keys, then write.
+    final keep = {for (final level in levels) level.id};
+    final stale = _box.keys.cast<int>().where((k) => !keep.contains(k)).toList();
+    if (stale.isNotEmpty) await _box.deleteAll(stale);
     await _box.putAll({for (final level in levels) level.id: level});
   }
 }

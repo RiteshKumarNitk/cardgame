@@ -56,7 +56,7 @@ void main() {
     expect(find.text('Avatars'), findsOneWidget);
 
     // Frames tab is selected by default.
-    expect(find.text('Golden'), findsOneWidget);
+    expect(find.text('Ivory'), findsOneWidget);
     expect(find.text('Equipped'), findsOneWidget); // Classic is equipped.
   });
 
@@ -83,7 +83,7 @@ void main() {
   });
 
   testWidgets('buying an item spends coins and equips it', (tester) async {
-    final walletCubit = WalletCubit(FakeWalletService(1000));
+    final walletCubit = WalletCubit(FakeWalletService(2000));
     await tester.pumpWidget(
       _wrap(
         walletCubit: walletCubit,
@@ -92,15 +92,15 @@ void main() {
     );
     await tester.pump();
 
-    // Golden frame costs 450. Tap its price button.
-    await tester.ensureVisible(find.text('450'));
+    // Ivory frame costs 1500. Tap its price button.
+    await tester.ensureVisible(find.text('1500'));
     await tester.pump();
-    await tester.tap(find.text('450'));
+    await tester.tap(find.text('1500'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(walletCubit.state, 550);
-    // Buying equips immediately: Golden shows the Equipped badge.
+    expect(walletCubit.state, 500);
+    // Buying equips immediately: Ivory shows the Equipped badge.
     expect(find.text('Equipped'), findsNWidgets(1));
   });
 
@@ -116,16 +116,16 @@ void main() {
     );
     await tester.pump();
 
-    await tester.ensureVisible(find.text('450'));
+    await tester.ensureVisible(find.text('1500'));
     await tester.pump();
-    await tester.tap(find.text('450'));
+    await tester.tap(find.text('1500'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(walletCubit.state, 100); // untouched
     expect(find.text('Not enough coins'), findsOneWidget);
-    // Still not owned: Golden keeps showing its price.
-    expect(find.text('450'), findsOneWidget);
+    // Still not owned: Ivory keeps showing its price.
+    expect(find.text('1500'), findsOneWidget);
   });
 
   testWidgets('equipping an owned item switches the Equipped badge', (

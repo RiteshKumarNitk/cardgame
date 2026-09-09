@@ -22,12 +22,13 @@ import '../../../../shared/widgets/game_background.dart';
 import '../../../../shared/widgets/game_button.dart';
 import '../../../../shared/widgets/game_card.dart';
 import '../../../../shared/widgets/press_scale.dart';
-import '../../../../shared/widgets/pulsing_glow.dart';
 import '../../../../shared/widgets/stat_chip.dart';
 import '../../../cosmetics/domain/entities/cosmetic_items.dart';
 import '../../../cosmetics/domain/services/cosmetics_catalog.dart';
 import '../../../cosmetics/presentation/bloc/cosmetics_cubit.dart';
 import '../../../cosmetics/presentation/widgets/avatar_badge.dart';
+import '../../../daily_puzzle/data/daily_challenge_repository_impl.dart';
+import '../../../daily_puzzle/domain/services/daily_challenge_service.dart';
 import '../../../daily_reward/domain/daily_reward_service.dart';
 import '../../../daily_reward/presentation/widgets/daily_rewards_modal.dart';
 import '../../../levels/data/datasources/levels_local_datasource.dart';
@@ -57,14 +58,30 @@ class _HomePageState extends State<HomePage> {
   List<Level> _levels = [];
   DateTime? _lastBackPressed; // for double-back-to-exit
 
+  /// Whether today's Daily Challenge is already done — it stays "locked"
+  /// (no replay) until the next local day. Drives the Home indicator.
+  bool _dailyDoneToday = false;
+
   @override
   void initState() {
     super.initState();
     _loadProgress();
+    _loadDailyState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkDailyReward();
     });
+  }
+
+  Future<void> _loadDailyState() async {
+    try {
+      final service = DailyChallengeService(HiveDailyChallengeRepository());
+      final today = await service.loadToday(DateTime.now());
+      if (!mounted) return;
+      setState(() => _dailyDoneToday = today.alreadyCompletedToday);
+    } catch (_) {
+      // Storage unavailable (widget tests, first run) — treat as available.
+    }
   }
 
   Future<void> _checkDailyReward() async {
@@ -152,6 +169,7 @@ class _HomePageState extends State<HomePage> {
                         ? _HomeBody(
                             levelId: progress.currentLevelId!,
                             levels: _levels,
+                            dailyDoneToday: _dailyDoneToday,
                           )
                         : allComplete
                         ? const _AllCompleteBanner()
@@ -248,10 +266,15 @@ class _HomeHeader extends StatelessWidget {
 /// Daily Discovery · secondary shortcuts.
 /// ────────────────────────────────────────────────────────────────────
 class _HomeBody extends StatelessWidget {
-  const _HomeBody({required this.levelId, required this.levels});
+  const _HomeBody({
+    required this.levelId,
+    required this.levels,
+    required this.dailyDoneToday,
+  });
 
   final int levelId;
   final List<Level> levels;
+  final bool dailyDoneToday;
 
   @override
   Widget build(BuildContext context) {
@@ -314,19 +337,14 @@ class _HomeBody extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
 
           // ── Continue CTA ──
-          PulsingGlow(
-            color: AppColors.primaryContainer,
-            minOpacity: 0.14,
-            maxOpacity: 0.42,
-            child: GameButton(
-              label: 'Continue Puzzle • Level $levelId',
-              icon: Icons.play_arrow_rounded,
-              width: double.infinity,
-              height: 58,
-              onTap: () => context.goNamed(
-                RouteNames.puzzle,
-                pathParameters: {'levelId': '$levelId'},
-              ),
+          GameButton(
+            label: 'Continue Puzzle • Level $levelId',
+            icon: Icons.play_arrow_rounded,
+            width: double.infinity,
+            height: 58,
+            onTap: () => context.goNamed(
+              RouteNames.puzzle,
+              pathParameters: {'levelId': '$levelId'},
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -336,7 +354,7 @@ class _HomeBody extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
 
           // ── Daily Discovery ──
-          const _DailyDiscovery(),
+          _DailyDiscovery(dailyDoneToday: dailyDoneToday),
           const SizedBox(height: AppSpacing.md),
 
           // ── Secondary shortcuts ──
@@ -762,7 +780,9 @@ class _DashedLinePainter extends CustomPainter {
 
 /// Two-up "Daily Discovery" bento — Daily Challenge + Art Collections.
 class _DailyDiscovery extends StatelessWidget {
-  const _DailyDiscovery();
+  const _DailyDiscovery({required this.dailyDoneToday});
+
+  final bool dailyDoneToday;
 
   @override
   Widget build(BuildContext context) {
@@ -783,11 +803,22 @@ class _DailyDiscovery extends StatelessWidget {
           children: [
             Expanded(
               child: _BentoCard(
-                icon: Icons.calendar_today_rounded,
-                iconBg: AppColors.honey,
-                iconFg: AppColors.honeyText,
+                // Locked once today's challenge is done — a clear "done"
+                // indicator and a dimmed card. Tapping still opens the
+                // Daily Challenge screen (which shows the completed card
+                // and blocks any replay until the next local day).
+                icon: dailyDoneToday
+                    ? Icons.lock_rounded
+                    : Icons.calendar_today_rounded,
+                iconBg: dailyDoneToday
+                    ? AppColors.cardWellHigh
+                    : AppColors.honey,
+                iconFg: dailyDoneToday
+                    ? AppColors.textMeta
+                    : AppColors.honeyText,
                 title: 'Daily Challenge',
-                subtitle: "Today's puzzle",
+                subtitle: dailyDoneToday ? 'Done — back tomorrow' : "Today's puzzle",
+                dimmed: dailyDoneToday,
                 onTap: () => context.goNamed(RouteNames.dailyPuzzle),
               ),
             ),
@@ -817,6 +848,7 @@ class _BentoCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.dimmed = false,
   });
 
   final IconData icon;
@@ -825,44 +857,48 @@ class _BentoCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return PressScale(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: AppRadius.lgRadius,
-          border: Border.all(color: AppColors.border, width: 1),
-          boxShadow: AppShadows.pill,
-        ),
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: AppRadius.smRadius,
+    return Opacity(
+      opacity: dimmed ? 0.6 : 1,
+      child: PressScale(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: AppRadius.lgRadius,
+            border: Border.all(color: AppColors.border, width: 1),
+            boxShadow: AppShadows.pill,
+          ),
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: AppRadius.smRadius,
+                ),
+                child: Icon(icon, size: 18, color: iconFg),
               ),
-              child: Icon(icon, size: 18, color: iconFg),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              title,
-              style: textTheme.labelMedium?.copyWith(
-                color: AppColors.textDark,
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                title,
+                style: textTheme.labelMedium?.copyWith(
+                  color: AppColors.textDark,
+                ),
               ),
-            ),
-            Text(
-              subtitle,
-              style: textTheme.bodySmall?.copyWith(color: AppColors.textMeta),
-            ),
-          ],
+              Text(
+                subtitle,
+                style: textTheme.bodySmall?.copyWith(color: AppColors.textMeta),
+              ),
+            ],
+          ),
         ),
       ),
     );

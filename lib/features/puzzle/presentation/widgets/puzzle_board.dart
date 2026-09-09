@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/design_system/app_animations.dart';
 import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/app_radius.dart';
 import '../../../../core/design_system/app_shadows.dart';
 import '../../../../services/audio_service.dart';
 import '../../../cosmetics/domain/entities/cosmetic_items.dart';
@@ -31,11 +30,20 @@ class PuzzleBoard extends StatefulWidget {
     this.solvedProgress = 0.0,
     this.snapFraction = 0.18,
     this.borderFadeFraction = 0.5,
+    this.frozen = false,
     this.frame,
     this.pieceStyle,
     this.adjacency,
     this.grouping,
   });
+
+  /// When `true`, every cell is rendered non-interactive **immediately**
+  /// (no `Draggable`/`DragTarget`), regardless of [solvedProgress]. Set on
+  /// the exact frame the puzzle enters its completed state so an
+  /// in-progress drag's gesture recognizer is disposed and cancelled at
+  /// once — the celebration animation ([solvedProgress]) then ramps up
+  /// from 0 a frame later.
+  final bool frozen;
 
   /// Resolved by the caller — from a chapter's board size
   /// ([boardDimensionsForLevel]) for regular levels, or a fixed
@@ -180,33 +188,21 @@ class _PuzzleBoardState extends State<PuzzleBoard> {
         final effectiveLayout = layout ?? _layout;
 
         return Container(
-          // Rounded, recessed "tray well" (Warm Tactile Serenity). The
-          // corners are clipped for a soft silhouette; this is purely
-          // cosmetic — the GridView still receives the full [constraints],
-          // so every cell dimension and the shared [ImageLayout] are
-          // computed exactly as before.
-          clipBehavior: Clip.antiAlias,
+          // Square-cornered so the artwork fills edge to edge and a solved
+          // board reads as one seamless photo — a warm ivory well behind
+          // the pieces, a clean hairline border, one soft warm shadow.
           decoration: BoxDecoration(
             color:
                 widget.frame?.backgroundColor ??
                 widget.pieceStyle?.tileBackground ??
                 AppColors.cardWell,
-            borderRadius: AppRadius.lgRadius,
             border: widget.solvedProgress < widget.borderFadeFraction
                 ? Border.all(
                     color: widget.frame?.borderColor ?? AppColors.border,
                     width: widget.frame?.borderWidth ?? 1,
                   )
                 : null,
-            boxShadow: [
-              ...AppShadows.card,
-              if (widget.frame != null)
-                BoxShadow(
-                  color: widget.frame!.glowColor.withValues(alpha: 0.35),
-                  blurRadius: 20,
-                  spreadRadius: 4,
-                ),
-            ],
+            boxShadow: AppShadows.card,
           ),
           child: GridView.builder(
             padding: EdgeInsets.zero,
@@ -234,6 +230,7 @@ class _PuzzleBoardState extends State<PuzzleBoard> {
                 solvedProgress: widget.solvedProgress,
                 snapFraction: widget.snapFraction,
                 borderFadeFraction: widget.borderFadeFraction,
+                frozen: widget.frozen,
                 cellWidth: cellWidth,
                 cellHeight: cellHeight,
                 gap: gap,
@@ -270,6 +267,7 @@ class _BoardCell extends StatefulWidget {
     this.solvedProgress = 0.0,
     this.snapFraction = 0.18,
     this.borderFadeFraction = 0.5,
+    this.frozen = false,
     this.pieceStyle,
     this.adjacency,
     this.grouping,
@@ -297,6 +295,10 @@ class _BoardCell extends StatefulWidget {
   final double solvedProgress;
   final double snapFraction;
   final double borderFadeFraction;
+
+  /// See [PuzzleBoard.frozen] — when `true` this cell renders with no
+  /// `Draggable`/`DragTarget` at all, cancelling any active drag.
+  final bool frozen;
   final PieceStyle? pieceStyle;
   final PuzzleAdjacency? adjacency;
   final PuzzleGrouping? grouping;
@@ -499,8 +501,11 @@ class _BoardCellState extends State<_BoardCell>
     // the board on every (re)shuffle. The feedback copy is built from
     // [decorated] directly, so the lifted piece is never double-animated.
     final Widget tree;
-    if (isAnimatingSolved) {
-      // When solved animation is playing, disable all interactions.
+    if (widget.frozen || isAnimatingSolved) {
+      // Puzzle is completed (or the celebration is playing) — every cell
+      // is inert. `frozen` flips on the SAME frame `isSolved` becomes
+      // true, so removing the `Draggable` here disposes its gesture
+      // recognizer and cancels any drag the player is still holding.
       tree = popped;
     } else if (isInGroup && widget.image != null && widget.layout != null) {
       // ── Group cell: drag the entire group as one unit ──
@@ -527,11 +532,11 @@ class _BoardCellState extends State<_BoardCell>
           // unconditionally and with zero propagation delay.
           final hoverRing = isThisGroupDragging
               ? fadedForGroupDrag
-              : (hovering ? _neutralHoverLift(popped, style) : popped);
+              : (hovering ? _hoverHint(popped) : popped);
 
           return Draggable<int>(
             data: widget.cellIndex,
-            feedback: _buildGroupFeedback(group, decorated),
+            feedback: _buildGroupFeedback(group),
             // The default anchor strategy maps "where within the grabbed
             // cell you touched" onto the SAME fraction of the feedback
             // widget. That's correct for a single tile (child and
@@ -568,31 +573,26 @@ class _BoardCellState extends State<_BoardCell>
         onAcceptWithDetails: (details) => _handleDrop(details.data),
         builder: (context, candidateData, rejectedData) {
           final hovering = candidateData.isNotEmpty;
-          // Drop-target feedback is purely physical — a subtle lift and
-          // neutral shadow, never a color that could read as a
-          // correct/incorrect signal.
-          final hoverRing = hovering ? _neutralHoverLift(popped, style) : popped;
+          // Drop-target hint: an extremely subtle scale only — no border,
+          // ring, glow or shadow.
+          final hoverRing = hovering ? _hoverHint(popped) : popped;
 
           return Draggable<int>(
             data: widget.cellIndex,
-            // The lifted piece: the exact same physical size as on the
-            // board (no scale-up — that would break drop alignment), with
-            // a soft warm lift shadow so it reads as "picked up off the
-            // tray" per the Warm Tactile Serenity spec.
+            // The lifted piece: just the clipped artwork, at exactly its
+            // on-board size. No border, outline, ring, glow or shadow —
+            // only the pointer-following motion signals "picked up".
             feedback: SizedBox(
               width: widget.cellWidth,
               height: widget.cellHeight,
               child: Material(
                 color: Colors.transparent,
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(boxShadow: AppShadows.lifted),
-                  child: decorated,
-                ),
+                child: clippedContent,
               ),
             ),
             childWhenDragging: Opacity(
-              opacity: 0.35,
-              child: decorated,
+              opacity: 0.3,
+              child: clippedContent,
             ),
             child: hoverRing,
           );
@@ -649,25 +649,11 @@ class _BoardCellState extends State<_BoardCell>
     }
   }
 
-  /// "This is a valid drop target" affordance (Warm Tactile Serenity): a
-  /// slight lift, a soft warm shadow, and a gentle sage halo outline.
-  /// The halo is a placement cue, never a correct/incorrect signal —
-  /// correctness is still communicated only by image continuity and edge
-  /// connections.
-  Widget _neutralHoverLift(Widget child, PieceStyle? style) {
-    final radius = BorderRadius.circular(style?.cornerRadius ?? 0);
-    return Transform.scale(
-      scale: 1.03,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(color: AppColors.primaryContainer, width: 2.5),
-          boxShadow: AppShadows.lifted,
-        ),
-        child: ClipRRect(borderRadius: radius, child: child),
-      ),
-    );
-  }
+  /// "This cell is a valid drop target" hint — an extremely subtle scale,
+  /// nothing else. No border, ring, outline, glow or shadow: correctness
+  /// is communicated only by image continuity and edge connections.
+  Widget _hoverHint(Widget child) =>
+      Transform.scale(scale: 1.02, child: child);
 
   /// Announces the piece for screen readers. Pieces are interactive the
   /// moment the board loads: drag to swap.
@@ -696,7 +682,7 @@ class _BoardCellState extends State<_BoardCell>
   /// directly from [group.cells]/[group.relativePositions] (the same
   /// shape data the movement engine itself uses), not a re-derived
   /// interpretation of the group's geometry.
-  Widget _buildGroupFeedback(PuzzleGroup group, Widget cellContent) {
+  Widget _buildGroupFeedback(PuzzleGroup group) {
     final style = widget.pieceStyle;
     final radius = BorderRadius.circular(style?.cornerRadius ?? 0);
 
@@ -769,26 +755,14 @@ class _BoardCellState extends State<_BoardCell>
       );
     }
 
-    // Exactly the group's on-board footprint (no scale). A soft sage
-    // outline + warm lift shadow read the connected group as one lifted
-    // physical object per Warm Tactile Serenity — this is a "joined"
-    // cue, not a lock: the group stays fully draggable at all times.
+    // Exactly the group's on-board footprint — just the artwork cells.
+    // No scale, border, outline, glow or shadow.
     return SizedBox(
       width: groupWidth,
       height: groupHeight,
       child: Material(
         color: Colors.transparent,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            border: Border.all(
-              color: AppColors.primaryContainer.withValues(alpha: 0.7),
-              width: 2,
-            ),
-            boxShadow: AppShadows.lifted,
-          ),
-          child: Stack(children: groupCells),
-        ),
+        child: Stack(children: groupCells),
       ),
     );
   }

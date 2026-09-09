@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/design_system/app_colors.dart';
-import '../../../../core/design_system/color_utils.dart';
 import '../../domain/entities/cosmetic_items.dart';
 
-/// The player's avatar: a filled circle in the avatar's color with the
-/// avatar's icon on top. Used on Home's top bar and as the Avatar
-/// category preview in the cosmetics shop.
+/// The player's avatar: a clean flat disc in the avatar's colour with a
+/// crisp centred icon. No gradient, no glow, no coloured drop-shadow —
+/// premium and minimal, consistent with the SuitClash art direction.
 class AvatarBadge extends StatelessWidget {
   const AvatarBadge({
     super.key,
     required this.avatar,
-    this.size = 48,
+    this.size = 44,
     this.onTap,
   });
 
@@ -26,27 +24,17 @@ class AvatarBadge extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [avatar.color, avatar.color.darken(0.22)],
+        color: avatar.color,
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.6),
+          width: 1.5,
         ),
-        border: Border.all(color: AppColors.outline, width: 2.5),
-        boxShadow: [
-          BoxShadow(
-            color: avatar.color.withValues(alpha: 0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
+      alignment: Alignment.center,
       child: Icon(
         avatar.icon,
         color: Colors.white,
-        size: size * 0.54,
-        shadows: const [
-          Shadow(color: AppColors.outline, offset: Offset(0, 1.5)),
-        ],
+        size: size * 0.52,
       ),
     );
 

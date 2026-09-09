@@ -9,7 +9,7 @@ Core feature implementation is advanced, but visual polish and core gameplay ref
 - [x] Flutter project created (package: `puzzle_cards`, product: SuitClash)
 - [x] Flame integrated (background floating pieces only)
 - [x] GoRouter routing (19 routes with consistent transitions)
-- [x] Design system (colors, typography, spacing, shadows, gradients, animations) — **"Warm Tactile Serenity"** (2026-09-09): Stitch project *"SuitClash UI/UX Redesign System"* is the visual source of truth. Soft-sage + honey-gold on warm ivory, Plus Jakarta Sans, warm layered elevation, tactile solid buttons. Visual-only retheme — no logic/navigation/grid changes. See `docs/UI_UX_GUIDELINES.md`. Cosmetics screen restyle still pending.
+- [x] Design system (colors, typography, spacing, shadows, gradients, animations) — **"Warm Tactile Serenity"** (2026-09-09): Stitch project *"SuitClash UI/UX Redesign System"* is the visual source of truth. Soft-sage + honey-gold on warm ivory, Plus Jakarta Sans, warm layered elevation, tactile solid buttons. Visual-only retheme — no logic/navigation/grid changes. See `docs/UI_UX_GUIDELINES.md`. Follow-up cleanup 2026-09-09: cosmetics trimmed to Classics, avatars flattened, golden glow removed, moving-piece feedback made clean, puzzle board back to square corners.
 - [x] Single light theme (bright, colorful casual game aesthetic)
 - [x] Hive local storage (10 boxes, LevelModel adapter)
 - [x] Splash screen (animated logo, bootstrap progress, puzzle piece loader)
@@ -49,7 +49,7 @@ Core feature implementation is advanced, but visual polish and core gameplay ref
 - [x] Daily challenge (daily puzzle, streak tracking, leaderboard)
 - [x] Daily reward (7-day streak system, 20-300 coins)
 - [x] Achievements (9 achievements with counter-based progress)
-- [x] Cosmetics (6 frames, 5 piece styles, 11 avatars)
+- [x] Cosmetics (4 frames — Classic + Ivory/Sage/Slate, 1 piece style — Classic seamless, 11 avatars). Trimmed to a clean "Classics" range 2026-09-09; prices raised to a 0 / 1,500 / 3,000 / 5,000 / 7,500 / 10,000 progression.
 - [x] Shop (3 coin packs, watch-ad-for-coins, remove ads)
 - [x] Settings (audio toggles, volume sliders, reset progress, restore purchases)
 - [x] Profile (display name editing, avatar display)

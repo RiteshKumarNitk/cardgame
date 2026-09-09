@@ -45,30 +45,30 @@ void main() {
   test('buy() spends coins, owns, equips, and persists the item', () async {
     final repository = FakeCosmeticsRepository();
     final cubit = CosmeticsCubit(repository);
-    final golden = CosmeticsCatalog.frames.firstWhere((f) => f.id == 'golden');
+    final sage = CosmeticsCatalog.frames.firstWhere((f) => f.id == 'sage');
     var spent = 0;
 
-    final success = await cubit.buy(golden, (amount) async {
+    final success = await cubit.buy(sage, (amount) async {
       spent = amount;
       return true;
     });
 
     expect(success, isTrue);
-    expect(spent, golden.price);
-    expect(cubit.state.ownsFrame('golden'), isTrue);
-    expect(cubit.state.equippedFrame, 'golden');
-    expect(repository.saved.ownsFrame('golden'), isTrue);
-    expect(repository.saved.equippedFrame, 'golden');
+    expect(spent, sage.price);
+    expect(cubit.state.ownsFrame('sage'), isTrue);
+    expect(cubit.state.equippedFrame, 'sage');
+    expect(repository.saved.ownsFrame('sage'), isTrue);
+    expect(repository.saved.equippedFrame, 'sage');
   });
 
   test('buy() fails without spending or owning when coins are short', () async {
     final cubit = CosmeticsCubit(FakeCosmeticsRepository());
-    final golden = CosmeticsCatalog.frames.firstWhere((f) => f.id == 'golden');
+    final sage = CosmeticsCatalog.frames.firstWhere((f) => f.id == 'sage');
 
-    final success = await cubit.buy(golden, spendFail);
+    final success = await cubit.buy(sage, spendFail);
 
     expect(success, isFalse);
-    expect(cubit.state.ownsFrame('golden'), isFalse);
+    expect(cubit.state.ownsFrame('sage'), isFalse);
     expect(cubit.state.equippedFrame, 'classic');
   });
 
@@ -108,13 +108,13 @@ void main() {
 
   test('purchases in different categories are independent', () async {
     final cubit = CosmeticsCubit(FakeCosmeticsRepository());
-    final neon = CosmeticsCatalog.pieceStyles.firstWhere((p) => p.id == 'neon');
+    final sage = CosmeticsCatalog.frames.firstWhere((f) => f.id == 'sage');
 
-    await cubit.buy(neon, spendOk);
+    await cubit.buy(sage, spendOk);
 
-    expect(cubit.state.ownsPieceStyle('neon'), isTrue);
-    expect(cubit.state.equippedPieceStyle, 'neon');
-    // Frame loadout untouched by a piece-style purchase.
-    expect(cubit.state.equippedFrame, 'classic');
+    expect(cubit.state.ownsFrame('sage'), isTrue);
+    expect(cubit.state.equippedFrame, 'sage');
+    // Avatar loadout untouched by a frame purchase.
+    expect(cubit.state.equippedAvatar, 'default');
   });
 }
